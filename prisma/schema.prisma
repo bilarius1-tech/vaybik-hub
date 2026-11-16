@@ -78,6 +78,95 @@ model LoginAttempt {
   updatedAt    DateTime  @updatedAt
 }
 
+enum ServiceType {
+  DOCKER
+  EXTERNAL
+  STATIC
+}
+
+enum CheckStatus {
+  UP
+  DOWN
+  DEGRADED
+  UNKNOWN
+}
+
+model Service {
+  id             String       @id @default(cuid())
+  slug           String       @unique
+  name           String
+  url            String
+  description    String?
+  icon           String?
+  type           ServiceType  @default(DOCKER)
+  containerNames String[]
+  composeProject String?
+  repoUrl        String?
+  branch         String?      @default("main")
+  healthUrl      String?
+  expectedStatus Int          @default(200)
+  keyword        String?
+  intervalSec    Int          @default(60)
+  timeoutMs      Int          @default(10000)
+  isPublic       Boolean      @default(false)
+  /// false = «не развёрнут» (чат/лид и т.п.)
+  isDeployed     Boolean      @default(true)
+  sortOrder      Int          @default(0)
+  tags           String[]
+  status         CheckStatus  @default(UNKNOWN)
+  lastCheckedAt  DateTime?
+  certExpiresAt  DateTime?
+  lastResponseMs Int?
+  ownerPartnerId String?
+  checks         HealthCheck[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model HealthCheck {
+  id         BigInt      @id @default(autoincrement())
+  serviceId  String
+  service    Service     @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  status     CheckStatus
+  httpStatus Int?
+  responseMs Int?
+  error      String?
+  checkedAt  DateTime    @default(now())
+
+  @@index([serviceId, checkedAt])
+}
+
+model ServerMetric {
+  id        BigInt   @id @default(autoincrement())
+  cpu       Float
+  memUsed   BigInt
+  memTotal  BigInt
+  diskUsed  BigInt
+  diskTotal BigInt
+  load1     Float
+  takenAt   DateTime @default(now())
+
+  @@index([takenAt])
+}
+
+model NotificationRule {
+  id          String   @id @default(cuid())
+  event       String
+  chatIds     String[]
+  isActive    Boolean  @default(true)
+  throttleMin Int      @default(10)
+  quietStart  String? // HH:mm Europe/Moscow
+  quietEnd    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model NotificationThrottle {
+  id         String   @id @default(cuid())
+  key        String   @unique
+  lastSentAt DateTime
+}
+
 model Setting {
   key       String   @id
   value     Json
