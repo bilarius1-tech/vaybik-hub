@@ -1,7 +1,8 @@
 import { prisma } from "@/server/db";
+import { resolveTelegramBotToken } from "@/server/vault/service";
 
-function botToken(): string | null {
-  return process.env.TELEGRAM_BOT_TOKEN || null;
+async function botToken(): Promise<string | null> {
+  return resolveTelegramBotToken();
 }
 
 function defaultChatId(): string | null {
@@ -30,8 +31,10 @@ export async function sendTelegramMessage(
   chatId: string,
   text: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const token = botToken();
-  if (!token) return { ok: false, error: "TELEGRAM_BOT_TOKEN не задан" };
+  const token = await botToken();
+  if (!token) {
+    return { ok: false, error: "Токен бота не найден (vault telegram_bot или TELEGRAM_BOT_TOKEN)" };
+  }
 
   const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: "POST",

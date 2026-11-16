@@ -60,7 +60,7 @@ export function NotificationsPanel({ initialRules }: { initialRules: Rule[] }) {
       <Card>
         <CardHeader
           title="Бот"
-          subtitle="токен пока в TELEGRAM_BOT_TOKEN (позже — vault)"
+          subtitle="токен из vault (kind=telegram_bot) или TELEGRAM_BOT_TOKEN"
         />
         <div className="grid-g2">
           <Field label="Chat ID" htmlFor="chat">

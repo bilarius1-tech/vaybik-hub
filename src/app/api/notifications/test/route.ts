@@ -21,11 +21,10 @@ export async function POST(req: NextRequest) {
     if (!chatId) {
       return jsonError("NO_CHAT", "Укажите chatId или TELEGRAM_DEFAULT_CHAT_ID", 400);
     }
-    if (!process.env.TELEGRAM_BOT_TOKEN) {
-      return jsonError("NO_TOKEN", "TELEGRAM_BOT_TOKEN не задан", 400);
-    }
-
     const result = await sendTelegramMessage(chatId, body.text);
+    if (!result.ok && result.error?.includes("Токен")) {
+      return jsonError("NO_TOKEN", result.error, 400);
+    }
     await writeAudit({
       actorId: ctx.user.id,
       action: "notifications.test",

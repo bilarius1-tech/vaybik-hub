@@ -28,6 +28,10 @@ jobs:
       NEXT_PUBLIC_THEME_VARIANT: A
       APP_ENV: dev
       TZ: Europe/Moscow
+      # 32 байта base64 — только для CI-тестов vault
+      VAULT_MASTER_KEY: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+      VAULT_KEY_VERSION: "1"
+      SESSION_SECRET: ci-session-secret-not-for-production
 
     steps:
       - uses: actions/checkout@v4

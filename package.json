@@ -18,7 +18,8 @@
     "prisma:migrate": "prisma migrate dev",
     "seed:owner": "tsx scripts/seed-owner.ts",
     "seed:e2e": "tsx scripts/seed-e2e-user.ts",
-    "seed:services": "tsx scripts/seed-services.ts"
+    "seed:services": "tsx scripts/seed-services.ts",
+    "vault:rotate": "tsx scripts/vault-rotate.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
