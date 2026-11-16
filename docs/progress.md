@@ -98,6 +98,9 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Логи: tail, SSE-поток, фильтр, скачивание; LogViewer + ConfirmDialog
 - [x] AuditLog + Telegram на docker.*
 - [x] Тесты policy → 403; DEPLOY.md про `vaybik.managed=true`
+- [x] Прод 2026-11-16: `deploy-prod.sh` (proxy POST=1), Whoami в реестре + `vaybik.managed=true`
+- [x] Проверки: `/admin/api/health`, vaybik.ru, region.vaybik.ru → 200; whoami status/logs/restart OK; traefik denylist 403; region не в реестре 403
+- [x] **Region не подключать** (Битрикс, другой агент) — только с согласия Алексея
 
 ## Фазы
 - [x] Фаза 0 — каркас
