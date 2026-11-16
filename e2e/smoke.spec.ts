@@ -1,9 +1,10 @@
 import { expect, test } from "@playwright/test";
 
-test("открывает /admin с AppShell", async ({ page }) => {
+test("открывает /admin/login без сессии", async ({ page }) => {
   await page.goto("/admin");
-  await expect(page.getByText("Вайбик", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText("панель управления")).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Дашборд" })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Сервисы/ })).toBeVisible();
+  await expect(page).toHaveURL(/\/admin\/login/);
+  await expect(page.getByRole("heading", { name: "Вход в Вайбик" }).or(
+    page.getByText("Вход в Вайбик"),
+  )).toBeVisible();
+  await expect(page.getByLabel("Email")).toBeVisible();
 });
