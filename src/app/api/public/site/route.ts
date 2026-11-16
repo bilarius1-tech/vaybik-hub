@@ -1,6 +1,8 @@
 import { getPublicSitePayload } from "@/server/settings/site";
 import { handleRouteError, jsonOk } from "@/server/http/response";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   try {
     const site = await getPublicSitePayload();

@@ -1,38 +1,76 @@
-# Скелет продакшн-развёртывания (дорабатывается в Фазе 1d, см. docs/TZ.md).
-# Деплой выполняет человек вручную. VPN, acme.json и конфиг Traefik не трогать.
+# Прод-развёртывание vaybik-hub.
+# Деплой — только человек по docs/DEPLOY.md.
+# НЕ трогать: VPN (Amnezia/Xray/WG), acme.json, конфиг Traefik, firewall, sshd.
+#
+# Сеть Traefik (external), certresolver и host — из .env.
+
 services:
   app:
-    build: .
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_THEME_VARIANT: ${NEXT_PUBLIC_THEME_VARIANT:-A}
     image: vaybik-hub:latest
     restart: unless-stopped
     env_file: .env
-    depends_on: [postgres]
-    networks: [internal, proxy]
+    environment:
+      RUN_MIGRATIONS: "1"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DOCKER_HOST: tcp://docker-proxy:2375
+      UPLOADS_DIR: /app/uploads
+      BACKUPS_DIR: /app/backups
+      APP_URL: https://${TRAEFIK_ADMIN_HOST:-vaybik.ru}/admin
+      NODE_ENV: production
+      APP_ENV: prod
+    command: ["node", "server.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/uploads
+      - backups:/app/backups
+    networks: [hub, proxy]
     labels:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_NETWORK:-proxy}
-      # HTTPS
+      # HTTPS — приоритет выше роутера заглушки nginx
       - traefik.http.routers.vaybik-admin.rule=Host(`${TRAEFIK_ADMIN_HOST:-vaybik.ru}`) && PathPrefix(`/admin`)
       - traefik.http.routers.vaybik-admin.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
       - traefik.http.routers.vaybik-admin.tls.certresolver=${TRAEFIK_CERTRESOLVER:-le}
-      - traefik.http.routers.vaybik-admin.priority=100
+      - traefik.http.routers.vaybik-admin.priority=${TRAEFIK_ADMIN_PRIORITY:-100}
       - traefik.http.services.vaybik-admin.loadbalancer.server.port=3000
-      # HTTP → HTTPS (middleware уже есть на сервере: to-https@docker)
+      # HTTP → HTTPS (middleware уже на сервере)
       - traefik.http.routers.vaybik-admin-http.rule=Host(`${TRAEFIK_ADMIN_HOST:-vaybik.ru}`) && PathPrefix(`/admin`)
       - traefik.http.routers.vaybik-admin-http.entrypoints=${TRAEFIK_ENTRYPOINT_HTTP:-web}
       - traefik.http.routers.vaybik-admin-http.middlewares=${TRAEFIK_HTTPS_REDIRECT_MIDDLEWARE:-to-https@docker}
-      - traefik.http.routers.vaybik-admin-http.priority=100
+      - traefik.http.routers.vaybik-admin-http.priority=${TRAEFIK_ADMIN_PRIORITY:-100}
       - traefik.http.routers.vaybik-admin-http.service=vaybik-admin
 
   worker:
     image: vaybik-hub:latest
     restart: unless-stopped
     env_file: .env
-    command: ["node", "worker.js"]   # уточняется в Фазе 1
-    depends_on: [postgres, docker-proxy]
-    networks: [internal]
+    environment:
+      RUN_MIGRATIONS: "0"
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?schema=public
+      DOCKER_HOST: tcp://docker-proxy:2375
+      UPLOADS_DIR: /app/uploads
+      BACKUPS_DIR: /app/backups
+      NODE_ENV: production
+      APP_ENV: prod
+    command: ["node", "worker.cjs"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      docker-proxy:
+        condition: service_started
+      app:
+        condition: service_started
     volumes:
+      - uploads:/app/uploads
+      - backups:/app/backups
       - /proc:/host/proc:ro
+    networks: [hub]
 
   postgres:
     image: postgres:16-alpine
@@ -43,26 +81,33 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
-    networks: [internal]
+    networks: [hub]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
-  # Ограниченный доступ к Docker API. В MVP — только чтение.
+  # Ограниченный Docker API. MVP: только чтение. Без портов наружу и без сети Traefik.
   docker-proxy:
     image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
     environment:
-      CONTAINERS: 1
-      INFO: 1
-      POST: 0          # Фаза 2: POST=1 + ALLOW_RESTARTS/ALLOW_START/ALLOW_STOP=1, IMAGES=1
+      CONTAINERS: "1"
+      INFO: "1"
+      POST: "0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    networks: [internal]   # без публикации портов и без сети Traefik
+    networks: [hub]
 
 networks:
-  internal:
-    internal: true
+  hub:
+    driver: bridge
   proxy:
     external: true
     name: ${TRAEFIK_NETWORK:-proxy}
 
 volumes:
   pgdata:
+  uploads:
+  backups:

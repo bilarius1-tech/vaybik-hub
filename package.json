@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build",
+    "build": "NODE_ENV=production next build",
     "start": "next start --hostname 127.0.0.1",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
@@ -19,7 +19,9 @@
     "seed:owner": "tsx scripts/seed-owner.ts",
     "seed:e2e": "tsx scripts/seed-e2e-user.ts",
     "seed:services": "tsx scripts/seed-services.ts",
-    "vault:rotate": "tsx scripts/vault-rotate.ts"
+    "vault:rotate": "tsx scripts/vault-rotate.ts",
+    "backup:now": "tsx scripts/backup-now.ts",
+    "backup:restore": "tsx scripts/restore-backup.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

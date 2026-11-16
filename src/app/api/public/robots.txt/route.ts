@@ -1,5 +1,7 @@
 import { prisma } from "@/server/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const hosts = await prisma.seoPage.findMany({
     where: { inSitemap: true },

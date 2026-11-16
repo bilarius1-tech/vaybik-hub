@@ -24,7 +24,9 @@ export class UploadError extends Error {
 }
 
 export function uploadsRoot(): string {
-  return process.env.UPLOADS_DIR || path.join(process.cwd(), "uploads");
+  if (process.env.UPLOADS_DIR) return process.env.UPLOADS_DIR;
+  // Статический join, чтобы turbopack не трейсил весь проект
+  return path.join(/* turbopackIgnore: true */ process.cwd(), "uploads");
 }
 
 export async function saveUpload(file: File): Promise<{
