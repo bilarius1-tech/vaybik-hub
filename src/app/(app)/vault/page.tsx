@@ -5,13 +5,20 @@ import { toMeta } from "@/server/vault/service";
 import { redirect } from "next/navigation";
 
 export default async function VaultPage() {
+  let totpEnabled = true;
   try {
-    await requireCan("vault.read");
+    const ctx = await requireCan("vault.read");
+    totpEnabled = ctx.user.totpEnabled;
   } catch {
     redirect("/");
   }
   const secrets = await prisma.secret.findMany({
     orderBy: [{ folder: "asc" }, { title: "asc" }],
   });
-  return <VaultPanel initial={JSON.parse(JSON.stringify(secrets.map(toMeta)))} />;
+  return (
+    <VaultPanel
+      initial={JSON.parse(JSON.stringify(secrets.map(toMeta)))}
+      totpEnabled={totpEnabled}
+    />
+  );
 }

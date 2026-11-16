@@ -15,7 +15,8 @@
 ## Фаза 1 — Auth
 - [x] Логин email+пароль (argon2id) → TOTP / резервный код
 - [x] Сессии в БД, cookie Secure*/HttpOnly/SameSite=Strict/Path=/admin
-- [x] Обязательная 2FA для OWNER/ADMIN
+- [x] Обязательная 2FA для OWNER/ADMIN (отключаемо: `REQUIRE_2FA=false`, на проде сейчас false)
+- [x] «Запомнить меня» — сессия `SESSION_REMEMBER_DAYS` (30 дн.), скользящая, cookie с Max-Age; reauth без 2FA — только пароль
 - [x] reauth, rate limit, RBAC, seed:owner, users/profile/activity
 
 ## Фаза 1 — Сервисы и дашборд

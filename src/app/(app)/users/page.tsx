@@ -4,8 +4,10 @@ import { prisma } from "@/server/db";
 import { redirect } from "next/navigation";
 
 export default async function UsersPage() {
+  let totpEnabled = true;
   try {
-    await requireCan("users.manage");
+    const ctx = await requireCan("users.manage");
+    totpEnabled = ctx.user.totpEnabled;
   } catch {
     redirect("/");
   }
@@ -32,6 +34,7 @@ export default async function UsersPage() {
     <UsersPanel
       initialUsers={JSON.parse(JSON.stringify(users))}
       initialInvites={JSON.parse(JSON.stringify(invites))}
+      totpEnabled={totpEnabled}
     />
   );
 }

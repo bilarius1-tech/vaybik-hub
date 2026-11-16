@@ -6,6 +6,7 @@ import {
   isBlocked,
   recordFailure,
 } from "@/server/auth/rate-limit";
+import { needsSetup2fa } from "@/server/auth/policy";
 import { loginSchema } from "@/server/auth/schemas";
 import {
   attachSessionCookie,
@@ -58,13 +59,15 @@ export async function POST(req: NextRequest) {
 
     await clearFailures(keys);
 
-    const needsMandatory2fa = user.role === "OWNER" || user.role === "ADMIN";
+    const remember = body.remember;
 
-    if (!user.totpEnabled && needsMandatory2fa) {
+    // REQUIRE_2FA=false — OWNER/ADMIN без TOTP входят по паролю
+    if (needsSetup2fa(user)) {
       const { token, expiresAt } = await createSession({
         userId: user.id,
         ip,
         userAgent: ua,
+        remember,
       });
       await writeAudit({
         actorId: user.id,
@@ -75,7 +78,7 @@ export async function POST(req: NextRequest) {
         userAgent: ua,
       });
       const res = NextResponse.json({ ok: true, needsSetup2fa: true });
-      attachSessionCookie(res, token, expiresAt);
+      attachSessionCookie(res, token, expiresAt, remember);
       return res;
     }
 
@@ -84,6 +87,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         ip,
         userAgent: ua,
+        remember,
       });
       await prisma.user.update({
         where: { id: user.id },
@@ -94,15 +98,16 @@ export async function POST(req: NextRequest) {
         action: "auth.login",
         entity: "User",
         entityId: user.id,
+        diff: { remember, twoFactor: false },
         ip,
         userAgent: ua,
       });
       const res = NextResponse.json({ ok: true, needs2fa: false });
-      attachSessionCookie(res, token, expiresAt);
+      attachSessionCookie(res, token, expiresAt, remember);
       return res;
     }
 
-    const pendingToken = await createPendingLogin(user.id);
+    const pendingToken = await createPendingLogin(user.id, remember);
     await writeAudit({
       actorId: user.id,
       action: "auth.login_password_ok",

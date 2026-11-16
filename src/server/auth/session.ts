@@ -6,8 +6,8 @@ import {
   PENDING_LOGIN_TTL_MS,
   REAUTH_TTL_MS,
   SESSION_COOKIE,
-  SESSION_TTL_MS,
 } from "@/server/auth/constants";
+import { sessionTtlMs } from "@/server/auth/policy";
 import type { AuthUser } from "@/server/auth/rbac";
 import { sha256Hex } from "@/server/crypto/password";
 import { prisma } from "@/server/db";
@@ -24,24 +24,35 @@ function cookieSecure(): boolean {
   return process.env.NODE_ENV === "production";
 }
 
-export function sessionCookieOptions(expiresAt: Date) {
-  return {
+export function sessionCookieOptions(expiresAt: Date, remember = false) {
+  const base = {
     httpOnly: true,
     secure: cookieSecure(),
     sameSite: "strict" as const,
     path: COOKIE_PATH,
     expires: expiresAt,
   };
+  if (!remember) return base;
+  // «Запомнить меня» — постоянная cookie с явным Max-Age
+  const maxAge = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+  return { ...base, maxAge };
 }
 
 export async function createSession(params: {
   userId: string;
   ip?: string | null;
   userAgent?: string | null;
-}): Promise<{ token: string; expiresAt: Date; sessionId: string }> {
+  remember?: boolean;
+}): Promise<{
+  token: string;
+  expiresAt: Date;
+  sessionId: string;
+  remember: boolean;
+}> {
   const token = newToken();
   const tokenHash = hashSessionToken(token);
-  const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  const remember = !!params.remember;
+  const expiresAt = new Date(Date.now() + sessionTtlMs(remember));
   const sessionId = newToken(16);
 
   await prisma.session.create({
@@ -51,11 +62,12 @@ export async function createSession(params: {
       tokenHash,
       ip: params.ip ?? null,
       userAgent: params.userAgent ?? null,
+      remember,
       expiresAt,
     },
   });
 
-  return { token, expiresAt, sessionId };
+  return { token, expiresAt, sessionId, remember };
 }
 
 export async function destroySessionByToken(token: string): Promise<void> {
@@ -102,14 +114,24 @@ export async function resolveSession(
   }
   if (session.user.isBlocked) return null;
 
-  // Скользящее продление: если осталось < 6 ч — продлить до 12 ч
+  // Скользящее продление: если осталась < половины срока — продлить на полный срок
+  // (12 ч или SESSION_REMEMBER_DAYS при «Запомнить меня»)
+  const ttl = sessionTtlMs(session.remember);
   const remaining = session.expiresAt.getTime() - Date.now();
-  if (remaining < SESSION_TTL_MS / 2) {
-    const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
+  if (remaining < ttl / 2) {
+    const expiresAt = new Date(Date.now() + ttl);
     await prisma.session.update({
       where: { id: session.id },
       data: { expiresAt },
     });
+    // Обновить cookie, если контекст позволяет (route handler / server action);
+    // в server component запись cookie запрещена — молча пропускаем.
+    try {
+      const jar = await cookies();
+      jar.set(SESSION_COOKIE, token, sessionCookieOptions(expiresAt, session.remember));
+    } catch {
+      /* read-only context */
+    }
   }
 
   return {
@@ -134,8 +156,9 @@ export function attachSessionCookie(
   res: NextResponse,
   token: string,
   expiresAt: Date,
+  remember = false,
 ): void {
-  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(expiresAt));
+  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions(expiresAt, remember));
 }
 
 export function clearSessionCookie(res: NextResponse): void {
@@ -145,11 +168,15 @@ export function clearSessionCookie(res: NextResponse): void {
   });
 }
 
-export async function createPendingLogin(userId: string): Promise<string> {
+export async function createPendingLogin(
+  userId: string,
+  remember = false,
+): Promise<string> {
   const token = newToken();
   await prisma.pendingLogin.create({
     data: {
       userId,
+      remember,
       tokenHash: hashSessionToken(token),
       expiresAt: new Date(Date.now() + PENDING_LOGIN_TTL_MS),
     },
@@ -162,7 +189,9 @@ export async function consumePendingLogin(token: string) {
   const pending = await prisma.pendingLogin.findUnique({ where: { tokenHash } });
   if (!pending || pending.expiresAt <= new Date()) {
     if (pending) {
-      await prisma.pendingLogin.delete({ where: { id: pending.id } }).catch(() => undefined);
+      await prisma.pendingLogin
+        .delete({ where: { id: pending.id } })
+        .catch(() => undefined);
     }
     return null;
   }

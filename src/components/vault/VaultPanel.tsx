@@ -23,7 +23,14 @@ type Meta = {
   updatedAt: string;
 };
 
-export function VaultPanel({ initial }: { initial: Meta[] }) {
+export function VaultPanel({
+  initial,
+  totpEnabled = true,
+}: {
+  initial: Meta[];
+  /** Без 2FA повторная аутентификация — только паролем */
+  totpEnabled?: boolean;
+}) {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [kind, setKind] = useState("login");
@@ -119,7 +126,7 @@ export function VaultPanel({ initial }: { initial: Meta[] }) {
 
   return (
     <div className="space-y-6">
-      <h2 className="mt-[10px] text-[16.5px] font-extrabold text-tx">Доступы</h2>
+      <h2 className="text-tx mt-[10px] text-[16.5px] font-extrabold">Доступы</h2>
 
       <Card>
         <CardHeader
@@ -135,13 +142,15 @@ export function VaultPanel({ initial }: { initial: Meta[] }) {
               onChange={(e) => setReauthPassword(e.target.value)}
             />
           </Field>
-          <Field label="TOTP" htmlFor="vc">
-            <Input
-              id="vc"
-              value={reauthCode}
-              onChange={(e) => setReauthCode(e.target.value)}
-            />
-          </Field>
+          {totpEnabled ? (
+            <Field label="TOTP" htmlFor="vc">
+              <Input
+                id="vc"
+                value={reauthCode}
+                onChange={(e) => setReauthCode(e.target.value)}
+              />
+            </Field>
+          ) : null}
         </div>
       </Card>
 
@@ -162,7 +171,11 @@ export function VaultPanel({ initial }: { initial: Meta[] }) {
             </Select>
           </Field>
           <Field label="Логин" htmlFor="u">
-            <Input id="u" value={username} onChange={(e) => setUsername(e.target.value)} />
+            <Input
+              id="u"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
           </Field>
           <Field label="Папка" htmlFor="f">
             <Input id="f" value={folder} onChange={(e) => setFolder(e.target.value)} />
@@ -197,18 +210,21 @@ export function VaultPanel({ initial }: { initial: Meta[] }) {
           </Button>
           <Button onClick={() => void create()}>Сохранить</Button>
         </div>
-        {msg ? <p className="mt-2 text-[13px] text-gr">{msg}</p> : null}
-        {err ? <p className="mt-2 text-[13px] text-rd">{err}</p> : null}
+        {msg ? <p className="text-gr mt-2 text-[13px]">{msg}</p> : null}
+        {err ? <p className="text-rd mt-2 text-[13px]">{err}</p> : null}
       </Card>
 
       {revealed ? (
         <Card>
-          <CardHeader title={`Секреты: ${revealTitle}`} subtitle="автоочистка через 30 с" />
+          <CardHeader
+            title={`Секреты: ${revealTitle}`}
+            subtitle="автоочистка через 30 с"
+          />
           <ul className="space-y-2 text-[13px]">
             {Object.entries(revealed).map(([k, v]) => (
               <li key={k} className="flex items-center justify-between gap-2">
                 <span className="text-mu">{k}</span>
-                <code className="rounded bg-bg2 px-2 py-1">{String(v)}</code>
+                <code className="bg-bg2 rounded px-2 py-1">{String(v)}</code>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -238,8 +254,7 @@ export function VaultPanel({ initial }: { initial: Meta[] }) {
             {
               key: "tags",
               header: "Теги",
-              render: (r) =>
-                r.tags.length ? r.tags.join(", ") : "—",
+              render: (r) => (r.tags.length ? r.tags.join(", ") : "—"),
             },
             { key: "u", header: "Логин", render: (r) => r.username || "—" },
             {

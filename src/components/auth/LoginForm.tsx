@@ -11,6 +11,7 @@ export function LoginForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,7 +25,7 @@ export function LoginForm() {
       pendingToken?: string;
     }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember }),
     });
     setLoading(false);
     if (res.error) {
@@ -69,9 +70,16 @@ export function LoginForm() {
             onChange={(e) => setPassword(e.target.value)}
           />
         </Field>
-        {error ? (
-          <p className="mt-3 text-[13px] font-semibold text-rd">{error}</p>
-        ) : null}
+        <label className="text-tx mt-3 flex items-center gap-2 text-[13px]">
+          <input
+            id="remember"
+            type="checkbox"
+            checked={remember}
+            onChange={(e) => setRemember(e.target.checked)}
+          />
+          Запомнить меня
+        </label>
+        {error ? <p className="text-rd mt-3 text-[13px] font-semibold">{error}</p> : null}
         <div className="mt-4">
           <Button type="submit" className="w-full" disabled={loading}>
             {loading ? "Входим…" : "Войти"}

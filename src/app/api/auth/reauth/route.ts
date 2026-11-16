@@ -2,11 +2,7 @@ import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
 import { AuthError } from "@/server/auth/require";
 import { reauthSchema } from "@/server/auth/schemas";
-import {
-  readSessionToken,
-  resolveSession,
-  setReauthUntil,
-} from "@/server/auth/session";
+import { readSessionToken, resolveSession, setReauthUntil } from "@/server/auth/session";
 import { decryptString } from "@/server/crypto/envelope";
 import { verifyPassword } from "@/server/crypto/password";
 import { verifyTotp } from "@/server/crypto/totp";
@@ -23,13 +19,14 @@ export async function POST(req: NextRequest) {
     if (!ctx) throw new AuthError("Требуется вход", 401, "UNAUTHORIZED");
 
     const user = await prisma.user.findUnique({ where: { id: ctx.user.id } });
-    if (!user?.totpSecretEnc || !user.totpEnabled) {
-      return jsonError("NO_2FA", "Сначала настройте 2FA", 400);
-    }
+    if (!user) throw new AuthError("Требуется вход", 401, "UNAUTHORIZED");
 
+    // С включённой 2FA — пароль + TOTP; без 2FA — только пароль
     const passOk = await verifyPassword(user.passwordHash, body.password);
-    const secret = decryptString(user.totpSecretEnc);
-    const totpOk = verifyTotp(secret, body.code);
+    const has2fa = user.totpEnabled && !!user.totpSecretEnc;
+    const totpOk = has2fa
+      ? verifyTotp(decryptString(user.totpSecretEnc!), body.code)
+      : true;
     if (!passOk || !totpOk) {
       await writeAudit({
         actorId: user.id,
@@ -39,7 +36,11 @@ export async function POST(req: NextRequest) {
         ip: clientIp(req),
         userAgent: userAgent(req),
       });
-      return jsonError("INVALID", "Неверный пароль или код", 401);
+      return jsonError(
+        "INVALID",
+        has2fa ? "Неверный пароль или код" : "Неверный пароль",
+        401,
+      );
     }
 
     const reauthUntil = await setReauthUntil(ctx.sessionId);

@@ -7,11 +7,7 @@ import {
   createSession,
 } from "@/server/auth/session";
 import { decryptString } from "@/server/crypto/envelope";
-import {
-  hashBackupCode,
-  normalizeBackupCode,
-  verifyTotp,
-} from "@/server/crypto/totp";
+import { hashBackupCode, normalizeBackupCode, verifyTotp } from "@/server/crypto/totp";
 import { prisma } from "@/server/db";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError } from "@/server/http/response";
@@ -67,10 +63,11 @@ export async function POST(req: NextRequest) {
       return jsonError("INVALID_2FA", "Неверный код", 401);
     }
 
-    const { token, expiresAt } = await createSession({
+    const { token, expiresAt, remember } = await createSession({
       userId: user.id,
       ip,
       userAgent: ua,
+      remember: pending.remember,
     });
     await prisma.user.update({
       where: { id: user.id },
@@ -86,7 +83,7 @@ export async function POST(req: NextRequest) {
     });
 
     const res = NextResponse.json({ ok: true });
-    attachSessionCookie(res, token, expiresAt);
+    attachSessionCookie(res, token, expiresAt, remember);
     return res;
   } catch (err) {
     return handleRouteError(err);

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
@@ -27,13 +28,7 @@ type Props = {
   initialSessions: SessionRow[];
 };
 
-export function ProfilePanel({
-  email,
-  name,
-  role,
-  totpEnabled,
-  initialSessions,
-}: Props) {
+export function ProfilePanel({ email, name, role, totpEnabled, initialSessions }: Props) {
   const router = useRouter();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -67,9 +62,7 @@ export function ProfilePanel({
 
   return (
     <div className="space-y-6">
-      <h2 className="mb-3 mt-[10px] text-[16.5px] font-extrabold text-tx">
-        Профиль
-      </h2>
+      <h2 className="text-tx mt-[10px] mb-3 text-[16.5px] font-extrabold">Профиль</h2>
       <Card>
         <CardHeader title={name || email} subtitle={email} />
         <div className="flex flex-wrap gap-2">
@@ -78,6 +71,13 @@ export function ProfilePanel({
             2FA: {totpEnabled ? "вкл" : "выкл"}
           </Pill>
         </div>
+        {!totpEnabled ? (
+          <p className="mt-3 text-[13px]">
+            <Link href="/setup-2fa" className="text-ac font-semibold underline">
+              Включить вход по коду из приложения (2FA)
+            </Link>
+          </p>
+        ) : null}
       </Card>
 
       <Card>
@@ -102,8 +102,8 @@ export function ProfilePanel({
               onChange={(e) => setNewPassword(e.target.value)}
             />
           </Field>
-          {err ? <p className="mt-2 text-[13px] text-rd">{err}</p> : null}
-          {msg ? <p className="mt-2 text-[13px] text-gr">{msg}</p> : null}
+          {err ? <p className="text-rd mt-2 text-[13px]">{err}</p> : null}
+          {msg ? <p className="text-gr mt-2 text-[13px]">{msg}</p> : null}
           <div className="mt-4">
             <Button type="submit">Сменить пароль</Button>
           </div>
@@ -121,8 +121,7 @@ export function ProfilePanel({
               header: "IP",
               render: (r) => (
                 <span>
-                  {r.ip || "—"}{" "}
-                  {r.current ? <Pill tone="accent">эта</Pill> : null}
+                  {r.ip || "—"} {r.current ? <Pill tone="accent">эта</Pill> : null}
                 </span>
               ),
             },
@@ -130,7 +129,7 @@ export function ProfilePanel({
               key: "ua",
               header: "Клиент",
               render: (r) => (
-                <span className="line-clamp-1 max-w-[280px] text-mu">
+                <span className="text-mu line-clamp-1 max-w-[280px]">
                   {r.userAgent || "—"}
                 </span>
               ),
@@ -145,11 +144,7 @@ export function ProfilePanel({
               header: "",
               render: (r) =>
                 r.current ? null : (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => void revoke(r.id)}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => void revoke(r.id)}>
                     Завершить
                   </Button>
                 ),

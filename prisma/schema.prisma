@@ -38,6 +38,8 @@ model Session {
   ip          String?
   userAgent   String?
   reauthUntil DateTime?
+  /// «Запомнить меня»: срок SESSION_REMEMBER_DAYS вместо 12 ч
+  remember    Boolean   @default(false)
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
 }
@@ -65,6 +67,7 @@ model PendingLogin {
   id        String   @id @default(cuid())
   userId    String
   tokenHash String   @unique
+  remember  Boolean  @default(false)
   expiresAt DateTime
   createdAt DateTime @default(now())
 }

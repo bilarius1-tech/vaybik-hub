@@ -1,8 +1,13 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.string().email("Некорректный email").transform((v) => v.toLowerCase()),
+  email: z
+    .string()
+    .email("Некорректный email")
+    .transform((v) => v.toLowerCase()),
   password: z.string().min(1, "Введите пароль"),
+  /** «Запомнить меня» — долгая сессия (SESSION_REMEMBER_DAYS) */
+  remember: z.boolean().optional().default(false),
 });
 
 export const twoFaSchema = z.object({
@@ -12,7 +17,8 @@ export const twoFaSchema = z.object({
 
 export const reauthSchema = z.object({
   password: z.string().min(1),
-  code: z.string().min(6).max(20),
+  /** Обязателен, только если у пользователя включена 2FA */
+  code: z.string().max(20).optional().default(""),
 });
 
 export const setup2faConfirmSchema = z.object({
@@ -26,7 +32,10 @@ export const changePasswordSchema = z.object({
 });
 
 export const inviteSchema = z.object({
-  email: z.string().email().transform((v) => v.toLowerCase()),
+  email: z
+    .string()
+    .email()
+    .transform((v) => v.toLowerCase()),
   role: z.enum(["ADMIN", "PARTNER", "OWNER"]),
 });
 

@@ -1,6 +1,8 @@
 /**
- * Интерактивное создание первого owner.
- * Запуск: npm run seed:owner
+ * Создание первого owner.
+ * Интерактивно: npm run seed:owner
+ * Без вопросов: SEED_EMAIL=… SEED_PASSWORD=… [SEED_NAME=…] npm run seed:owner
+ * (пароль лучше передавать через файл/окружение, а не в истории shell)
  */
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
@@ -18,11 +20,18 @@ async function main() {
     process.exit(1);
   }
 
-  const rl = createInterface({ input, output });
+  const nonInteractive = !!(process.env.SEED_EMAIL && process.env.SEED_PASSWORD);
+  const rl = nonInteractive ? null : createInterface({ input, output });
   try {
-    const email = (await ask(rl, "Email owner: ")).toLowerCase();
-    const name = await ask(rl, "Имя (опц.): ");
-    const password = await ask(rl, "Пароль (≥ 12): ");
+    const email = (
+      nonInteractive ? process.env.SEED_EMAIL!.trim() : await ask(rl!, "Email owner: ")
+    ).toLowerCase();
+    const name = nonInteractive
+      ? (process.env.SEED_NAME ?? "").trim()
+      : await ask(rl!, "Имя (опц.): ");
+    const password = nonInteractive
+      ? process.env.SEED_PASSWORD!
+      : await ask(rl!, "Пароль (≥ 12): ");
     if (!email || password.length < 12) {
       console.error("Нужны email и пароль ≥ 12 символов");
       process.exit(1);
@@ -37,9 +46,13 @@ async function main() {
       },
     });
     console.log(`Создан owner ${user.email} (${user.id})`);
-    console.log("При первом входе потребуется настройка 2FA.");
+    if (
+      !["false", "0", "no", "off"].includes((process.env.REQUIRE_2FA ?? "").toLowerCase())
+    ) {
+      console.log("При первом входе потребуется настройка 2FA.");
+    }
   } finally {
-    rl.close();
+    rl?.close();
     await prisma.$disconnect();
   }
 }

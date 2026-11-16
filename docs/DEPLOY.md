@@ -108,7 +108,11 @@ docker compose logs -f app --tail=100
 docker compose exec -it app npx tsx scripts/seed-owner.ts
 ```
 
-Введите email и пароль (≥ 12 символов). При первом входе на `https://vaybik.ru/admin` обязательна настройка 2FA — без неё дальше setup-2fa не пустит.
+Введите email и пароль (≥ 12 символов). При первом входе на `https://vaybik.ru/admin` обязательна настройка 2FA — без неё дальше setup-2fa не пустит (если `REQUIRE_2FA=false` — 2FA по желанию, включается в профиле).
+
+Без вопросов (например, из скрипта): `docker compose exec -e SEED_EMAIL=… -e SEED_PASSWORD=… app npx tsx scripts/seed-owner.ts`.
+
+Вход: `REQUIRE_2FA` (true/false) и `SESSION_REMEMBER_DAYS` (по умолчанию 30) в `.env`; после изменения — `docker compose up -d`.
 
 ## 6. Проверка
 

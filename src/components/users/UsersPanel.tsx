@@ -32,9 +32,11 @@ type InviteRow = {
 type Props = {
   initialUsers: UserRow[];
   initialInvites: InviteRow[];
+  /** Без 2FA повторная аутентификация — только паролем */
+  totpEnabled?: boolean;
 };
 
-export function UsersPanel({ initialUsers, initialInvites }: Props) {
+export function UsersPanel({ initialUsers, initialInvites, totpEnabled = true }: Props) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("ADMIN");
@@ -89,7 +91,7 @@ export function UsersPanel({ initialUsers, initialInvites }: Props) {
 
   return (
     <div className="space-y-6">
-      <h2 className="mb-3 mt-[10px] text-[16.5px] font-extrabold text-tx">
+      <h2 className="text-tx mt-[10px] mb-3 text-[16.5px] font-extrabold">
         Пользователи
       </h2>
 
@@ -107,16 +109,18 @@ export function UsersPanel({ initialUsers, initialInvites }: Props) {
               onChange={(e) => setReauthPassword(e.target.value)}
             />
           </Field>
-          <Field label="TOTP" htmlFor="rc">
-            <Input
-              id="rc"
-              value={reauthCode}
-              onChange={(e) => setReauthCode(e.target.value)}
-            />
-          </Field>
+          {totpEnabled ? (
+            <Field label="TOTP" htmlFor="rc">
+              <Input
+                id="rc"
+                value={reauthCode}
+                onChange={(e) => setReauthCode(e.target.value)}
+              />
+            </Field>
+          ) : null}
         </div>
-        {msg ? <p className="mt-2 text-[13px] text-gr">{msg}</p> : null}
-        {err ? <p className="mt-2 text-[13px] text-rd">{err}</p> : null}
+        {msg ? <p className="text-gr mt-2 text-[13px]">{msg}</p> : null}
+        {err ? <p className="text-rd mt-2 text-[13px]">{err}</p> : null}
       </Card>
 
       <Card>
@@ -131,11 +135,7 @@ export function UsersPanel({ initialUsers, initialInvites }: Props) {
             />
           </Field>
           <Field label="Роль" htmlFor="inv-role">
-            <Select
-              id="inv-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
-            >
+            <Select id="inv-role" value={role} onChange={(e) => setRole(e.target.value)}>
               <option value="ADMIN">ADMIN</option>
               <option value="PARTNER">PARTNER</option>
               <option value="OWNER">OWNER</option>
@@ -144,7 +144,7 @@ export function UsersPanel({ initialUsers, initialInvites }: Props) {
           <Button onClick={() => void createInvite()}>Создать ссылку</Button>
         </div>
         {inviteLink ? (
-          <p className="mt-3 break-all text-[12.5px] text-ac">{inviteLink}</p>
+          <p className="text-ac mt-3 text-[12.5px] break-all">{inviteLink}</p>
         ) : null}
       </Card>
 
@@ -177,8 +177,7 @@ export function UsersPanel({ initialUsers, initialInvites }: Props) {
             {
               key: "login",
               header: "Вход",
-              render: (r) =>
-                r.lastLoginAt ? formatDateTime(r.lastLoginAt) : "—",
+              render: (r) => (r.lastLoginAt ? formatDateTime(r.lastLoginAt) : "—"),
             },
             {
               key: "actions",
