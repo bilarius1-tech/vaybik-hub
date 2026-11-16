@@ -2,12 +2,15 @@
 
 import { NAV_ITEMS, SIDEFOOT_ROWS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
+import { api } from "@/lib/api-client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 type Props = {
   open: boolean;
   onNavigate?: () => void;
+  userEmail?: string;
+  userRole?: string;
 };
 
 function isActive(pathname: string, href: string): boolean {
@@ -15,8 +18,20 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ open, onNavigate }: Props) {
+export function Sidebar({ open, onNavigate, userEmail, userRole }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const items =
+    userRole === "PARTNER"
+      ? NAV_ITEMS.filter((i) => i.href === "/" || i.href === "/profile")
+      : NAV_ITEMS;
+
+  async function logout() {
+    await api("/api/auth/logout", { method: "POST", body: "{}" });
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <aside
@@ -43,7 +58,7 @@ export function Sidebar({ open, onNavigate }: Props) {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto" aria-label="Основное меню">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const active = isActive(pathname, item.href);
           return (
             <Link
@@ -70,18 +85,42 @@ export function Sidebar({ open, onNavigate }: Props) {
             </Link>
           );
         })}
+        <Link
+          href="/profile"
+          onClick={onNavigate}
+          className={cn(
+            "flex items-center gap-2.5 rounded-md px-3 py-[9px] text-[13.5px] font-semibold text-mu hover:bg-card hover:text-tx",
+            isActive(pathname, "/profile") &&
+              "border border-[color-mix(in_srgb,var(--ac)_27%,transparent)] bg-gradient-to-r from-[color-mix(in_srgb,var(--ac)_15%,transparent)] to-transparent text-tx",
+          )}
+        >
+          <span className="inline-flex w-[18px] justify-center">◉</span>
+          Профиль
+        </Link>
       </nav>
 
-      <div className="rounded-xl border border-bd bg-card p-3">
-        {SIDEFOOT_ROWS.map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between gap-2 py-1 text-[12px]"
-          >
-            <span className="text-mu">{row.label}</span>
-            <span className="font-bold text-tx">{row.value}</span>
-          </div>
-        ))}
+      <div className="space-y-2">
+        {userEmail ? (
+          <div className="truncate px-1 text-[11.5px] text-mu">{userEmail}</div>
+        ) : null}
+        <button
+          type="button"
+          onClick={() => void logout()}
+          className="w-full rounded-md border border-bd bg-card px-3 py-2 text-left text-[12.5px] font-semibold text-mu hover:text-tx"
+        >
+          Выйти
+        </button>
+        <div className="rounded-xl border border-bd bg-card p-3">
+          {SIDEFOOT_ROWS.map((row) => (
+            <div
+              key={row.label}
+              className="flex items-center justify-between gap-2 py-1 text-[12px]"
+            >
+              <span className="text-mu">{row.label}</span>
+              <span className="font-bold text-tx">{row.value}</span>
+            </div>
+          ))}
+        </div>
       </div>
     </aside>
   );
