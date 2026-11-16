@@ -9,6 +9,10 @@
 # Не трогает: Traefik, acme.json, VPN, firewall, .env прода (только читает имя проекта).
 set -euo pipefail
 
+# Не наследовать DOCKER_HOST/POSTGRES_* из shell или dev-.env —
+# иначе `docker compose` ходит не туда / подставляет чужой пароль в DATABASE_URL.
+unset DOCKER_HOST POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DATABASE_URL || true
+
 PROD_DIR="${PROD_DIR:-/opt/apps/vaybik-hub}"
 DEV_DIR="${DEV_DIR:-/opt/vaybik-hub}"
 IMAGE="vaybik-hub-prod"
