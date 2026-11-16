@@ -1,7 +1,8 @@
 /**
- * Фоновый worker (pg-boss): health-checks, метрики сервера, агрегация, Telegram.
+ * Фоновый worker (pg-boss): health-checks, метрики сервера, агрегация, бэкапы, Telegram.
  */
 import { PgBoss } from "pg-boss";
+import { runAdminBackup } from "@/server/backup/run";
 import { prisma } from "@/server/db";
 import {
   aggregateOldHealthChecks,
@@ -30,10 +31,12 @@ async function main() {
   await boss.createQueue("health-checks");
   await boss.createQueue("server-metrics");
   await boss.createQueue("maintenance");
+  await boss.createQueue("admin-backup");
 
   await boss.schedule("health-checks", "*/1 * * * *", {}, { tz: "Europe/Moscow" });
   await boss.schedule("server-metrics", "*/1 * * * *", {}, { tz: "Europe/Moscow" });
   await boss.schedule("maintenance", "15 3 * * *", {}, { tz: "Europe/Moscow" });
+  await boss.schedule("admin-backup", "0 3 * * *", {}, { tz: "Europe/Moscow" });
 
   await boss.work("health-checks", async () => {
     const n = await checkAllDueServices();
@@ -65,6 +68,18 @@ async function main() {
     const a = await aggregateOldHealthChecks();
     const p = await pruneOldServerMetrics();
     console.log(`[worker] maintenance: aggregated=${a} prunedMetrics=${p}`);
+  });
+
+  await boss.work("admin-backup", async () => {
+    try {
+      const r = await runAdminBackup();
+      console.log(
+        `[worker] backup id=${r.id} pruned=${r.pruned} db=${r.dbFile}`,
+      );
+    } catch (err) {
+      console.error("[worker] backup failed", err);
+      throw err;
+    }
   });
 
   const shutdown = async () => {
