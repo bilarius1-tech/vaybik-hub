@@ -12,16 +12,26 @@
 - [x] GitHub Actions CI (lint, typecheck, test, build + postgres)
 - [x] `docs/progress.md` с чек-листом
 
+## Фаза 1 — Auth (часть)
+- [x] Логин email+пароль (argon2id) → TOTP / резервный код
+- [x] Сессии в БД (SHA-256 токена), cookie Secure*/HttpOnly/SameSite=Strict/Path=/admin, 12 ч скользящий
+- [x] Обязательная 2FA для OWNER/ADMIN (QR + 10 резервных кодов)
+- [x] reauth + `requireReauth()`
+- [x] Rate limit / блокировка 5 попыток на 15 мин (email + IP)
+- [x] Middleware защиты, `requireRole()` / `can()`
+- [x] `npm run seed:owner` (интерактивно)
+- [x] `/admin/users` (приглашения 48 ч, роли, блок), `/admin/profile`, `/admin/activity`
+- [x] AuditLog + Origin-check + security headers
+- [x] Unit + e2e (вход 2FA, выход, блокировка)
+- [ ] Дашборд / сервисы / vault / SEO / деплой-пакет
+
 ## Фазы
 - [x] Фаза 0 — каркас
-- [ ] Фаза 1 — MVP (auth+2FA, layout, дашборд, сервисы, vault, SEO, деплой-пакет)
+- [ ] Фаза 1 — MVP (auth✓, layout, дашборд, сервисы, vault, SEO, деплой-пакет)
 - [ ] Фаза 2 — Docker
 - [ ] Фаза 3 — БД и бэкапы
 - [ ] Фаза 4 — партнёры
 - [ ] Фаза 5 — публичный хаб (опц.)
-
-## Открытые вопросы
-_(закрыты 16.11.2026)_
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)
@@ -29,3 +39,5 @@ _(закрыты 16.11.2026)_
 - Certresolver: `le`
 - Редирект http→https: middleware `to-https@docker`
 - Тема: вариант **A** (`NEXT_PUBLIC_THEME_VARIANT=A`)
+
+\* Secure cookie включается при `NODE_ENV=production` (локальный http иначе не примет cookie).

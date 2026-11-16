@@ -17,16 +17,17 @@
 4. Скопировать **Промпт 1** из [`docs/PROMPTS.md`](docs/PROMPTS.md) и отправить. Агент соберёт каркас (Фаза 0).
 5. Проверить результат по критериям из `docs/TZ.md` §11, затем запускать следующий промпт.
 
-## Локальный запуск (Фаза 0 готова)
+## Локальный запуск (Фаза 0 + Auth)
 ```bash
-cp .env.example .env   # заполнить POSTGRES_PASSWORD и DATABASE_URL
+cp .env.example .env   # POSTGRES_*, DATABASE_URL, SESSION_SECRET, VAULT_MASTER_KEY
 docker compose -f docker-compose.dev.yml up -d
 npm install && npx prisma migrate dev
+npm run seed:owner     # интерактивно: email + пароль (≥ 12)
 npm run dev            # http://127.0.0.1:3000/admin (только localhost)
-# npm run seed:owner   # появится в Фазе 1
-# npm run worker       # заглушка; задачи — с Фазы 1
+# npm run worker       # заглушка; задачи — дальше в Фазе 1
 ```
-Витрина UI-компонентов (только dev): http://127.0.0.1:3000/admin/ui
+После входа OWNER/ADMIN обязана настройка 2FA (`/admin/setup-2fa`).  
+Витрина UI (dev, после входа): http://127.0.0.1:3000/admin/ui
 
 Проверки: `npm run lint && npm run typecheck && npm test` · e2e: `npx playwright install chromium && npm run test:e2e`
 
