@@ -28,11 +28,29 @@
 - [x] `GET /admin/api/public/services`, `/admin/api/health`
 - [x] Сид демо-сервисов (vaybik, region, chat/lead не развёрнуты)
 - [x] Unit (checker/SSRF/labels) + e2e создать сервис
-- [ ] Vault / SEO / деплой-пакет
+
+## Фаза 1 — Vault
+- [x] Модель Secret, envelope AES-256-GCM (DEK + VAULT_MASTER_KEY), keyVersion
+- [x] CRUD / список без секретов, reveal после reauth, автоочистка буфера 30 с
+- [x] Генератор паролей, папки и теги, аудит раскрытий
+- [x] `npm run vault:rotate`, Telegram-токен из vault (фолбэк env)
+- [x] Тесты: нет plaintext в dataEnc; reveal без reauth → 401
+
+## Фаза 1 — SEO
+- [x] Модель SeoPage, CRUD, превью сниппета и OG (CalcCard-стиль), счётчики длины
+- [x] JSON-LD, ID Вебмастера/Метрики/GSC в Setting
+- [x] Публичные `/api/public/sitemap.xml`, `/api/public/robots.txt`
+- [x] «Проверить страницу» с SSRF-защитой
+
+## Фаза 1 — Настройки Вайбика
+- [x] Бренд (название, слоган, логотип, фавикон, тема A/B/C)
+- [x] Контент блоков публичного сайта, контакты
+- [x] Загрузка файлов (MIME/размер), `GET /api/public/site` с кешем
+- [ ] Деплой-пакет (Dockerfile, compose prod, DEPLOY.md)
 
 ## Фазы
 - [x] Фаза 0 — каркас
-- [ ] Фаза 1 — MVP (auth✓, сервисы+дашборд✓, vault, SEO, деплой-пакет)
+- [ ] Фаза 1 — MVP (auth✓, сервисы+дашборд✓, vault✓, SEO✓, настройки✓, деплой-пакет)
 - [ ] Фаза 2 — Docker
 - [ ] Фаза 3 — БД и бэкапы
 - [ ] Фаза 4 — партнёры
