@@ -59,6 +59,14 @@ services:
       NODE_ENV: production
       APP_ENV: prod
     command: ["node", "worker.cjs"]
+    # Образ наследует HEALTHCHECK app (curl :3000), а worker HTTP не слушает —
+    # проверяем, что процесс worker жив (PID 1) и БД доступна.
+    healthcheck:
+      test: ["CMD-SHELL", "grep -q worker.cjs /proc/1/cmdline && pg_isready -h postgres -U $$POSTGRES_USER -q"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
     depends_on:
       postgres:
         condition: service_healthy
