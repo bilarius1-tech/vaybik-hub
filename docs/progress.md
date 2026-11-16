@@ -21,5 +21,11 @@
 - [ ] Фаза 5 — публичный хаб (опц.)
 
 ## Открытые вопросы
-- Имя внешней сети Traefik, entrypoint и certresolver на сервере (уточнить у Алексея).
-- Вариант темы A/B/C (по умолчанию A; переключается на `/admin/ui` и через `NEXT_PUBLIC_THEME_VARIANT`).
+_(закрыты 16.11.2026)_
+
+## Факты сервера (Traefik / тема)
+- Внешняя сеть Traefik: `proxy` (external)
+- Entrypoints: `websecure` (https), `web` (http)
+- Certresolver: `le`
+- Редирект http→https: middleware `to-https@docker`
+- Тема: вариант **A** (`NEXT_PUBLIC_THEME_VARIANT=A`)

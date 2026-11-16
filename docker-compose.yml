@@ -7,15 +7,22 @@ services:
     restart: unless-stopped
     env_file: .env
     depends_on: [postgres]
-    networks: [internal, traefik]
+    networks: [internal, proxy]
     labels:
       - traefik.enable=true
-      - traefik.docker.network=${TRAEFIK_NETWORK}
-      - traefik.http.routers.vaybik-admin.rule=Host(`${TRAEFIK_ADMIN_HOST}`) && PathPrefix(`/admin`)
-      - traefik.http.routers.vaybik-admin.entrypoints=${TRAEFIK_ENTRYPOINT}
-      - traefik.http.routers.vaybik-admin.tls.certresolver=${TRAEFIK_CERTRESOLVER}
+      - traefik.docker.network=${TRAEFIK_NETWORK:-proxy}
+      # HTTPS
+      - traefik.http.routers.vaybik-admin.rule=Host(`${TRAEFIK_ADMIN_HOST:-vaybik.ru}`) && PathPrefix(`/admin`)
+      - traefik.http.routers.vaybik-admin.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
+      - traefik.http.routers.vaybik-admin.tls.certresolver=${TRAEFIK_CERTRESOLVER:-le}
       - traefik.http.routers.vaybik-admin.priority=100
       - traefik.http.services.vaybik-admin.loadbalancer.server.port=3000
+      # HTTP → HTTPS (middleware уже есть на сервере: to-https@docker)
+      - traefik.http.routers.vaybik-admin-http.rule=Host(`${TRAEFIK_ADMIN_HOST:-vaybik.ru}`) && PathPrefix(`/admin`)
+      - traefik.http.routers.vaybik-admin-http.entrypoints=${TRAEFIK_ENTRYPOINT_HTTP:-web}
+      - traefik.http.routers.vaybik-admin-http.middlewares=${TRAEFIK_HTTPS_REDIRECT_MIDDLEWARE:-to-https@docker}
+      - traefik.http.routers.vaybik-admin-http.priority=100
+      - traefik.http.routers.vaybik-admin-http.service=vaybik-admin
 
   worker:
     image: vaybik-hub:latest
@@ -53,9 +60,9 @@ services:
 networks:
   internal:
     internal: true
-  traefik:
+  proxy:
     external: true
-    name: ${TRAEFIK_NETWORK}
+    name: ${TRAEFIK_NETWORK:-proxy}
 
 volumes:
   pgdata:
