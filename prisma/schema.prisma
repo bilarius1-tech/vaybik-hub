@@ -14,18 +14,19 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
+  id            String       @id @default(cuid())
+  email         String       @unique
   name          String?
   passwordHash  String
-  role          Role      @default(ADMIN)
+  role          Role         @default(ADMIN)
   totpSecretEnc String?
-  totpEnabled   Boolean   @default(false)
+  totpEnabled   Boolean      @default(false)
   /// Связь с Partner появится в Фазе 4
   partnerId     String?
-  isBlocked     Boolean   @default(false)
+  isBlocked     Boolean      @default(false)
   sessions      Session[]
-  createdAt     DateTime  @default(now())
+  backupCodes   BackupCode[]
+  createdAt     DateTime     @default(now())
   lastLoginAt   DateTime?
 }
 
@@ -39,6 +40,42 @@ model Session {
   reauthUntil DateTime?
   expiresAt   DateTime
   createdAt   DateTime  @default(now())
+}
+
+model BackupCode {
+  id       String    @id @default(cuid())
+  userId   String
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash String
+  usedAt   DateTime?
+}
+
+model Invite {
+  id        String    @id @default(cuid())
+  email     String
+  role      Role
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+  createdBy String?
+}
+
+model PendingLogin {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+/// Счётчик неудачных попыток входа (ключ = email:... или ip:...)
+model LoginAttempt {
+  id           String    @id @default(cuid())
+  key          String    @unique
+  failedCount  Int       @default(0)
+  blockedUntil DateTime?
+  updatedAt    DateTime  @updatedAt
 }
 
 model Setting {
@@ -61,4 +98,6 @@ model AuditLog {
 
   @@index([createdAt])
   @@index([entity, entityId])
+  @@index([actorId])
+  @@index([action])
 }
