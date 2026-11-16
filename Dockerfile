@@ -21,8 +21,8 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev \
-  && npm install tsx@4.23.15 --omit=dev
+# tsx — в dependencies (нужен для seed-owner / backup-скриптов в проде)
+RUN npm ci --omit=dev
 
 FROM deps AS builder
 WORKDIR /app
@@ -53,7 +53,7 @@ RUN apt-get update \
     postgresql-client \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --system --gid 1001 nodejs \
-  && useradd --system --uid 1001 --gid nodejs nextjs
+  && useradd --system --uid 1001 --gid nodejs --create-home nextjs
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
