@@ -22,7 +22,7 @@
 - [x] Модели Service, HealthCheck, ServerMetric, NotificationRule (+ throttle)
 - [x] CRUD `/admin/services` (таблица, форма, страница с историей и графиком)
 - [x] Worker pg-boss: health-checks, SSRF, SSL, агрегация; метрики `/host/proc`
-- [x] Telegram: правила, анти-спам, тест (токен из env)
+- [x] Telegram: правила, анти-спам, тест (токен из env → vault)
 - [x] Генератор Traefik labels (YAML)
 - [x] Дашборд KPI k5, таблица, Chart.js, алерты, sidefoot, период
 - [x] `GET /admin/api/public/services`, `/admin/api/health`
@@ -46,13 +46,55 @@
 - [x] Бренд (название, слоган, логотип, фавикон, тема A/B/C)
 - [x] Контент блоков публичного сайта, контакты
 - [x] Загрузка файлов (MIME/размер), `GET /api/public/site` с кешем
-- [ ] Деплой-пакет (Dockerfile, compose prod, DEPLOY.md)
+
+## Фаза 1 — Деплой-пакет
+- [x] Dockerfile multi-stage, standalone, non-root, healthcheck; worker из того же образа (`node worker.cjs`)
+- [x] `docker-compose.yml`: app, worker, postgres (volume), docker-socket-proxy (CONTAINERS/INFO, POST=0, без портов); Traefik labels; `/proc` ro в worker; volumes uploads/backups
+- [x] Ежедневный бэкап БД+uploads (AES-256-GCM, 14 дней), `npm run backup:now` / restore-скрипт
+- [x] `docs/DEPLOY.md` пошагово + предупреждения VPN/acme/Traefik
+
+## Фаза 1 — Чек-лист приёмки (TZ §11)
+
+| Критерий | Статус | Как проверить |
+|---|---|---|
+| OWNER/ADMIN без 2FA → только setup-2fa | ✅ | unit `gate.test.ts`; e2e login; вручную после seed:owner |
+| Блокировка после 5 неверных паролей (6-я отклонена) | ✅ | e2e `auth.spec.ts`; unit rate-limit |
+| Сервис с healthUrl → статус ≤ 2 интервала; Telegram down/up | ✅ код | worker 1 мин; проверка на стенде с реальным ботом |
+| Секрет в БД нечитаем; reveal без reauth → 401; аудит | ✅ | unit vault crypto/service + reveal-auth |
+| `/admin/api/public/sitemap.xml` валиден, только `inSitemap` | ✅ | unit sitemap + sitemap-public; curl после деплоя |
+| Партнёр не видит чужие данные | ✅ RBAC | unit `partner-isolation` (эндпоинты партнёра — Фаза 4) |
+| Unit crypto/auth/RBAC | ✅ | vitest |
+| e2e: логин+2FA, сервис, секрет | ✅ | `auth`, `services`, `vault` specs |
+| Lighthouse desktop `/admin` ≥ 90 Perf/A11y | 📋 вручную | см. ниже |
+
+### Lighthouse (вручную после деплоя / локально)
+
+Автопрогон в CI не делаем (нужна авторизованная сессия и стабильный UI). После входа владельца:
+
+```bash
+# Chrome: DevTools → Lighthouse → Desktop → Performance + Accessibility
+# URL: https://vaybik.ru/admin  (или http://127.0.0.1:3000/admin после логина)
+# Цель: Performance ≥ 90, Accessibility ≥ 90
+```
+
+Либо CLI (нужен cookies/storage авторизованной сессии):
+
+```bash
+npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=performance,accessibility --view
+```
+
+Результат прогона зафиксировать здесь при приёмке на стенде:
+
+- Дата:
+- Perf:
+- A11y:
+- Замечания:
 
 ## Фазы
 - [x] Фаза 0 — каркас
-- [ ] Фаза 1 — MVP (auth✓, сервисы+дашборд✓, vault✓, SEO✓, настройки✓, деплой-пакет)
+- [x] Фаза 1 — MVP (auth, сервисы, vault, SEO, настройки, деплой-пакет)
 - [ ] Фаза 2 — Docker
-- [ ] Фаза 3 — БД и бэкапы
+- [ ] Фаза 3 — БД и бэкапы (расширенные; ежедневный бэкап админки уже в фазе 1)
 - [ ] Фаза 4 — партнёры
 - [ ] Фаза 5 — публичный хаб (опц.)
 
@@ -62,5 +104,6 @@
 - Certresolver: `le`
 - Редирект http→https: middleware `to-https@docker`
 - Тема: вариант **A** (`NEXT_PUBLIC_THEME_VARIANT=A`)
+- Приоритет роутера admin: `TRAEFIK_ADMIN_PRIORITY=100`
 
 \* Secure cookie включается при `NODE_ENV=production`.
