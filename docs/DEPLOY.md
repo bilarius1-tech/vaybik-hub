@@ -14,6 +14,23 @@
 
 Админка только добавляет **labels** своему контейнеру и подключается к **существующей** внешней сети Traefik.
 
+### Label `vaybik.managed=true` (фаза 2)
+
+Чтобы админка могла restart/start/stop/логи/обновление контейнера сервиса:
+
+1. В `docker-compose.yml` сервиса добавьте label (генератор в админке уже вставляет его):
+
+```yaml
+labels:
+  - vaybik.managed=true
+```
+
+2. В карточке сервиса в админке (`/admin/services/...`) укажите **точное имя контейнера** (как в `docker ps`), например `region` или `vaybik-hub-prod-app-1`.
+3. Контейнеры Traefik / Amnezia / Xray / WireGuard **никогда** не управляются (denylist), даже если ошибочно попали в реестр.
+4. Управление идёт только через `docker-proxy` (POST=1, ALLOW_RESTARTS/START/STOP=1, IMAGES=1). Сырой `docker.sock` в app не монтировать.
+
+После смены env у `docker-proxy` в compose хаба — `docker compose up -d docker-proxy` (или полный деплой скриптом).
+
 ---
 
 ## 1. Клонирование

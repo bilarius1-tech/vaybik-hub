@@ -1,7 +1,7 @@
 # CONTEXT — память проекта Вайбик
 
 > Читать в начале **каждого** чата и при «открой день». Обновлять при «закрой день» и сразу после любого важного решения.
-> Здесь только факты и решения, без секретов. Последнее обновление: 2026-11-16.
+> Здесь только факты и решения, без секретов. Последнее обновление: 2026-11-16 (вечер, фаза 2).
 
 ## 1. Что такое Вайбик
 
@@ -15,7 +15,7 @@
 - Сервер: FirstVDS VPS `199.189.250.208` (`bilariuss.hlab.kz`), Ubuntu 24.04, 4 vCPU / 8 ГБ, Europe/Moscow. Пользователи `root` и `deploy` (агенты работают как `deploy`).
 - Traefik v3.6 в `/opt/proxy` (не трогать): сеть `proxy`, entrypoints `web`/`websecure`, resolver `le`, middleware `to-https@docker`, wildcard DNS `*.vaybik.ru` → сервер.
 - Каждый сервис — `/opt/apps/<имя>`, свой git, свой compose, без `ports:`; создаётся `new-project` из `/opt/apps/_template`. Общие правила сервера — `/opt/docs`.
-- vaybik-hub: Next.js 16 (App Router, TS strict), `basePath: /admin`, standalone; Tailwind 4 (токены km-dashboard), Prisma + PostgreSQL 16, pg-boss worker, Zod, Chart.js, Vitest, Playwright. Auth: argon2id, TOTP (опционально), сессии в БД. Vault: AES-256-GCM envelope (`VAULT_MASTER_KEY`). Docker — только через `docker-socket-proxy` (сейчас POST=0).
+- vaybik-hub: Next.js 16 (App Router, TS strict), `basePath: /admin`, standalone; Tailwind 4 (токены km-dashboard), Prisma + PostgreSQL 16, pg-boss worker, Zod, Chart.js, Vitest, Playwright. Auth: argon2id, TOTP (опционально), сессии в БД. Vault: AES-256-GCM envelope (`VAULT_MASTER_KEY`). Docker — через `docker-socket-proxy` + dockerode (фаза 2: POST=1, restart/start/stop/images; denylist Traefik/VPN).
 - Dev: `/opt/vaybik-hub` + `vaybik-hub-postgres-1` + `npm run dev` (127.0.0.1:3000). Prod: `/opt/apps/vaybik-hub`, compose-проект `vaybik-hub-prod`, деплой `scripts/deploy-prod.sh`. Подробно — `docs/WORKFLOW.md`.
 - Стиль UI: https://ztim2008.github.io/km-dashboard/ (копия `bilarius1-tech/km-dashboard`), тема A, акцент `#ff8a1f`. См. `docs/DESIGN.md`.
 
@@ -34,11 +34,11 @@
 
 ## 4. Текущее состояние (на 2026-11-16)
 
-- Фазы 0 и 1 (MVP) готовы и выкачены: вход, пользователи/роли, реестр сервисов + health-checks + дашборд, Telegram-уведомления (код, бот не подключён), Vault, SEO, настройки, ежедневный бэкап админки.
+- Фазы 0–2 готовы в dev: MVP + управление Docker (статус, логи SSE, restart/start/stop/update, whitelist/denylist). Фаза 2 ещё нужно выкатить на прод («задеплой»).
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
-- Прод на `f84847f`+; на проде `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- Прод на `b31c1a1` (+ docs `12807b9` не выкачен); на проде `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
 - Push с сервера работает (deploy key с записью для `deploy`).
-- Следующее: **Промпт 6 — Фаза 2: управление Docker** (`docs/PROMPTS.md`).
+- Следующее: выкатить фазу 2; затем **Промпт 7 — Фаза 3** (БД/бэкапы/Метрика).
 
 ## 5. Решения (кратко, новые — снизу)
 
@@ -49,6 +49,7 @@
 - **2026-11-16** — прод: отдельный checkout `/opt/apps/vaybik-hub`, образ `vaybik-hub-prod`, откат по тегу `prev-<sha>`.
 - **2026-11-16** — вход упрощён: 2FA необязательна (`REQUIRE_2FA=false`, включается в профиле), «Запомнить меня» на 30 дней (скользящая сессия). Риск осознан Алексеем.
 - **2026-11-16** — агент сам пушит (deploy key) и сам деплоит через `scripts/deploy-prod.sh` после проверок; журнал `docs/devlog/ГГГГ-ММ-ДД.md`, ритуал дня — `docs/WORKFLOW.md`.
+- **2026-11-16** — Docker фаза 2: вариант A (pull + recreate); stop/update требуют reauth; контейнеры только из реестра + denylist VPN/Traefik; label `vaybik.managed=true` рекомендуется.
 
 ## 6. Договорённости
 
@@ -67,5 +68,5 @@
 
 ## 8. Следующие шаги
 
-1. Промпт 6 — Фаза 2 (Docker: статус, логи, restart, whitelist/denylist).
+1. Задеплоить фазу 2 на прод (обновится docker-proxy). Пометить `region` / нужные сервисы label + имена контейнеров в реестре.
 2. Промпт 7 — Фаза 3 (БД, бэкапы, Метрика). 3. Промпт 8 — партнёры и лиды. 4. Промпт 9 — публичный хаб.

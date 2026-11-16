@@ -91,10 +91,18 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - A11y:
 - Замечания:
 
+## Фаза 2 — Docker
+- [x] socket-proxy: POST=1, ALLOW_RESTARTS/START/STOP=1, IMAGES=1, остальное 0
+- [x] dockerode-клиент через DOCKER_HOST; whitelist (реестр) + denylist (traefik/amnezia/xray/wg)
+- [x] Статус/uptime/CPU/RAM; restart/start/stop (stop+update → reauth); update = pull+recreate
+- [x] Логи: tail, SSE-поток, фильтр, скачивание; LogViewer + ConfirmDialog
+- [x] AuditLog + Telegram на docker.*
+- [x] Тесты policy → 403; DEPLOY.md про `vaybik.managed=true`
+
 ## Фазы
 - [x] Фаза 0 — каркас
 - [x] Фаза 1 — MVP (auth, сервисы, vault, SEO, настройки, деплой-пакет)
-- [ ] Фаза 2 — Docker
+- [x] Фаза 2 — Docker
 - [ ] Фаза 3 — БД и бэкапы (расширенные; ежедневный бэкап админки уже в фазе 1)
 - [ ] Фаза 4 — партнёры
 - [ ] Фаза 5 — публичный хаб (опц.)
