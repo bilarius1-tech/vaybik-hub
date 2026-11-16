@@ -2,6 +2,7 @@ export { Alert } from "./Alert";
 export { Button } from "./Button";
 export { CalcCard } from "./CalcCard";
 export { Card, CardHeader } from "./Card";
+export { ConfirmDialog } from "./ConfirmDialog";
 export { DataTable } from "./DataTable";
 export type { Column } from "./DataTable";
 export { EmptyState } from "./EmptyState";

@@ -11,6 +11,7 @@ const DEMO = [
     healthUrl: "https://vaybik.ru",
     description: "Публичная заглушка хаба",
     type: "STATIC" as const,
+    containerNames: ["vaybik-main"],
     isPublic: true,
     isDeployed: true,
     sortOrder: 1,
@@ -23,6 +24,7 @@ const DEMO = [
     healthUrl: "https://region.vaybik.ru",
     description: "Сервис region.vaybik.ru",
     type: "DOCKER" as const,
+    containerNames: ["region"],
     isPublic: true,
     isDeployed: true,
     sortOrder: 2,
@@ -60,7 +62,7 @@ async function main() {
       where: { slug: s.slug },
       create: {
         ...s,
-        containerNames: [],
+        containerNames: "containerNames" in s ? s.containerNames : [],
         expectedStatus: 200,
         intervalSec: 60,
         timeoutMs: 10000,
@@ -75,6 +77,9 @@ async function main() {
         sortOrder: s.sortOrder,
         tags: s.tags,
         type: s.type,
+        ...("containerNames" in s
+          ? { containerNames: s.containerNames }
+          : {}),
       },
     });
     console.log(`✓ ${s.slug}`);

@@ -13,6 +13,7 @@ export type ServiceFormValues = {
   url: string;
   description?: string | null;
   type: "DOCKER" | "EXTERNAL" | "STATIC";
+  containerNames: string[];
   healthUrl?: string | null;
   expectedStatus: number;
   keyword?: string | null;
@@ -29,6 +30,7 @@ const empty: ServiceFormValues = {
   url: "https://",
   description: "",
   type: "DOCKER",
+  containerNames: [],
   healthUrl: "",
   expectedStatus: 200,
   keyword: "",
@@ -64,6 +66,7 @@ export function ServiceForm({ mode, serviceId, initial }: Props) {
       healthUrl: form.healthUrl || null,
       description: form.description || null,
       keyword: form.keyword || null,
+      containerNames: form.containerNames,
       tags: form.tags,
     };
     const res =
@@ -129,6 +132,22 @@ export function ServiceForm({ mode, serviceId, initial }: Props) {
             <option value="EXTERNAL">EXTERNAL</option>
             <option value="STATIC">STATIC</option>
           </Select>
+        </Field>
+        <Field label="Контейнеры (через запятую)" htmlFor="containers">
+          <Input
+            id="containers"
+            value={form.containerNames.join(", ")}
+            onChange={(e) =>
+              set(
+                "containerNames",
+                e.target.value
+                  .split(/[,;\s]+/)
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+              )
+            }
+            placeholder="region, vaybik-main"
+          />
         </Field>
         <Field label="Health URL" htmlFor="health">
           <Input

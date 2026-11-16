@@ -1,5 +1,6 @@
 "use client";
 
+import { DockerPanel } from "@/components/services/DockerPanel";
 import { ServiceForm } from "@/components/services/ServiceForm";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -20,6 +21,7 @@ type Service = {
   url: string;
   description: string | null;
   type: "DOCKER" | "EXTERNAL" | "STATIC";
+  containerNames: string[];
   healthUrl: string | null;
   expectedStatus: number;
   keyword: string | null;
@@ -229,6 +231,13 @@ export function ServiceDetail({
         />
       </Card>
 
+      {service.type === "DOCKER" ? (
+        <DockerPanel
+          serviceId={service.id}
+          containerNames={service.containerNames || []}
+        />
+      ) : null}
+
       <Card>
         <CardHeader
           title="Traefik labels"
@@ -262,6 +271,7 @@ export function ServiceDetail({
           url: service.url,
           description: service.description,
           type: service.type,
+          containerNames: service.containerNames || [],
           healthUrl: service.healthUrl,
           expectedStatus: service.expectedStatus,
           keyword: service.keyword,
