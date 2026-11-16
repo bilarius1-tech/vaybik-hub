@@ -12,3 +12,8 @@ test-results/
 uploads/
 backups/
 .DS_Store
+
+# tooling
+.turbo/
+*.tsbuildinfo
+playwright/.cache/
