@@ -1,5 +1,7 @@
 import { AppShell } from "@/components/shell/AppShell";
 import { enforce2faGate, requirePageSession } from "@/server/auth/gate";
+import { can } from "@/server/auth/rbac";
+import { getDashboardSummary } from "@/server/services/dashboard";
 
 export default async function AppLayout({
   children,
@@ -9,8 +11,28 @@ export default async function AppLayout({
   const { user } = await requirePageSession();
   await enforce2faGate(user);
   const envBadge = process.env.APP_ENV === "prod" ? "prod" : "dev";
+
+  let sidefoot = [
+    { label: "Сервисов онлайн", value: "—" },
+    { label: "CPU / RAM", value: "—" },
+    { label: "Диск", value: "—" },
+  ];
+  if (can(user, "services.manage")) {
+    try {
+      const summary = await getDashboardSummary("day");
+      sidefoot = summary.sidefoot;
+    } catch {
+      /* ignore */
+    }
+  }
+
   return (
-    <AppShell envBadge={envBadge} userEmail={user.email} userRole={user.role}>
+    <AppShell
+      envBadge={envBadge}
+      userEmail={user.email}
+      userRole={user.role}
+      sidefoot={sidefoot}
+    >
       {children}
     </AppShell>
   );

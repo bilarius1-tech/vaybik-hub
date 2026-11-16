@@ -4,11 +4,14 @@ import { Sidebar } from "@/components/shell/Sidebar";
 import { Topbar, type Period } from "@/components/shell/Topbar";
 import { useState, type ReactNode } from "react";
 
+type SidefootRow = { label: string; value: string };
+
 type Props = {
   children: ReactNode;
   envBadge?: string;
   userEmail?: string;
   userRole?: string;
+  sidefoot?: SidefootRow[];
 };
 
 export function AppShell({
@@ -16,6 +19,7 @@ export function AppShell({
   envBadge = "dev",
   userEmail,
   userRole,
+  sidefoot,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [period, setPeriod] = useState<Period>("week");
@@ -35,6 +39,7 @@ export function AppShell({
         onNavigate={() => setMenuOpen(false)}
         userEmail={userEmail}
         userRole={userRole}
+        sidefoot={sidefoot}
       />
       <main className="min-w-0 flex-1 px-[26px] pb-5 max-[950px]:px-4">
         <Topbar

@@ -11,6 +11,7 @@ type Props = {
   onNavigate?: () => void;
   userEmail?: string;
   userRole?: string;
+  sidefoot?: ReadonlyArray<{ label: string; value: string }>;
 };
 
 function isActive(pathname: string, href: string): boolean {
@@ -18,9 +19,16 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ open, onNavigate, userEmail, userRole }: Props) {
+export function Sidebar({
+  open,
+  onNavigate,
+  userEmail,
+  userRole,
+  sidefoot,
+}: Props) {
   const pathname = usePathname();
   const router = useRouter();
+  const foot = sidefoot?.length ? sidefoot : SIDEFOOT_ROWS;
 
   const items =
     userRole === "PARTNER"
@@ -111,7 +119,7 @@ export function Sidebar({ open, onNavigate, userEmail, userRole }: Props) {
           Выйти
         </button>
         <div className="rounded-xl border border-bd bg-card p-3">
-          {SIDEFOOT_ROWS.map((row) => (
+          {foot.map((row) => (
             <div
               key={row.label}
               className="flex items-center justify-between gap-2 py-1 text-[12px]"
