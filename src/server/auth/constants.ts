@@ -1,0 +1,8 @@
+export const SESSION_COOKIE = "vaybik_session";
+export const SESSION_TTL_MS = 12 * 60 * 60 * 1000; // 12 ч
+export const REAUTH_TTL_MS = 5 * 60 * 1000; // 5 мин
+export const PENDING_LOGIN_TTL_MS = 10 * 60 * 1000; // 10 мин на 2FA
+export const INVITE_TTL_MS = 48 * 60 * 60 * 1000; // 48 ч
+export const LOGIN_MAX_FAILURES = 5;
+export const LOGIN_BLOCK_MS = 15 * 60 * 1000; // 15 мин
+export const COOKIE_PATH = "/admin";
