@@ -9,7 +9,7 @@ test-results/
 .env.*
 !.env.example
 *.log
-uploads/
+/uploads/
 backups/
 .DS_Store
 

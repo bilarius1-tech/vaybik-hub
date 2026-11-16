@@ -5,7 +5,7 @@ export { Card, CardHeader } from "./Card";
 export { DataTable } from "./DataTable";
 export type { Column } from "./DataTable";
 export { EmptyState } from "./EmptyState";
-export { Field, Input, Select } from "./Field";
+export { Field, Input, Select, Textarea } from "./Field";
 export { Insight } from "./Insight";
 export { Kpi } from "./Kpi";
 export { Pill } from "./Pill";

@@ -1,5 +1,10 @@
 import { cn } from "@/lib/cn";
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import type {
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+  TextareaHTMLAttributes,
+} from "react";
 
 type FieldProps = {
   label: string;
@@ -35,5 +40,16 @@ export function Select({ className, children, ...rest }: SelectProps) {
     <select className={cn(controlClass, className)} {...rest}>
       {children}
     </select>
+  );
+}
+
+type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
+
+export function Textarea({ className, ...rest }: TextareaProps) {
+  return (
+    <textarea
+      className={cn(controlClass, "min-h-[88px] resize-y", className)}
+      {...rest}
+    />
   );
 }
