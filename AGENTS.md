@@ -2,6 +2,8 @@
 
 Проект: админка хаба **Вайбик** по адресу `https://vaybik.ru/admin`. Полное ТЗ — `docs/TZ.md`, дизайн — `docs/DESIGN.md`, промпты по фазам — `docs/PROMPTS.md`.
 
+> **Сначала прочитай:** [`docs/WORKFLOW.md`](docs/WORKFLOW.md) (как работать: режим новичка, ритуал дня, push, деплой, новые сервисы) и [`docs/CONTEXT.md`](docs/CONTEXT.md) (память проекта), затем последний [`docs/devlog/`](docs/devlog/) и `docs/progress.md`. Стартовый промпт сессии — `docs/prompts/00-start-session.md`.
+
 ## Язык
 - Общение, комментарии к PR, документация, тексты интерфейса — **на русском**.
 - Идентификаторы кода, имена файлов, коммиты-префиксы — на английском (`feat:`, `fix:`, `chore:`, `docs:`, `test:`); описание коммита можно по-русски.
@@ -23,9 +25,10 @@ Next.js (App Router, TypeScript strict) с `basePath: '/admin'`, PostgreSQL 16, 
 - Docker — **только** через socket-proxy; никогда не монтировать `/var/run/docker.sock` в контейнер приложения.
 - Denylist контейнеров для управления: Traefik, Amnezia, Xray, WireGuard и всё, чего нет в реестре сервисов.
 
-## Сервер — НЕ ТРОГАТЬ
-- Агент **не подключается к серверу** (SSH, панель FirstVDS), **не деплоит** и не запускает команды на 199.189.250.208. Деплой делает человек по `docs/DEPLOY.md`.
-- В коде, скриптах и инструкциях **запрещено** изменять/читать/монтировать: `acme.json`, `/etc/amnezia/*`, `/opt/xray/config.json`, `/etc/ssh/sshd_config`, контейнеры и конфиги VPN (Amnezia, Xray), конфигурацию самого Traefik и firewall.
+## Сервер
+- Агент работает **на сервере** по Remote-SSH как `deploy` в dev-checkout `/opt/vaybik-hub`. Сам пушит в GitHub (deploy key) и сам деплоит прод **только** через `scripts/deploy-prod.sh` после зелёных проверок — см. `docs/WORKFLOW.md` §7.
+- Прод-checkout `/opt/apps/vaybik-hub` руками не править; прод-`.env` — только добавлять новые ключи, секреты не печатать.
+- **Запрещено** изменять/читать/монтировать: `acme.json`, `/opt/proxy` (конфиг Traefik), `/etc/amnezia/*`, `/opt/xray/config.json`, `/etc/ssh/sshd_config`, VPN (Amnezia, Xray), firewall, чужие проекты в `/opt/apps`.
 - Своим контейнерам можно только добавлять Traefik **labels** и подключать их к существующей внешней сети Traefik.
 - Не предлагать сторонние `curl … | sudo bash` скрипты; только официальные пакеты/образы.
 

@@ -2,7 +2,7 @@
 description: Безопасность и запреты на сервер — применять всегда
 alwaysApply: true
 ---
-- НИКОГДА не подключайся к серверу 199.189.250.208 и не деплой. Деплой — человек по `docs/DEPLOY.md`.
+- Работаешь на сервере как `deploy` в `/opt/vaybik-hub`. Прод — только через `scripts/deploy-prod.sh` после зелёных проверок; прод-checkout и прод-`.env` руками не правь (в `.env` — только добавить новый ключ). Подробно — `docs/WORKFLOW.md`.
 - НИКОГДА не трогай и не монтируй: `acme.json`, `/etc/amnezia/*`, `/opt/xray/config.json`, `sshd_config`, VPN (Amnezia, Xray, WireGuard), конфиг Traefik, firewall.
 - Docker API — только через `tecnativa/docker-socket-proxy` во внутренней сети; `docker.sock` в контейнер приложения не монтировать. Denylist: traefik, amnezia*, xray*, wg*; управлять только контейнерами из реестра сервисов.
 - Секреты не коммитить; только `.env.example` с пустыми значениями. Секреты не логировать, не отдавать в списках и URL.

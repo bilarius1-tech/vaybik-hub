@@ -1,6 +1,6 @@
 # Деплой vaybik-hub (продакшн)
 
-Инструкция для **человека**. Агенты Cursor на сервер не заходят и не деплоят.
+Первичная установка (разделы 1–6) уже сделана. **Обновление прода** — только `scripts/deploy-prod.sh` (запускает агент от `deploy`, см. `docs/WORKFLOW.md` §7): тег отката `vaybik-hub-prod:prev-<sha>`, pull, build, up -d, health-check, печать команды отката. Прод: `/opt/apps/vaybik-hub`, `COMPOSE_PROJECT_NAME=vaybik-hub-prod`, образ задаёт `docker-compose.override.yml`.
 
 Сервер: FirstVDS, Ubuntu 24.04. Traefik уже работает и выдаёт сертификаты Let's Encrypt.
 
@@ -132,11 +132,9 @@ docker compose logs -f worker --tail=50
 ## 7. Обновление
 
 ```bash
-cd /opt/vaybik-hub
-git pull
-docker compose build
-docker compose up -d
-docker compose logs -f app --tail=80
+cd /opt/vaybik-hub                 # dev-checkout, код уже в origin/main
+scripts/deploy-prod.sh --dry-run   # что поедет
+scripts/deploy-prod.sh             # выкатка + health + команда отката
 ```
 
 Миграции применятся при рестарте app. VPN / Traefik / acme.json не затрагиваются.
@@ -190,9 +188,12 @@ docker compose run --rm -e RUN_MIGRATIONS=0 app \
 ## 9. Откат образа
 
 ```bash
-docker images | grep vaybik-hub
-# при наличии тега/дайджеста предыдущей сборки — docker tag … && docker compose up -d
+cd /opt/apps/vaybik-hub
+docker images | grep vaybik-hub-prod          # теги prev-<sha> (хранятся 3 последних)
+docker tag vaybik-hub-prod:prev-<sha> vaybik-hub-prod:latest
+docker compose up -d --no-build --force-recreate app worker
 ```
+Точную команду печатает `scripts/deploy-prod.sh`. Миграции БД откат образа не отменяет.
 
 Храните один предыдущий успешно собранный образ до проверки новой версии.
 

@@ -21,7 +21,8 @@
     "seed:services": "tsx scripts/seed-services.ts",
     "vault:rotate": "tsx scripts/vault-rotate.ts",
     "backup:now": "tsx scripts/backup-now.ts",
-    "backup:restore": "tsx scripts/restore-backup.ts"
+    "backup:restore": "tsx scripts/restore-backup.ts",
+    "deploy:prod": "bash scripts/deploy-prod.sh"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
