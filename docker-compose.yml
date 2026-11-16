@@ -96,14 +96,26 @@ services:
       timeout: 5s
       retries: 10
 
-  # Ограниченный Docker API. MVP: только чтение. Без портов наружу и без сети Traefik.
+  # Ограниченный Docker API (фаза 2). Без портов наружу и без сети Traefik.
   docker-proxy:
     image: tecnativa/docker-socket-proxy:latest
     restart: unless-stopped
     environment:
       CONTAINERS: "1"
       INFO: "1"
-      POST: "0"
+      POST: "1"
+      ALLOW_RESTARTS: "1"
+      ALLOW_START: "1"
+      ALLOW_STOP: "1"
+      IMAGES: "1"
+      EXEC: "0"
+      VOLUMES: "0"
+      NETWORKS: "0"
+      SWARM: "0"
+      SECRETS: "0"
+      BUILD: "0"
+      PLUGINS: "0"
+      SYSTEM: "0"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [hub]
