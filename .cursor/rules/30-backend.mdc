@@ -1,0 +1,11 @@
+---
+description: Серверная часть — API, Prisma, worker
+globs: src/app/api/**,src/server/**,src/worker/**,prisma/**
+alwaysApply: false
+---
+- Route handlers под `/admin/api/*`; ответы JSON, ошибки `{ error: { code, message } }`.
+- Бизнес-логика — в `src/server/*` (сервисы), handlers тонкие. Доступ к БД только через Prisma-клиент из `src/server/db.ts`.
+- Каждая мутация пишет AuditLog (без секретов в diff).
+- Фоновые задачи — только в worker (`src/worker`, pg-boss): health-checks, метрики, уведомления, бэкапы, вебхуки с ретраями.
+- Тесты Vitest для crypto, auth, RBAC, валидации; e2e Playwright для ключевых сценариев.
+- Миграции — `prisma migrate dev --name <что_изменено>`, коммитить вместе с кодом.

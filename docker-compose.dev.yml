@@ -1,0 +1,19 @@
+# Локальная разработка: только инфраструктура. Приложение — `npm run dev`.
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-vaybik}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vaybik_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-vaybik_admin}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  pgdata_dev:

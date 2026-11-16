@@ -1,0 +1,10 @@
+---
+description: Общие правила проекта vaybik-hub (язык, стек, порядок фаз)
+alwaysApply: true
+---
+- Проект — админка хаба Вайбик на `https://vaybik.ru/admin`. Источник истины: `docs/TZ.md`, `docs/DESIGN.md`, `AGENTS.md`.
+- Отвечай и пиши документацию/UI-тексты на русском; идентификаторы кода — на английском.
+- Стек фиксирован: Next.js App Router + TypeScript strict, `basePath: '/admin'`, PostgreSQL + Prisma, Tailwind с токенами из DESIGN.md, Zod, Chart.js, pg-boss, dockerode через socket-proxy, Vitest, Playwright. Новые зависимости — только при необходимости, с объяснением в коммите.
+- Работай по фазам (TZ §11) по порядку; веди чек-лист в `docs/progress.md`.
+- Маленькие коммиты в стиле Conventional Commits; каждый коммит проходит `npm run lint && npm run typecheck && npm test`.
+- Не выдумывай факты о сервере: если чего-то не хватает (имя сети Traefik, certresolver) — оставь переменную в `.env.example` и вопрос в `docs/progress.md`.

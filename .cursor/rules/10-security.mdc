@@ -1,0 +1,13 @@
+---
+description: Безопасность и запреты на сервер — применять всегда
+alwaysApply: true
+---
+- НИКОГДА не подключайся к серверу 199.189.250.208 и не деплой. Деплой — человек по `docs/DEPLOY.md`.
+- НИКОГДА не трогай и не монтируй: `acme.json`, `/etc/amnezia/*`, `/opt/xray/config.json`, `sshd_config`, VPN (Amnezia, Xray, WireGuard), конфиг Traefik, firewall.
+- Docker API — только через `tecnativa/docker-socket-proxy` во внутренней сети; `docker.sock` в контейнер приложения не монтировать. Denylist: traefik, amnezia*, xray*, wg*; управлять только контейнерами из реестра сервисов.
+- Секреты не коммитить; только `.env.example` с пустыми значениями. Секреты не логировать, не отдавать в списках и URL.
+- Пароли — argon2id; секреты vault — AES-256-GCM envelope encryption, мастер-ключ `VAULT_MASTER_KEY` из env; показ секрета — только после reauth (пароль + TOTP), с записью в AuditLog.
+- RBAC проверяется на сервере в каждом route handler / server action; партнёр видит только свои данные.
+- Все входные данные — Zod; мутации — проверка Origin + SameSite=Strict cookie; rate limit на /auth.
+- Для health-check и SEO-inspect — защита от SSRF (только http/https, без приватных IP, таймауты).
+- Никаких `curl | sudo bash` в инструкциях.

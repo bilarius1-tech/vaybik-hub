@@ -1,0 +1,12 @@
+---
+description: UI в стиле km-dashboard с брендом Вайбика
+globs: src/app/**/*.tsx,src/components/**/*.tsx,src/styles/**/*.css,tailwind.config.*
+alwaysApply: false
+---
+- Следуй `docs/DESIGN.md`: AppShell (сайдбар 250px + sticky-шапка с blur), Card (радиус 16, градиент card2→card, рамка bd, тень), Kpi (28px/800, полоска 3px снизу), Pill, Insight, Alert, DataTable (tabular-nums), Segmented, CalcCard (label 12.5/600, input радиус 10, результат 24/800 акцентом).
+- Шрифт Manrope через next/font (latin + cyrillic). Тёмная тема по умолчанию, светлая — класс `.light`.
+- Только токены (CSS-переменные / классы Tailwind из конфига), никаких хардкод-цветов.
+- Сетки: gap 14px; k5/k4/g2/g3/g-2-1/g-3-2; брейкпоинты 1250 и 950px.
+- Тексты на русском; числа `toLocaleString('ru-RU')`; даты Europe/Moscow `dd.MM.yyyy HH:mm`.
+- На оранжевой кнопке текст тёмный (`--ac-contrast`).
+- Каждая страница: заголовки секций h2 + карточки в сетке; пустые состояния и скелетоны обязательны.
