@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: vaybik
+          POSTGRES_PASSWORD: vaybik_ci
+          POSTGRES_DB: vaybik_admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U vaybik"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://vaybik:vaybik_ci@localhost:5432/vaybik_admin?schema=public
+      NEXT_PUBLIC_THEME_VARIANT: A
+      APP_ENV: dev
+      TZ: Europe/Moscow
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Prisma generate & migrate
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
