@@ -82,10 +82,40 @@ function renderHero(data: Record<string, unknown>, anchor?: string | null): stri
         ? "hero sub"
         : "hero hero-mascot";
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
-  const titleAccent = data.titleAccent
-    ? `<span class="grad">${esc(String(data.titleAccent))}</span>`
+  const accentRaw = data.titleAccent != null ? String(data.titleAccent).trim() : "";
+  const titleRaw = data.title != null ? String(data.title).trim() : "";
+  // Не дублировать: импорт часто кладёт один и тот же текст в accent и title
+  const titleRest =
+    accentRaw && titleRaw && titleRaw === accentRaw ? "" : titleRaw;
+  const visualRaw =
+    data.titleVisual != null
+      ? String(data.titleVisual).trim()
+      : "";
+  const titleAccent = accentRaw
+    ? `<span class="grad">${esc(accentRaw)}</span>`
     : "";
-  const titleRest = esc(String(data.title || ""));
+  // home: подзаголовок как .visually с тире (как в leadweb)
+  let h1Inner: string;
+  if (variant === "home" && accentRaw) {
+    const visualText =
+      visualRaw ||
+      (titleRest
+        ? titleRest.startsWith("—") || titleRest.startsWith("-")
+          ? titleRest
+          : `— ${titleRest}`
+        : "");
+    const titleVisual = visualText
+      ? `<span class="visually" style="display:block;font-size:.42em;font-weight:600;margin-top:.4em">${esc(visualText)}</span>`
+      : "";
+    h1Inner = `${titleAccent}${titleVisual}`;
+  } else {
+    const titleVisual = visualRaw
+      ? `<span class="visually" style="display:block;font-size:.42em;font-weight:600;margin-top:.4em">${esc(visualRaw)}</span>`
+      : "";
+    h1Inner = [titleAccent, titleRest ? esc(titleRest) : "", titleVisual]
+      .filter(Boolean)
+      .join(titleAccent && titleRest ? " " : "");
+  }
   const rings = data.rings
     ? `<div class="rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
     : "";
@@ -101,7 +131,7 @@ function renderHero(data: Record<string, unknown>, anchor?: string | null): stri
 
   return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${
     data.kicker ? `<span class="kicker">${esc(String(data.kicker))}</span>` : ""
-  }<h1>${titleAccent}${titleAccent ? " " : ""}${titleRest}</h1>${
+  }<h1>${h1Inner}</h1>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
   }${buttonsHtml(data.buttons as never)}</div><figure class="mascot"><img src="/img/vaybik-${escAttr(mascot)}.png" alt="" width="400" height="539"></figure></div>${feats}</div></section>`;
 }
