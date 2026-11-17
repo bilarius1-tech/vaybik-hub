@@ -563,7 +563,7 @@ function renderOffer(data: Record<string, unknown>, anchor?: string | null): str
       const hl = it.highlight ? " hl-box" : "";
       const price =
         typeof it.price === "string" && it.price.trim()
-          ? `<div class="price">${sanitizeCmsHtml(it.price)}</div>`
+          ? `<div class="price">${fixMissingSvgViewBox(sanitizeCmsHtml(it.price))}</div>`
           : "";
       return `<div class="answer reveal${hl}">${
         it.kicker ? `<span class="kicker">${esc(String(it.kicker))}</span>` : ""
@@ -598,20 +598,24 @@ function renderSteps(data: Record<string, unknown>, anchor?: string | null): str
     }>) || [];
   if (variant === "flow5") {
     const lis = items
-      .map(
-        (it, i) =>
-          `<li><span class="num">${i + 1}</span>${it.icon ? `<span class="ibox">${it.icon}</span>` : ""}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
-      )
+      .map((it, i) => {
+        const ic = it.icon
+          ? `<span class="ibox">${fixMissingSvgViewBox(String(it.icon))}</span>`
+          : "";
+        return `<li><span class="num">${i + 1}</span>${ic}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`;
+      })
       .join("");
     return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="flow5 reveal">${lis}</ol>${secClose()}`;
   }
   if (variant === "av" || variant === "k-steps") {
     const cls = variant === "av" ? "steps av-steps" : "steps k-steps";
     const lis = items
-      .map(
-        (it) =>
-          `<li>${it.icon ? `<span class="ibox">${it.icon}</span>` : ""}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
-      )
+      .map((it) => {
+        const ic = it.icon
+          ? `<span class="ibox">${fixMissingSvgViewBox(String(it.icon))}</span>`
+          : "";
+        return `<li>${ic}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`;
+      })
       .join("");
     return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="${cls} reveal">${lis}</ol>${secClose()}`;
   }
@@ -678,8 +682,9 @@ export function renderBlocks(
 ): string {
   // calcFull.html уже содержит section.hero.lc-hero — не дублировать блок hero
   const skipHero = pageHasCalcFull(blocks);
-  return blocks
+  const html = blocks
     .filter((b) => !(skipHero && b.type === "hero"))
     .map((b) => renderBlock(b, opts))
     .join("\n");
+  return fixMissingSvgViewBox(html);
 }

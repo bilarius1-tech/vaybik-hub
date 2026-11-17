@@ -187,7 +187,8 @@ export async function loadPublicPageByPath(
       id: page.id,
       path: page.path,
       title: snap.page?.title || page.title,
-      template: snap.page?.template || page.template,
+      // template берём с Page (можно сменить без republish); snapshot — запасной
+      template: page.template || snap.page?.template || "default",
       status: page.status,
       publishedAt: page.publishedAt,
       publishedRevisionId: page.publishedRevisionId,

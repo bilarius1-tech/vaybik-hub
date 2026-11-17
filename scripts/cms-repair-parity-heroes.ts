@@ -59,9 +59,11 @@ async function main() {
 
   for (const page of pages) {
     const wantTpl = templateFor(page.path);
+    let templateChanged = false;
     if (page.template !== wantTpl) {
       console.log(`template ${page.path}: ${page.template} → ${wantTpl}`);
       pagesTouched += 1;
+      templateChanged = true;
       if (APPLY) {
         await prisma.page.update({
           where: { id: page.id },
@@ -71,7 +73,28 @@ async function main() {
     }
 
     const file = leadwebFile(page.path);
-    if (!file || !page.publishedRevisionId) continue;
+    if (!file || !page.publishedRevisionId) {
+      if (APPLY && templateChanged && page.publishedRevisionId) {
+        const revOnly = await prisma.pageRevision.findUnique({
+          where: { id: page.publishedRevisionId },
+        });
+        if (revOnly) {
+          const snapOnly = revOnly.snapshot as {
+            page?: Record<string, unknown>;
+          };
+          await prisma.pageRevision.update({
+            where: { id: revOnly.id },
+            data: {
+              snapshot: {
+                ...snapOnly,
+                page: { ...(snapOnly.page || {}), template: wantTpl },
+              } as object,
+            },
+          });
+        }
+      }
+      continue;
+    }
     const html = readFileSync(file, "utf8");
     const $ = cheerio.load(html);
     const heroSec = $("section.hero").first();
@@ -84,7 +107,12 @@ async function main() {
     });
     if (!rev) continue;
     const snap = rev.snapshot as {
-      blocks?: Array<{ type: string; data: Record<string, unknown>; anchor?: string | null }>;
+      page?: { title?: string; template?: string; [k: string]: unknown };
+      blocks?: Array<{
+        type: string;
+        data: Record<string, unknown>;
+        anchor?: string | null;
+      }>;
     };
     const blocks = [...(snap.blocks || [])];
     const idx = blocks.findIndex((b) => b.type === "hero");
@@ -114,9 +142,22 @@ async function main() {
       anchor: recognized.anchor ?? prev.anchor,
     };
     if (APPLY) {
+      const nextSnap = {
+        ...snap,
+        blocks,
+        page: {
+          ...(snap.page && typeof snap.page === "object" ? snap.page : {}),
+          template: wantTpl,
+          title:
+            (snap.page &&
+              typeof snap.page === "object" &&
+              (snap.page as { title?: string }).title) ||
+            undefined,
+        },
+      };
       await prisma.pageRevision.update({
         where: { id: rev.id },
-        data: { snapshot: { ...snap, blocks } as object },
+        data: { snapshot: nextSnap as object },
       });
     }
   }
