@@ -1,6 +1,7 @@
 #!/usr/bin/env tsx
 /**
- * Засев site.robots / site.assets и template=keysy для /keysy-ii/.
+ * Засев site.robots / site.llms / site.assets и template=keysy для /keysy-ii/.
+ * Источник правды дальше — только /admin/seo (Setting site.robots / site.llms).
  *   npx tsx scripts/cms-seed-site-settings.ts --dry-run
  *   npx tsx scripts/cms-seed-site-settings.ts
  */
@@ -77,23 +78,26 @@ Sitemap: https://vaybik.ru/sitemap.xml
 `;
 
 async function main() {
-  const robotsPath =
-    process.env.SITE_ROBOTS_SRC || "/opt/vaybik-site-src/robots.txt";
-  const llmsPath =
-    process.env.SITE_LLMS_SRC || "/opt/vaybik-site-src/llms.txt";
-  let robots = "";
-  try {
-    robots = readFileSync(robotsPath, "utf8");
-  } catch {
-    robots = DEFAULT_SITE_ROBOTS;
+  // Опциональный bootstrap из файла (SITE_*_SRC); по умолчанию — встроенные константы.
+  // После cutover правки только через /admin/seo.
+  let robots = DEFAULT_SITE_ROBOTS;
+  if (process.env.SITE_ROBOTS_SRC) {
+    try {
+      robots = readFileSync(process.env.SITE_ROBOTS_SRC, "utf8");
+    } catch {
+      /* keep default */
+    }
   }
   robots = ensureAdminDisallow(robots);
 
-  let llms = "";
-  try {
-    llms = readFileSync(llmsPath, "utf8");
-  } catch {
-    llms = "# vaybik.ru\n\n> Сайт студии Вайбик. Подробности — на https://vaybik.ru/\n";
+  let llms =
+    "# vaybik.ru\n\n> Сайт студии Вайбик. Подробности — на https://vaybik.ru/\n";
+  if (process.env.SITE_LLMS_SRC) {
+    try {
+      llms = readFileSync(process.env.SITE_LLMS_SRC, "utf8");
+    } catch {
+      /* keep default */
+    }
   }
 
   console.log(dry ? "[dry-run]" : "[write]");

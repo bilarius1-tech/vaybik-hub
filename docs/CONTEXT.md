@@ -23,7 +23,7 @@
 
 | Адрес                         | Что                                                   | Где                     | Статус             |
 | ----------------------------- | ----------------------------------------------------- | ----------------------- | ------------------ |
-| https://vaybik.ru             | главный сайт (статика leadweb → nginx)                | `/opt/apps/vaybik-main`; исходник `/opt/vaybik-site-src` (репо leadweb); деплой `scripts/deploy-site.sh` | переезд leadweb (до «задеплой» — ещё заглушка) |
+| https://vaybik.ru             | главный сайт (CMS `site.cjs`; статика css/js/img — nginx) | хаб `/opt/apps/vaybik-hub` + `/opt/apps/vaybik-main` (css/js/fonts/img/kp); тексты — админка | cutover ON |
 | https://vaybik.ru/admin       | админка vaybik-hub                                    | `/opt/apps/vaybik-hub`  | работает (фаза 2)  |
 | https://region.vaybik.ru      | «Регион» (Битрикс, отдельная разработка)              | `/opt/apps/region`      | работает; **не трогать** |
 | http://199.189.250.208/whoami | тест Traefik / Docker-панели (`vaybik.managed=true`)  | `/opt/apps/whoami`      | работает           |
@@ -34,7 +34,8 @@
 
 ## 4. Текущее состояние (на 2026-11-17)
 
-- Фазы 0–3 + CMS-3a на проде. Прод: **`e613dd7`** (+ docs `52dd27d`). Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`, `X-Vaybik-Site: cms`); роутер `site-test.vaybik.ru` снят. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`. llms.txt правится в `/admin/seo`.
+- Фазы 0–3 + CMS-3a на проде. Прод: **`e613dd7`** (+ docs). Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`, `X-Vaybik-Site: cms`); роутер `site-test.vaybik.ru` снят. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- **Источник правды для сайта — админка** (`/admin/site`, `/admin/seo`). Импортов из leadweb больше нет. `robots.txt` / `llms.txt` — только Setting `site.robots` / `site.llms` (статика удалена из leadweb и nginx). leadweb/`vaybik-main` — css/js/fonts/img/kp.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
 - Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
@@ -65,6 +66,7 @@
 - **2026-11-17** — Cutover OFF (~17:02): снова nginx на vaybik.ru; CMS на site-test.
 - **2026-11-17** — Cutover ON снова: `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`; site-test router снят; llms.txt в SEO (`site.llms`); «Открыть на сайте» → vaybik.ru. Откат: `scripts/site-cutover.sh off`.
 - **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
+- **2026-11-17** — Источник правды сайта = админка; импортов leadweb нет. `robots.txt`/`llms.txt` только из SEO; статические файлы удалены из leadweb и `vaybik-main/html`.
 
 ## 6. Договорённости
 
@@ -86,8 +88,8 @@
 - Модели: `Page`, `Block`, `NavItem`, `Redirect`, `PageRevision`, `Media*`; SEO через `Page.seoPageId` → `SeoPage`.
 - Админка: `/admin/site`, редактор `/admin/site/pages/[id]`, предпросмотр `/admin/site-preview/[id]` (noindex, CSS с `SITE_ASSETS_ORIGIN`).
 - **CMS-2.1:** список страниц — soft delete (`deletedAt`), корзина, duplicate/publish/unpublish/bulk, сортировка/пагинация/фильтры в URL. Purge — OWNER. Partial unique `Page_path_active_key`.
-- **CMS-3:** сервис `site` (`node site.cjs`, :3100) рендерит из БД; labels `site-test.vaybik.ru` + `vaybik.ru` (priority `SITE_PROD_PRIORITY`). Unpublish сбрасывает `publishedRevisionId`. Виджеты public — доверенные HTML из `src/server/cms/render/widgets/`. После cutover правки HTML в leadweb на тексты сайта не влияют (только css/js/img/kp).
-- Импорт: `npm run cms:import -- --src /opt/vaybik-site-src`. Seed robots/assets: `npm run cms:seed-site`.
+- **CMS-3:** сервис `site` (`node site.cjs`, :3100) рендерит из БД; label `vaybik.ru` (priority `SITE_PROD_PRIORITY`). Unpublish сбрасывает `publishedRevisionId`. Виджеты public — доверенные HTML из `src/server/cms/render/widgets/`. Тексты/страницы/robots/llms — только админка; leadweb/`vaybik-main` — css/js/fonts/img/kp.
+- Seed (разовый): `npm run cms:seed-site`. Импорт leadweb **не использовать** (история: `cms:import`).
 
 ## 8. Следующие шаги
 
