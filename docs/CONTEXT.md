@@ -63,6 +63,7 @@
 - **2026-11-17** — CMS-3: публичный сайт — лёгкий Node `site.cjs` в том же образе (не второй Next). Тестовый хост `site-test.vaybik.ru`; cutover через `SITE_PROD_PRIORITY` (1=off, 50=on). Контент только из `PageRevision`; DRAFT с `publishedRevisionId` остаётся публичным. Кеш инвалидируется `site.contentVersion` (опрос 5 с). vaybik-main не останавливаем.
 - **2026-11-17** — Cutover ON: `SITE_PROD_PRIORITY=50`, `SITE_PUBLIC_ORIGIN=https://vaybik.ru`. Тексты сайта — только через админку; HTML в leadweb на тексты больше не влияет (css/js/img/kp — по-прежнему). Откат: `scripts/site-cutover.sh off` или `docker compose stop site`.
 - **2026-11-17** — Cutover OFF (~17:02): снова nginx на vaybik.ru; CMS на site-test.
+- **2026-11-17** — Cutover ON снова: `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`; site-test router снят; llms.txt в SEO (`site.llms`); «Открыть на сайте» → vaybik.ru. Откат: `scripts/site-cutover.sh off`.
 - **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
 
 ## 6. Договорённости
