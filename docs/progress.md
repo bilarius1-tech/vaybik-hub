@@ -130,7 +130,21 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Предпросмотр `/admin/site-preview/[id]` (noindex, без JS сайта)
 - [x] Импортёр `scripts/cms-import-leadweb.ts` + `npm run cms:import`
 - [x] e2e `site.spec.ts`; повторный импорт = 0 изменений (dev)
-- [ ] Документация CONTEXT; деплой — только после «задеплой»
+- [x] Документация CONTEXT; деплой + импорт на прод (2026-11-17)
+
+## CMS-2 — формы блоков, Tiptap, медиабиблиотека (часть 2 из 4)
+
+Промпт: `docs/prompts/11-cms-02-editor-media.md`. Публичный vaybik.ru остаётся статикой.
+
+- [ ] Медиа: MediaFolder / MediaAsset / MediaUsage + миграция `cms_media`
+- [ ] Медиа: sharp, варианты, public URL, API upload/list/replace/delete
+- [ ] Медиа: вкладка «Медиа» + MediaPicker
+- [ ] Tiptap RichText + sanitizeRichText + миграция полей
+- [ ] Формы блоков вместо JSON + live preview iframe
+- [ ] rawHtml → новые типы + `cms-convert-rawhtml`
+- [ ] Бэкап uploads v2 (потоковое шифрование) + soft-limit
+- [ ] Тесты / e2e / build; деплой — только после «задеплой»
+- [ ] CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop, клик-для-правки в предпросмотре
 
 ## Фазы
 - [x] Фаза 0 — каркас
@@ -138,7 +152,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-1 в работе)
+- [ ] Фаза 5 — публичный хаб / CMS (CMS-1 на проде; CMS-2 в работе)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)
