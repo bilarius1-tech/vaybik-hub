@@ -114,7 +114,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Тестовый restore (API + `scripts/backup-restore-test.ts`); в прод из UI нельзя
 - [x] DEPLOY.md §8, RBAC-тесты, политика region/prod
 - [ ] Яндекс.Метрика на дашборд — перенос (не хватило приоритета; бэкапы важнее)
-- [ ] Деплой фазы 3 — ждать команду «задеплой»
+- [x] Деплой фазы 3 — `8a4bb94`, health 200, ручной бэкап OK → `/var/backups/vaybik/admin`
 
 ## Фазы
 - [x] Фаза 0 — каркас
