@@ -5,11 +5,20 @@ import { bumpSiteVersion } from "@/server/cms/site-version";
 import { prisma } from "@/server/db";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonOk } from "@/server/http/response";
+import { ensureAdminDisallow } from "@/server/seo/robots-normalize";
 import { z } from "zod";
 
 const bodySchema = z.object({
   text: z.string().max(50_000),
 });
+
+function asText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "text" in (value as object)) {
+    return String((value as { text: string }).text);
+  }
+  return "";
+}
 
 export async function GET() {
   try {
@@ -17,15 +26,7 @@ export async function GET() {
     const row = await prisma.setting.findUnique({
       where: { key: "site.robots" },
     });
-    const text =
-      typeof row?.value === "string"
-        ? row.value
-        : row?.value &&
-            typeof row.value === "object" &&
-            "text" in (row.value as object)
-          ? String((row.value as { text: string }).text)
-          : "";
-    return jsonOk({ text });
+    return jsonOk({ text: ensureAdminDisallow(asText(row?.value)) });
   } catch (err) {
     return handleRouteError(err);
   }
@@ -36,10 +37,11 @@ export async function PUT(req: NextRequest) {
     assertSameOrigin(req);
     const auth = await requireCan("settings.manage");
     const body = bodySchema.parse(await req.json());
+    const text = ensureAdminDisallow(body.text);
     await prisma.setting.upsert({
       where: { key: "site.robots" },
-      create: { key: "site.robots", value: body.text, updatedBy: auth.user.id },
-      update: { value: body.text, updatedBy: auth.user.id },
+      create: { key: "site.robots", value: text, updatedBy: auth.user.id },
+      update: { value: text, updatedBy: auth.user.id },
     });
     await bumpSiteVersion(prisma, "site.robots");
     await writeAudit({
@@ -47,11 +49,11 @@ export async function PUT(req: NextRequest) {
       action: "seo.robots.update",
       entity: "Setting",
       entityId: "site.robots",
-      diff: { length: body.text.length },
+      diff: { length: text.length },
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
-    return jsonOk({ text: body.text });
+    return jsonOk({ text });
   } catch (err) {
     return handleRouteError(err);
   }

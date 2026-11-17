@@ -14,6 +14,7 @@ import {
 import { assertSafeMediaPath } from "@/server/cms/media/url";
 import { mediaVersionDir } from "@/server/cms/media/store";
 import { getSiteContentVersion } from "@/server/cms/site-version";
+import { ensureAdminDisallow } from "@/server/seo/robots-normalize";
 import { buildPublicCmsSitemapXml } from "@/server/seo/sitemap";
 import {
   clearAllCache,
@@ -34,12 +35,19 @@ import {
   type RedirectRule,
 } from "./redirects";
 
+function settingText(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (value && typeof value === "object" && "text" in (value as object)) {
+    return String((value as { text: string }).text);
+  }
+  return "";
+}
+
 const PORT = Number(process.env.SITE_PORT || 3100);
 const ASSETS_ORIGIN =
   process.env.SITE_ASSETS_ORIGIN?.replace(/\/$/, "") || "https://vaybik.ru";
 const SITE_ORIGIN =
-  process.env.SITE_PUBLIC_ORIGIN?.replace(/\/$/, "") ||
-  "https://site-test.vaybik.ru";
+  process.env.SITE_PUBLIC_ORIGIN?.replace(/\/$/, "") || "https://vaybik.ru";
 const MEDIA_BASE = "/media";
 const PROXY_TARGET = process.env.SITE_STATIC_PROXY || "http://vaybik-main:80";
 const CACHE_DIR = process.env.SITE_CACHE_DIR || "/app/site-cache";
@@ -50,6 +58,7 @@ let contentVersion = 0;
 let dbOk = true;
 let redirects: RedirectRule[] = [];
 let robotsText = "";
+let llmsText = "";
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -110,10 +119,11 @@ function sendCached(
 
 async function refreshMeta(): Promise<void> {
   try {
-    const [ver, rules, robotsRow] = await Promise.all([
+    const [ver, rules, robotsRow, llmsRow] = await Promise.all([
       getSiteContentVersion(sitePrisma),
       loadRedirects(sitePrisma),
       sitePrisma.setting.findUnique({ where: { key: "site.robots" } }),
+      sitePrisma.setting.findUnique({ where: { key: "site.llms" } }),
     ]);
     if (ver !== contentVersion) {
       contentVersion = ver;
@@ -121,15 +131,8 @@ async function refreshMeta(): Promise<void> {
       console.info("[site] content version →", ver, "cache cleared");
     }
     redirects = rules;
-    if (typeof robotsRow?.value === "string") {
-      robotsText = robotsRow.value;
-    } else if (
-      robotsRow?.value &&
-      typeof robotsRow.value === "object" &&
-      "text" in (robotsRow.value as object)
-    ) {
-      robotsText = String((robotsRow.value as { text: string }).text);
-    }
+    robotsText = ensureAdminDisallow(settingText(robotsRow?.value));
+    llmsText = settingText(llmsRow?.value);
     dbOk = true;
   } catch (err) {
     dbOk = false;
@@ -390,9 +393,22 @@ async function handle(
     const body = test
       ? "User-agent: *\nDisallow: /\n"
       : robotsText ||
-        "User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://vaybik.ru/sitemap.xml\n";
+        ensureAdminDisallow(
+          "User-agent: *\nAllow: /\n\nSitemap: https://vaybik.ru/sitemap.xml\n",
+        );
     send(res, 200, body, {
       "Content-Type": "text/plain; charset=utf-8",
+      ...(test ? { "X-Robots-Tag": "noindex" } : {}),
+    });
+    return;
+  }
+  if (pathname === "/llms.txt") {
+    const body =
+      llmsText ||
+      "# vaybik.ru\n\n> Сайт студии Вайбик. Подробности — на https://vaybik.ru/\n";
+    send(res, 200, body, {
+      "Content-Type": "text/plain; charset=utf-8",
+      "Cache-Control": "public, s-maxage=300",
       ...(test ? { "X-Robots-Tag": "noindex" } : {}),
     });
     return;

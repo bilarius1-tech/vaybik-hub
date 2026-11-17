@@ -48,10 +48,12 @@ export function SeoPanel({
   initialPages,
   initialCounters,
   initialRobots = "",
+  initialLlms = "",
 }: {
   initialPages: SeoPageRow[];
   initialCounters: Counters;
   initialRobots?: string;
+  initialLlms?: string;
 }) {
   const router = useRouter();
   const [path, setPath] = useState("/");
@@ -67,6 +69,7 @@ export function SeoPanel({
   const [inSitemap, setInSitemap] = useState(true);
   const [counters, setCounters] = useState<Counters>(initialCounters);
   const [robotsText, setRobotsText] = useState(initialRobots);
+  const [llmsText, setLlmsText] = useState(initialLlms);
   const [inspectUrl, setInspectUrl] = useState("https://vaybik.ru/");
   const [inspect, setInspect] = useState<InspectResult | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -133,12 +136,25 @@ export function SeoPanel({
 
   async function saveRobots() {
     setErr(null);
-    const res = await api("/api/seo/robots", {
+    const res = await api<{ text: string }>("/api/seo/robots", {
       method: "PUT",
       body: JSON.stringify({ text: robotsText }),
     });
     if (res.error) setErr(res.error.message);
-    else setMsg("robots.txt сохранён");
+    else {
+      if (res.data?.text) setRobotsText(res.data.text);
+      setMsg("robots.txt сохранён");
+    }
+  }
+
+  async function saveLlms() {
+    setErr(null);
+    const res = await api("/api/seo/llms", {
+      method: "PUT",
+      body: JSON.stringify({ text: llmsText }),
+    });
+    if (res.error) setErr(res.error.message);
+    else setMsg("llms.txt сохранён");
   }
 
   async function runInspect() {
@@ -387,7 +403,7 @@ export function SeoPanel({
       <Card>
         <CardHeader
           title="robots.txt"
-          subtitle="публичный сайт; на site-test всегда Disallow: /"
+          subtitle="при сохранении в каждую группу добавится Disallow: /admin/"
         />
         <Field label="Текст robots.txt" htmlFor="robots">
           <Textarea
@@ -400,6 +416,25 @@ export function SeoPanel({
         </Field>
         <div className="mt-3">
           <Button onClick={() => void saveRobots()}>Сохранить robots.txt</Button>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="llms.txt"
+          subtitle="публичный https://vaybik.ru/llms.txt — краткий текст для ИИ"
+        />
+        <Field label="Текст llms.txt" htmlFor="llms">
+          <Textarea
+            id="llms"
+            rows={16}
+            value={llmsText}
+            onChange={(e) => setLlmsText(e.target.value)}
+            className="font-mono text-[12px]"
+          />
+        </Field>
+        <div className="mt-3">
+          <Button onClick={() => void saveLlms()}>Сохранить llms.txt</Button>
         </div>
       </Card>
 

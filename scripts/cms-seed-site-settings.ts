@@ -8,6 +8,7 @@ import { readFileSync } from "node:fs";
 import { prisma } from "../src/server/db";
 import { DEFAULT_ASSET_VERSIONS } from "../src/server/cms/render/assets";
 import { bumpSiteVersion } from "../src/server/cms/site-version";
+import { ensureAdminDisallow } from "../src/server/seo/robots-normalize";
 
 const dry = process.argv.includes("--dry-run");
 
@@ -78,15 +79,26 @@ Sitemap: https://vaybik.ru/sitemap.xml
 async function main() {
   const robotsPath =
     process.env.SITE_ROBOTS_SRC || "/opt/vaybik-site-src/robots.txt";
+  const llmsPath =
+    process.env.SITE_LLMS_SRC || "/opt/vaybik-site-src/llms.txt";
   let robots = "";
   try {
     robots = readFileSync(robotsPath, "utf8");
   } catch {
     robots = DEFAULT_SITE_ROBOTS;
   }
+  robots = ensureAdminDisallow(robots);
+
+  let llms = "";
+  try {
+    llms = readFileSync(llmsPath, "utf8");
+  } catch {
+    llms = "# vaybik.ru\n\n> Сайт студии Вайбик. Подробности — на https://vaybik.ru/\n";
+  }
 
   console.log(dry ? "[dry-run]" : "[write]");
   console.log("site.robots bytes:", robots.length);
+  console.log("site.llms bytes:", llms.length);
   console.log("site.assets:", DEFAULT_ASSET_VERSIONS);
 
   const keysy = await prisma.page.findFirst({
@@ -103,6 +115,11 @@ async function main() {
     where: { key: "site.robots" },
     create: { key: "site.robots", value: robots },
     update: { value: robots },
+  });
+  await prisma.setting.upsert({
+    where: { key: "site.llms" },
+    create: { key: "site.llms", value: llms },
+    update: { value: llms },
   });
   await prisma.setting.upsert({
     where: { key: "site.assets" },

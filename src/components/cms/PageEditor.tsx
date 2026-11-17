@@ -65,7 +65,7 @@ export function PageEditor({
   initialPage,
   seoPages,
   isOwner = false,
-  sitePublicOrigin = "https://site-test.vaybik.ru",
+  sitePublicOrigin = "https://vaybik.ru",
 }: {
   initialPage: PageData;
   seoPages: SeoOption[];

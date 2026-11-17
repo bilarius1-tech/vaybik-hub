@@ -744,10 +744,25 @@ function restoreKeysyMoreButtons(html: string): string {
   );
 }
 
+/** sanitize срезал кнопки закрытия диалога — остались «×» и «Закрыть» */
+function restoreKeysyDialogControls(html: string): string {
+  let out = html.replace(
+    /(<div class="k-dlg-inner">)\s*×\s*/g,
+    `$1<button class="k-dlg-close" type="button" data-close-dialog aria-label="Закрыть">×</button>\n`,
+  );
+  // хвост CTA: …</a>Закрыть</div>
+  out = out.replace(
+    /(<div class="k-dlg-cta[^"]*"[^>]*>[\s\S]*?<\/a>)\s*Закрыть(\s*<\/div>)/g,
+    `$1<button class="bt-btn2" type="button" data-close-dialog>Закрыть</button>$2`,
+  );
+  return out;
+}
+
 function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): string {
   let html = fixMissingSvgViewBox(sanitizeCmsHtml(String(data.html || "")));
   html = restoreKeysyFilters(html);
   html = restoreKeysyMoreButtons(html);
+  html = restoreKeysyDialogControls(html);
   if (html.trim().startsWith("<section")) return html;
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
   return `<section class="sec"${id}>${html}</section>`;

@@ -133,7 +133,7 @@ services:
       UPLOADS_DIR: /app/uploads
       SITE_CACHE_DIR: /app/site-cache
       SITE_PORT: "3100"
-      SITE_PUBLIC_ORIGIN: ${SITE_PUBLIC_ORIGIN:-https://site-test.vaybik.ru}
+      SITE_PUBLIC_ORIGIN: ${SITE_PUBLIC_ORIGIN:-https://vaybik.ru}
       SITE_ASSETS_ORIGIN: ${SITE_ASSETS_ORIGIN:-https://vaybik.ru}
       SITE_STATIC_PROXY: ${SITE_STATIC_PROXY:-http://vaybik-main:80}
       NODE_ENV: production
@@ -160,17 +160,8 @@ services:
       - traefik.enable=true
       - traefik.docker.network=${TRAEFIK_NETWORK:-proxy}
       - vaybik.managed=true
-      # Тестовый хост (всегда)
-      - traefik.http.routers.vaybik-site-test.rule=Host(`site-test.vaybik.ru`)
-      - traefik.http.routers.vaybik-site-test.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
-      - traefik.http.routers.vaybik-site-test.tls.certresolver=${TRAEFIK_CERTRESOLVER:-le}
-      - traefik.http.routers.vaybik-site-test.service=vaybik-site
-      - traefik.http.routers.vaybik-site-test-http.rule=Host(`site-test.vaybik.ru`)
-      - traefik.http.routers.vaybik-site-test-http.entrypoints=${TRAEFIK_ENTRYPOINT_HTTP:-web}
-      - traefik.http.routers.vaybik-site-test-http.middlewares=${TRAEFIK_HTTPS_REDIRECT_MIDDLEWARE:-to-https@docker}
-      - traefik.http.routers.vaybik-site-test-http.service=vaybik-site
       # Прод: выключен при SITE_PROD_PRIORITY=1 (проигрывает vaybik-main=17); cutover → 50
-      - traefik.http.routers.vaybik-site.rule=Host(`${TRAEFIK_ADMIN_HOST:-vaybik.ru}`) && !PathPrefix(`/admin`) && !PathPrefix(`/css/`) && !PathPrefix(`/js/`) && !PathPrefix(`/fonts/`) && !PathPrefix(`/img/`) && !PathPrefix(`/kp/`) && !Path(`/studio-preview.html`) && !Path(`/llms.txt`)
+      - traefik.http.routers.vaybik-site.rule=Host(`${TRAEFIK_ADMIN_HOST:-vaybik.ru}`) && !PathPrefix(`/admin`) && !PathPrefix(`/css/`) && !PathPrefix(`/js/`) && !PathPrefix(`/fonts/`) && !PathPrefix(`/img/`) && !PathPrefix(`/kp/`) && !Path(`/studio-preview.html`)
       - traefik.http.routers.vaybik-site.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}
       - traefik.http.routers.vaybik-site.tls.certresolver=${TRAEFIK_CERTRESOLVER:-le}
       - traefik.http.routers.vaybik-site.priority=${SITE_PROD_PRIORITY:-1}

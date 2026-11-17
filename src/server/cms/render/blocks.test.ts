@@ -171,4 +171,22 @@ describe("renderBlock", () => {
     });
     expect(html).toContain('aria-label="Подробнее: Landing Page"');
   });
+
+  it("keysy rawHtml: фильтры + кнопки диалога после sanitize", () => {
+    const html = renderBlock({
+      type: "rawHtml",
+      data: {
+        html: `<div class="k-filters"><div class="k-chips" role="group" aria-label="Фильтр по системам"><label for="kf-all">Все</label></div></div>
+<dialog class="k-dlg" id="dlg-case-uk"><div class="k-dlg-inner">
+×
+<p class="k-ind">UK</p>
+<div class="k-dlg-cta acts"><a class="bt-btn" href="https://t.me/bilarius"><span class="bt-sl">Хочу так же</span></a>Закрыть</div>
+</div></dialog>`,
+      },
+    });
+    expect(html).toContain('name="kfilter"');
+    expect(html).toContain('class="k-dlg-close"');
+    expect(html).toContain('class="bt-btn2"');
+    expect(html).toContain("data-close-dialog");
+  });
 });
