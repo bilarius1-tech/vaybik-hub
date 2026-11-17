@@ -10,7 +10,8 @@ test-results/
 !.env.example
 *.log
 /uploads/
-backups/
+# Только каталог бэкапов в корне репо (не src/app/api/backups)
+/backups/
 .DS_Store
 
 # tooling
