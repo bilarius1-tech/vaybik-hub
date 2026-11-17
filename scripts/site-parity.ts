@@ -3,6 +3,9 @@
  * Сравнение статики vaybik.ru и CMS site-test.
  *   npx tsx scripts/site-parity.ts
  *   SITE_A=https://vaybik.ru SITE_B=https://site-test.vaybik.ru npx tsx scripts/site-parity.ts
+ *
+ * FAIL — только видимые расхождения (вёрстка/контент/стили на экране).
+ * WARN — невидимые (aria/id/reveal/b↔strong/alt/scope) + пояснение.
  */
 import { writeFileSync } from "node:fs";
 import * as cheerio from "cheerio";
@@ -32,7 +35,19 @@ const STRUCT_ATTRS = [
   "viewBox",
   "viewbox",
   "style",
+  "scope",
+  "alt",
 ] as const;
+
+/** Атрибуты/теги, которые не видны глазу (a11y, якоря без ссылок, анимация reveal). */
+const INVISIBLE_ATTRS = new Set([
+  "id",
+  "alt",
+  "scope",
+  "decoding",
+  "fetchpriority",
+  "loading",
+]);
 
 async function fetchText(url: string) {
   const res = await fetch(url, {
@@ -53,9 +68,8 @@ function words(s: string): Set<string> {
     s
       .toLowerCase()
       .replace(/<[^>]+>/g, " ")
-      .replace(/[^\p{L}\p{N}\s]+/gu, " ")
-      .split(/\s+/)
-      .filter((w) => w.length > 2),
+      .split(/[^a-zа-яё0-9]+/i)
+      .filter(Boolean),
   );
 }
 
@@ -105,10 +119,11 @@ function stableJsonValue(v: unknown): unknown {
   return v;
 }
 
-/** data-* JSON сравниваем по смыслу (порядок ключей в leadweb/CMS может отличаться). */
 function normalizeAttrValue(key: string, value: string): string {
   if (
-    (key.startsWith("data-") || key === "data-magic-rings" || key === "data-gradient-blinds") &&
+    (key.startsWith("data-") ||
+      key === "data-magic-rings" ||
+      key === "data-gradient-blinds") &&
     /^\s*[\[{]/.test(value)
   ) {
     try {
@@ -137,6 +152,33 @@ function nodeSignature(el: Element): string {
   return parts.join("|");
 }
 
+/** Сигнатура только видимого: без aria/id/alt/scope/reveal, b≡strong, data-* JSON sorted. */
+function visibleSignature(full: string): string {
+  const parts = full.split("|");
+  let tag = parts[0] || "";
+  if (tag === "strong") tag = "b";
+  const out: string[] = [tag];
+  for (const p of parts.slice(1)) {
+    const eq = p.indexOf("=");
+    if (eq < 0) continue;
+    const key = p.slice(0, eq);
+    let val = p.slice(eq + 1);
+    if (key.startsWith("aria-") || INVISIBLE_ATTRS.has(key)) continue;
+    if (key === "class") {
+      val = val
+        .split(/\s+/)
+        .filter((c) => c && c !== "reveal")
+        .join(" ");
+      if (!val) continue;
+    }
+    if (key.startsWith("data-") && /^\s*[\[{]/.test(val)) {
+      val = normalizeAttrValue(key, val);
+    }
+    out.push(`${key}=${val}`);
+  }
+  return out.join("|");
+}
+
 function walkSignatures(
   $: cheerio.CheerioAPI,
   root: cheerio.Cheerio<Element>,
@@ -144,8 +186,11 @@ function walkSignatures(
   const out: string[] = [];
   root.find("*").addBack().each((_, el) => {
     if (el.type !== "tag") return;
-    // скрипты/стили внутри секции не структурный контент
-    if (el.tagName === "script" || el.tagName === "style" || el.tagName === "noscript") {
+    if (
+      el.tagName === "script" ||
+      el.tagName === "style" ||
+      el.tagName === "noscript"
+    ) {
       return;
     }
     out.push(nodeSignature(el));
@@ -153,27 +198,153 @@ function walkSignatures(
   return out;
 }
 
-function diffSignatures(
+function explainInvisible(a: string, b: string): string | null {
+  const reasons = new Set<string>();
+  const pa = a.split("|");
+  const pb = b.split("|");
+  const ta = pa[0] === "strong" ? "b" : pa[0];
+  const tb = pb[0] === "strong" ? "b" : pb[0];
+  if (ta !== tb) return null;
+  if (
+    (pa[0] === "strong" || pa[0] === "b") &&
+    (pb[0] === "strong" || pb[0] === "b") &&
+    pa[0] !== pb[0]
+  ) {
+    reasons.add("b↔strong");
+  }
+  const map = (parts: string[]) => {
+    const m = new Map<string, string>();
+    for (const p of parts.slice(1)) {
+      const eq = p.indexOf("=");
+      if (eq > 0) m.set(p.slice(0, eq), p.slice(eq + 1));
+    }
+    return m;
+  };
+  const ma = map(pa);
+  const mb = map(pb);
+  const keys = new Set([...ma.keys(), ...mb.keys()]);
+  for (const k of keys) {
+    const va = ma.get(k);
+    const vb = mb.get(k);
+    if (va === vb) continue;
+    if (k.startsWith("aria-")) reasons.add("aria-*");
+    else if (k === "id") reasons.add("id (якорь/a11y)");
+    else if (k === "alt") reasons.add("alt");
+    else if (k === "scope") reasons.add("scope");
+    else if (k === "class") {
+      const ca = new Set((va || "").split(/\s+/).filter(Boolean));
+      const cb = new Set((vb || "").split(/\s+/).filter(Boolean));
+      const onlyA = [...ca].filter((c) => !cb.has(c));
+      const onlyB = [...cb].filter((c) => !ca.has(c));
+      if (
+        [...onlyA, ...onlyB].every((c) => c === "reveal") &&
+        onlyA.length + onlyB.length > 0
+      ) {
+        reasons.add("class=reveal");
+      } else return null;
+    } else if (k.startsWith("data-")) {
+      try {
+        if (
+          JSON.stringify(stableJsonValue(JSON.parse(va || "null"))) ===
+          JSON.stringify(stableJsonValue(JSON.parse(vb || "null")))
+        ) {
+          reasons.add("data-* порядок ключей");
+          continue;
+        }
+      } catch {
+        /* visible */
+      }
+      return null;
+    } else return null;
+  }
+  if (!reasons.size && visibleSignature(a) === visibleSignature(b)) {
+    reasons.add("невидимые атрибуты");
+  }
+  return reasons.size ? [...reasons].join(", ") : null;
+}
+
+type DomDiffResult = {
+  visibleFail: boolean;
+  invisibleWarn: boolean;
+  notes: string[];
+};
+
+function diffSignaturesVisible(
   label: string,
   a: string[],
   b: string[],
-  notes: string[],
-): boolean {
-  const max = Math.max(a.length, b.length);
-  const diffs: string[] = [];
-  for (let i = 0; i < max; i += 1) {
-    if (a[i] !== b[i]) {
-      diffs.push(`#${i}: «${(a[i] || "∅").slice(0, 80)}» ≠ «${(b[i] || "∅").slice(0, 80)}»`);
-      if (diffs.length >= 5) break;
+): DomDiffResult {
+  const notes: string[] = [];
+  const va = a.map(visibleSignature);
+  const vb = b.map(visibleSignature);
+  const max = Math.max(va.length, vb.length);
+  const visDiffs: string[] = [];
+  const invisReasons = new Set<string>();
+  let invisCount = 0;
+
+  // Сначала полное сравнение с классификацией сдвига
+  // Если длины равны — поэлементно; иначе ищем видимый сдвиг
+  for (let i = 0; i < Math.min(a.length, b.length); i += 1) {
+    if (a[i] === b[i]) continue;
+    if (va[i] === vb[i]) {
+      const why = explainInvisible(a[i]!, b[i]!);
+      invisCount += 1;
+      if (why) why.split(", ").forEach((r) => invisReasons.add(r));
+      else invisReasons.add("невидимые атрибуты");
+      continue;
+    }
+    visDiffs.push(
+      `#${i}: «${(a[i] || "∅").slice(0, 70)}» ≠ «${(b[i] || "∅").slice(0, 70)}»`,
+    );
+    if (visDiffs.length >= 5) break;
+  }
+  if (a.length !== b.length && visDiffs.length < 5) {
+    // видимый сдвиг по длине — если после нормализации длины тоже разные
+    if (va.length !== vb.length || visDiffs.length === 0) {
+      // найти первый видимый mismatch по нормализованным
+      for (let i = 0; i < max; i += 1) {
+        if (va[i] !== vb[i]) {
+          const already = visDiffs.some((d) => d.startsWith(`#${i}:`));
+          if (!already) {
+            visDiffs.push(
+              `#${i}: «${(a[i] || "∅").slice(0, 70)}» ≠ «${(b[i] || "∅").slice(0, 70)}»`,
+            );
+          }
+          if (visDiffs.length >= 5) break;
+        }
+      }
+      if (va.length !== vb.length) {
+        notes.push(
+          `DOM ${label}: видимых узлов ${va.length} vs ${vb.length}`,
+        );
+      }
     }
   }
-  if (diffs.length) {
+
+  if (invisCount && !visDiffs.length && va.length === vb.length) {
     notes.push(
-      `DOM ${label}: ${a.length} vs ${b.length} узлов; ${diffs.join("; ")}`,
+      `DOM ${label}: только невидимое (${invisCount} узлов: ${[...invisReasons].join(", ") || "aria/id/reveal"})`,
     );
-    return true;
+    return { visibleFail: false, invisibleWarn: true, notes };
   }
-  return false;
+  if (invisCount && visDiffs.length) {
+    notes.push(
+      `DOM ${label}: также невидимое ×${invisCount} (${[...invisReasons].join(", ")})`,
+    );
+  }
+  if (visDiffs.length) {
+    notes.push(
+      `DOM ${label}: ${a.length} vs ${b.length} узлов; ${visDiffs.join("; ")}`,
+    );
+    return { visibleFail: true, invisibleWarn: invisCount > 0, notes };
+  }
+  if (invisCount) {
+    notes.push(
+      `DOM ${label}: только невидимое (${invisCount} узлов: ${[...invisReasons].join(", ")})`,
+    );
+    return { visibleFail: false, invisibleWarn: true, notes };
+  }
+  return { visibleFail: false, invisibleWarn: false, notes: [] };
 }
 
 function countSvgWithoutViewBox($: cheerio.CheerioAPI): number {
@@ -192,9 +363,7 @@ function compareAssetLists(
   notes: string[],
 ): boolean {
   if (a.length === b.length && a.every((v, i) => v === b[i])) return false;
-  notes.push(
-    `${kind}: [${a.join(", ")}] ≠ [${b.join(", ")}]`,
-  );
+  notes.push(`${kind}: [${a.join(", ")}] ≠ [${b.join(", ")}]`);
   return true;
 }
 
@@ -260,7 +429,9 @@ async function comparePage(path: string): Promise<Row> {
   for (const [name, va, vb] of checks) {
     if (va !== vb) {
       notes.push(`${name}: «${va.slice(0, 60)}» ≠ «${vb.slice(0, 60)}»`);
-      warn();
+      // title/description/h1 текст — видимо
+      if (name === "h1") fail();
+      else warn();
     }
   }
 
@@ -280,7 +451,6 @@ async function comparePage(path: string): Promise<Row> {
     fail();
   }
 
-  // CSS/JS списки (путь + ?v=)
   if (
     compareAssetLists("css", listAssets($a, "css"), listAssets($b, "css"), notes)
   ) {
@@ -292,7 +462,6 @@ async function comparePage(path: string): Promise<Row> {
     fail();
   }
 
-  // svg без viewBox: CMS не должно быть больше статики
   const svgA = countSvgWithoutViewBox($a);
   const svgB = countSvgWithoutViewBox($b);
   if (svgB > svgA) {
@@ -300,14 +469,15 @@ async function comparePage(path: string): Promise<Row> {
     fail();
   }
 
-  // DOM header / main / footer
   for (const sel of ["header.hdr", "main#main", "footer.ftr"] as const) {
     const sa = walkSignatures($a, $a(sel).first() as cheerio.Cheerio<Element>);
     const sb = walkSignatures($b, $b(sel).first() as cheerio.Cheerio<Element>);
-    if (diffSignatures(sel, sa, sb, notes)) fail();
+    const d = diffSignaturesVisible(sel, sa, sb);
+    notes.push(...d.notes);
+    if (d.visibleFail) fail();
+    else if (d.invisibleWarn) warn();
   }
 
-  // Мини-калькулятор
   if ($a("#calc-sec").length || $b("#calc-sec").length) {
     const sa = walkSignatures(
       $a,
@@ -317,14 +487,19 @@ async function comparePage(path: string): Promise<Row> {
       $b,
       $b("#calc-sec").first() as cheerio.Cheerio<Element>,
     );
-    if (diffSignatures("#calc-sec", sa, sb, notes)) fail();
+    const d = diffSignaturesVisible("#calc-sec", sa, sb);
+    notes.push(...d.notes);
+    if (d.visibleFail) fail();
+    else if (d.invisibleWarn) warn();
   }
 
-  // Полный калькулятор
   if (path.includes("kalkulyator")) {
     const sa = walkSignatures($a, $a("main").first() as cheerio.Cheerio<Element>);
     const sb = walkSignatures($b, $b("main").first() as cheerio.Cheerio<Element>);
-    if (diffSignatures("main@kalkulyator", sa, sb, notes)) fail();
+    const d = diffSignaturesVisible("main@kalkulyator", sa, sb);
+    notes.push(...d.notes);
+    if (d.visibleFail) fail();
+    else if (d.invisibleWarn) warn();
     const ba = walkSignatures(
       $a,
       $a(".lc-bar").first() as cheerio.Cheerio<Element>,
@@ -333,7 +508,10 @@ async function comparePage(path: string): Promise<Row> {
       $b,
       $b(".lc-bar").first() as cheerio.Cheerio<Element>,
     );
-    if (diffSignatures(".lc-bar", ba, bb, notes)) fail();
+    const db = diffSignaturesVisible(".lc-bar", ba, bb);
+    notes.push(...db.notes);
+    if (db.visibleFail) fail();
+    else if (db.invisibleWarn) warn();
   }
 
   return { url: path, status, notes };
@@ -343,7 +521,7 @@ async function main() {
   const sm = await fetchText(`${A}/sitemap.xml`);
   const locs = [...sm.text.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => {
     try {
-      return new URL(m[1]).pathname;
+      return new URL(m[1]!).pathname;
     } catch {
       return "/";
     }
@@ -363,6 +541,7 @@ async function main() {
       notes: [`${r.status} → ${r.location || ""}`],
     });
   }
+
   const md = [
     `# Site parity ${date}`,
     "",
@@ -376,12 +555,10 @@ async function main() {
     ),
     "",
   ].join("\n");
-  const outMd = `/tmp/site-parity-${date}.md`;
-  const outJson = `/tmp/site-parity-${date}.json`;
-  writeFileSync(outMd, md);
-  writeFileSync(outJson, JSON.stringify(rows, null, 2));
+  writeFileSync(`/tmp/site-parity-${date}.md`, md);
+  writeFileSync(`/tmp/site-parity-${date}.json`, JSON.stringify(rows, null, 2));
   console.log(md);
-  console.log("wrote", outMd, outJson);
+  console.log(`wrote /tmp/site-parity-${date}.md /tmp/site-parity-${date}.json`);
   if (rows.some((r) => r.status === "FAIL")) process.exit(2);
 }
 

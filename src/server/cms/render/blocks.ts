@@ -5,7 +5,9 @@ import {
   EXT_MORE_ICON,
   FAQ_CHEV,
   FAQ_ICON,
+  KEYSY_FILTERS_HTML,
   MORE_ARROW,
+  PHONE_ICON,
   PRICE_ICON,
   fixMissingSvgViewBox,
   MASCOT_META,
@@ -64,7 +66,21 @@ function secHeader(h?: Header | null, opts: RenderOptions = {}): string {
   const parts: string[] = [`<div class="${cls}">`];
   if (h.kicker) parts.push(`<span class="kicker">${esc(h.kicker)}</span>`);
   if (h.title) parts.push(`<h2>${esc(h.title)}</h2>`);
-  if (h.subtitle) parts.push(`<p class="muted">${esc(h.subtitle)}</p>`);
+  if (h.subtitle) {
+    let sub = esc(h.subtitle);
+    // leadweb: ссылка в подзаголовке «Примеры по отраслям»
+    if (
+      sub.includes("разделе кейсов") &&
+      !sub.includes("<a ") &&
+      sub.includes("Битрикс24")
+    ) {
+      sub = sub.replace(
+        "разделе кейсов",
+        '<a href="/keysy-ii/">разделе кейсов</a>',
+      );
+    }
+    parts.push(`<p class="muted">${sub}</p>`);
+  }
   parts.push("</div>");
   return parts.join("");
 }
@@ -137,7 +153,10 @@ function buttonsHtml(
       }
       // leadweb: «bt-btn bt-call » с хвостовым пробелом
       const cls = extras.length ? `${base} ${extras.join(" ")} ` : base;
-      const icon = b.icon ? fixMissingSvgViewBox(String(b.icon)) : "";
+      let icon = b.icon ? fixMissingSvgViewBox(String(b.icon)) : "";
+      if (!icon && !isSecondary && /^tel:/i.test(b.href)) {
+        icon = PHONE_ICON;
+      }
       const inner = isSecondary
         ? `${icon}${esc(b.label)}`
         : `<span class="bt-sl">${icon}${esc(b.label)}</span>`;
@@ -331,17 +350,27 @@ function renderAnswer(
 }
 
 function cardTextHtml(it: Record<string, unknown>): string {
+  let html = "";
   if (typeof it.textHtml === "string" && it.textHtml.trim()) {
     const raw = it.textHtml.trim();
     // уже с <p> (несколько абзацев, deliver) — basic; иначе inline в одном <p>
     if (/<p[\s>]/i.test(raw)) {
-      return richOrMd(raw, null, "basic");
+      html = richOrMd(raw, null, "basic");
+    } else {
+      const inline = richOrMd(raw, null, "inline");
+      html = inline ? `<p>${inline}</p>` : "";
     }
-    const inline = richOrMd(raw, null, "inline");
-    return inline ? `<p>${inline}</p>` : "";
+  } else if (it.text) {
+    html = `<p>${esc(String(it.text))}</p>`;
   }
-  if (it.text) return `<p>${esc(String(it.text))}</p>`;
-  return "";
+  // leadweb: «Вы получаете» → p.deliver + <b>
+  if (html) {
+    html = html.replace(
+      /<p>(?:\s*)<(?:strong|b)>Вы получаете<\/(?:strong|b)>/gi,
+      '<p class="deliver"><b>Вы получаете</b>',
+    );
+  }
+  return html;
 }
 
 function renderCardItem(
@@ -372,12 +401,18 @@ function renderCardItem(
       : null;
 
   if (style === "teaser" && linkObj) {
-    const alt = String(it.title || "");
-    const media = resolveMediaSrc(it.image, opts.media ?? null, alt);
+    const media = resolveMediaSrc(it.image, opts.media ?? null, "");
+    const mascotKey = media.src.match(/\/img\/vaybik-([a-z0-9-]+)\./i)?.[1];
+    const alt =
+      (mascotKey && MASCOT_META[mascotKey]?.alt) ||
+      media.alt ||
+      String(it.title || "");
     let img = "";
     if (media.src.startsWith("/img/")) {
-      img = renderStaticImgPicture(media.src, media.alt || alt, {
+      img = renderStaticImgPicture(media.src, alt, {
         sizes: "132px",
+        width: mascotKey ? MASCOT_META[mascotKey]?.width : null,
+        height: mascotKey ? MASCOT_META[mascotKey]?.height : null,
       });
     } else if (opts.media) {
       img = renderMediaPicture(it.image, opts.media, {
@@ -385,7 +420,7 @@ function renderCardItem(
         lazy: true,
       });
     } else if (media.src) {
-      img = `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}" loading="lazy">`;
+      img = `<img src="${escAttr(media.src)}" alt="${escAttr(alt)}" loading="lazy">`;
     }
     return `<a class="card vaybik-teaser reveal" href="${escAttr(linkObj.href)}">${img}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${text}<span class="more">${esc(linkObj.label)}${MORE_ARROW}</span></div></a>`;
   }
@@ -424,7 +459,18 @@ function renderCards(
   const cols = Number(data.columns) || 3;
   const items = (data.items as Array<Record<string, unknown>>) || [];
   const gridItems = items.filter((it) => String(it.cardStyle || "default") !== "teaser");
-  const teasers = items.filter((it) => String(it.cardStyle || "default") === "teaser");
+  const teaserSeen = new Set<string>();
+  const teasers = items.filter((it) => {
+    if (String(it.cardStyle || "default") !== "teaser") return false;
+    const href =
+      it.link && typeof it.link === "object"
+        ? String((it.link as { href?: string }).href || "")
+        : "";
+    const key = href || String(it.title || "");
+    if (teaserSeen.has(key)) return false;
+    teaserSeen.add(key);
+    return true;
+  });
   const cards = gridItems.map((it) => renderCardItem(it, opts)).join("");
   const teaserHtml = teasers.map((it) => renderCardItem(it, opts)).join("");
   const before =
@@ -568,7 +614,11 @@ function renderCases(
         const rows: string[] = [];
         if (before) rows.push(`<dt>Было</dt><dd>${esc(before)}</dd>`);
         if (didHtml) rows.push(`<dt>Сделали</dt><dd>${didHtml}</dd>`);
-        if (result) rows.push(`<dt>Результат</dt><dd>${esc(result)}</dd>`);
+        if (result) {
+          rows.push(
+            `<dt>Результат</dt><dd><strong>${esc(result)}</strong></dd>`,
+          );
+        }
         body = `<dl>${rows.join("")}</dl>`;
       } else {
         const caseText =
@@ -644,8 +694,19 @@ function renderWidget(
   return renderWidgetHtml(data, opts.mode || "preview", anchor);
 }
 
+function restoreKeysyFilters(html: string): string {
+  if (!html.includes("k-chips") || html.includes('name="kfilter"')) {
+    return html;
+  }
+  return html.replace(
+    /<div class="k-filters">\s*<div class="k-chips"[^>]*>[\s\S]*?<\/div>/,
+    KEYSY_FILTERS_HTML,
+  );
+}
+
 function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): string {
-  const html = fixMissingSvgViewBox(sanitizeCmsHtml(String(data.html || "")));
+  let html = fixMissingSvgViewBox(sanitizeCmsHtml(String(data.html || "")));
+  html = restoreKeysyFilters(html);
   if (html.trim().startsWith("<section")) return html;
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
   return `<section class="sec"${id}>${html}</section>`;

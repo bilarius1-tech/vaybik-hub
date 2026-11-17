@@ -19,6 +19,23 @@ export const FAQ_CHEV =
 export const EXT_MORE_ICON =
   '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg>';
 
+/** Иконка телефона для bt-call (hero/CTA o-nas) */
+export const PHONE_ICON =
+  '<svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.832 16.568a1 1 0 0 0 1.213-.303l.355-.465A2 2 0 0 1 17 15h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2A18 18 0 0 1 2 4a2 2 0 0 1 2-2h3a2 2 0 0 1 2 2v3a2 2 0 0 1-.8 1.6l-.468.351a1 1 0 0 0-.292 1.233 14 14 0 0 0 6.392 6.384" /></svg>';
+
+/** Фильтр кейсов keysy-ii (input radio + chips) — если sanitize срезал input */
+export const KEYSY_FILTERS_HTML = `<div class="k-filters">
+<input type="radio" name="kfilter" id="kf-all" value="all" checked>
+<input type="radio" name="kfilter" id="kf-1c" value="1c">
+<input type="radio" name="kfilter" id="kf-b24" value="b24">
+<input type="radio" name="kfilter" id="kf-both" value="both">
+<div class="k-chips" role="group" aria-label="Фильтр по системам">
+<label for="kf-all">Все</label>
+<label for="kf-1c">1С</label>
+<label for="kf-b24">Битрикс24</label>
+<label for="kf-both">1С + Битрикс24</label>
+</div>`;
+
 /** Подпись/размеры/srcset маскотов leadweb. */
 export const MASCOT_META: Record<
   string,
