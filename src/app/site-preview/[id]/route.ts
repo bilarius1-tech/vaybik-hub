@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireCan } from "@/server/auth/require";
-import { renderPreviewDocument, type NavRenderItem } from "@/server/cms/render/document";
+import { collectMediaRefs } from "@/server/cms/media/usage";
+import type { MediaVariant } from "@/server/cms/media/url";
+import { renderSiteDocument, type NavRenderItem } from "@/server/cms/render/document";
+import type { MediaAssetInfo } from "@/server/cms/render/media";
 import type { RenderBlock } from "@/server/cms/render/blocks";
 import { prisma } from "@/server/db";
 
@@ -30,6 +33,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     where: { id },
     include: {
       blocks: { orderBy: { sortOrder: "asc" } },
+      seoPage: true,
     },
   });
   if (!page) {
@@ -76,6 +80,29 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     banner = embed ? "" : "Предпросмотр · черновик";
   }
 
+  const mediaIds = new Set<string>();
+  for (const b of blocks) {
+    for (const ref of collectMediaRefs(b.type, b.data)) {
+      mediaIds.add(ref.mediaId);
+    }
+  }
+  const mediaById = new Map<string, MediaAssetInfo>();
+  if (mediaIds.size) {
+    const assets = await prisma.mediaAsset.findMany({
+      where: { id: { in: [...mediaIds] }, deletedAt: null },
+    });
+    for (const a of assets) {
+      mediaById.set(a.id, {
+        id: a.id,
+        version: a.version,
+        alt: a.alt,
+        width: a.width,
+        height: a.height,
+        variants: (a.variants as MediaVariant[]) || [],
+      });
+    }
+  }
+
   const navRows = await prisma.navItem.findMany({
     include: { page: { select: { path: true } } },
     orderBy: [{ menu: "asc" }, { sortOrder: "asc" }],
@@ -94,12 +121,29 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     sortOrder: n.sortOrder,
   }));
 
-  const html = renderPreviewDocument({
+  const contactsRow = await prisma.setting.findUnique({
+    where: { key: "site.contacts" },
+  });
+  const contacts = (contactsRow?.value || {}) as {
+    email?: string;
+    telegram?: string;
+  };
+
+  const html = renderSiteDocument({
+    mode: "preview",
     title,
+    path: page.path,
     template,
     blocks,
     nav,
+    seo: page.seoPage,
+    contacts,
     assetsOrigin: assetsOrigin(),
+    siteOrigin: assetsOrigin(),
+    media: {
+      mediaBase: "/admin/api/public/media",
+      mediaById,
+    },
     banner,
   });
 

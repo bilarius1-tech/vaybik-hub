@@ -1,5 +1,14 @@
+import {
+  assetsForTemplate,
+  mergeAssetVersions,
+  type SiteAssetVersions,
+} from "./assets";
 import { esc, escAttr } from "./escape";
-import { renderBlocks, type RenderBlock } from "./blocks";
+import {
+  renderBlocks,
+  type MediaRenderContext,
+  type RenderBlock,
+} from "./blocks";
 
 export type NavRenderItem = {
   id: string;
@@ -14,37 +23,142 @@ export type NavRenderItem = {
   sortOrder: number;
 };
 
+export type SeoRenderData = {
+  title?: string | null;
+  description?: string | null;
+  canonical?: string | null;
+  robots?: string | null;
+  ogTitle?: string | null;
+  ogDescription?: string | null;
+  ogImage?: string | null;
+  twitterCard?: string | null;
+  jsonLd?: unknown;
+};
+
+export type ContactsRender = {
+  email?: string | null;
+  telegram?: string | null;
+};
+
+export type RenderMode = "public" | "preview";
+
+const CARET_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>`;
+
+const TG_SVG = `<svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/></svg>`;
+
+const MAIL_SVG = `<svg class="ic" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`;
+
 function hrefOf(item: NavRenderItem): string {
   return item.url || item.pagePath || "#";
 }
 
-function renderHeaderNav(items: NavRenderItem[]): string {
+function slugForSub(label: string, id: string): string {
+  const s = label
+    .toLowerCase()
+    .replace(/[^a-zа-яё0-9]+/gi, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 24);
+  return s || id.slice(0, 8);
+}
+
+function renderHeaderNav(
+  items: NavRenderItem[],
+  currentPath?: string,
+): string {
   const roots = items
     .filter((i) => i.menu === "HEADER" && !i.parentId && !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const parts = roots.map((root) => {
+  return roots
+    .map((root) => {
+      const children = items
+        .filter((c) => c.parentId === root.id && !c.isHidden)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+      const href = hrefOf(root);
+      const target = root.openInNewTab
+        ? ' target="_blank" rel="noopener"'
+        : "";
+      const current =
+        currentPath && (href === currentPath || href === `${currentPath}`)
+          ? ' aria-current="page"'
+          : "";
+      if (!children.length) {
+        return `<div class="nav-item"><a class="nav-link" href="${escAttr(href)}"${target}${current}>${esc(root.label)}</a></div>`;
+      }
+      const subId = `sub-${slugForSub(root.label, root.id)}`;
+      const sub = children
+        .map((c) => {
+          const hl = c.isHighlighted ? ' class="sub-hl"' : "";
+          const t = c.openInNewTab
+            ? ' target="_blank" rel="noopener"'
+            : "";
+          return `<li><a href="${escAttr(hrefOf(c))}"${hl}${t}>${esc(c.label)}</a></li>`;
+        })
+        .join("");
+      return `<div class="nav-item has-sub"><a class="nav-link" href="${escAttr(href)}">${esc(root.label)}</a><button class="nav-caret" type="button" aria-expanded="false" aria-controls="${escAttr(subId)}" aria-label="Подменю: ${escAttr(root.label)}">${CARET_SVG}</button><ul class="nav-sub" id="${escAttr(subId)}">${sub}</ul></div>`;
+    })
+    .join("");
+}
+
+function renderMobileMenu(
+  items: NavRenderItem[],
+  contacts: ContactsRender,
+  currentPath?: string,
+): string {
+  const roots = items
+    .filter((i) => i.menu === "HEADER" && !i.parentId && !i.isHidden)
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const homeCurrent =
+    currentPath === "/" ? ' aria-current="page"' : "";
+  const parts: string[] = [
+    `<a href="/"${homeCurrent}>Главная</a>`,
+  ];
+
+  for (const root of roots) {
     const children = items
       .filter((c) => c.parentId === root.id && !c.isHidden)
       .sort((a, b) => a.sortOrder - b.sortOrder);
-    const target = root.openInNewTab ? ' target="_blank" rel="noopener"' : "";
-    if (!children.length) {
-      return `<div class="nav-item"><a class="nav-link" href="${escAttr(hrefOf(root))}"${target}>${esc(root.label)}</a></div>`;
+    if (root.isHighlighted) {
+      parts.push(
+        `<a class="menu-hl" href="${escAttr(hrefOf(root))}">${esc(root.label)}</a>`,
+      );
+      continue;
     }
-    const sub = children
-      .map((c) => {
-        const hl = c.isHighlighted ? ' class="sub-hl"' : "";
-        const t = c.openInNewTab ? ' target="_blank" rel="noopener"' : "";
-        return `<li><a href="${escAttr(hrefOf(c))}"${hl}${t}>${esc(c.label)}</a></li>`;
-      })
+    if (!children.length) {
+      parts.push(
+        `<a href="${escAttr(hrefOf(root))}">${esc(root.label)}</a>`,
+      );
+      continue;
+    }
+    const lis = children
+      .map(
+        (c) =>
+          `<a href="${escAttr(hrefOf(c))}">${esc(c.label)}</a>`,
+      )
       .join("");
-    return `<div class="nav-item has-sub"><a class="nav-link" href="${escAttr(hrefOf(root))}">${esc(root.label)}</a><ul class="nav-sub">${sub}</ul></div>`;
-  });
+    parts.push(
+      `<details class="menu-acc"><summary>${esc(root.label)}</summary><div class="menu-acc-list">${lis}</div></details>`,
+    );
+  }
 
-  return parts.join("");
+  const tg =
+    contacts.telegram ||
+    process.env.SITE_DEFAULT_TELEGRAM ||
+    "https://t.me/bilarius";
+  const email =
+    contacts.email ||
+    process.env.SITE_DEFAULT_EMAIL ||
+    "bilariuss@yandex.ru";
+  const tgLabel = tg.replace(/^https?:\/\/t\.me\//i, "@");
+
+  return `<div class="menu" id="menu" hidden role="dialog" aria-modal="true" aria-label="Меню"><div class="menu-back" data-close-menu tabindex="-1"></div><div class="menu-panel"><div class="menu-top"><span class="logo">vaybik<b>.</b>ru</span><button class="mclose" type="button" aria-label="Закрыть меню">×</button></div><nav aria-label="Мобильное меню">${parts.join("")}</nav><div class="menu-ft"><a class="bt-btn" href="${escAttr(tg)}" target="_blank" rel="noopener"><span class="bt-sl">Обсудить проект</span></a><div class="menu-ft-links"><a href="${escAttr(tg)}" target="_blank" rel="noopener">${TG_SVG}Telegram ${esc(tgLabel)}</a><a href="mailto:${escAttr(email)}">${MAIL_SVG}${esc(email)}</a></div></div></div></div>`;
 }
 
-function renderFooter(items: NavRenderItem[]): string {
+function renderFooter(
+  items: NavRenderItem[],
+  year: number,
+): string {
   const roots = items
     .filter((i) => i.menu === "FOOTER" && !i.parentId && !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -56,7 +170,9 @@ function renderFooter(items: NavRenderItem[]): string {
         .sort((a, b) => a.sortOrder - b.sortOrder);
       const links = children
         .map((c) => {
-          const t = c.openInNewTab ? ' target="_blank" rel="noopener"' : "";
+          const t = c.openInNewTab
+            ? ' target="_blank" rel="noopener"'
+            : "";
           return `<a href="${escAttr(hrefOf(c))}"${t}>${esc(c.label)}</a>`;
         })
         .join("");
@@ -64,9 +180,182 @@ function renderFooter(items: NavRenderItem[]): string {
     })
     .join("");
 
-  return `<footer class="ftr"><div class="w"><div class="grid"><div><a class="logo" href="/">vaybik<b>.</b>ru</a></div>${cols}</div></div></footer>`;
+  return `<footer class="ftr"><div class="w"><div class="grid"><div><a class="logo" href="/">vaybik<b>.</b>ru</a><p>Команда из двух разработчиков — Алексея и Игоря. Делаем сайты, презентации и калькуляторы, которые приводят заявки: дизайн, разработка, SEO и реклама в одних руках.</p></div>${cols}</div><p style="margin-top:32px">© ${year} vaybik.ru. Сайты, которые приводят заявки. <a class="ftr-team" href="/kp/" rel="nofollow" style="opacity:.55;margin-left:12px">Калькулятор для команды</a></p></div></footer>`;
 }
 
+function renderHead(opts: {
+  mode: RenderMode;
+  title: string;
+  path: string;
+  seo: SeoRenderData | null;
+  assetsOrigin: string;
+  siteOrigin: string;
+  cssHrefs: string[];
+  noindexHost?: boolean;
+  skipCanonical?: boolean;
+}): string {
+  const seo = opts.seo || {};
+  const title = seo.title || opts.title;
+  const desc = seo.description || "";
+  const canonical =
+    seo.canonical ||
+    `${opts.siteOrigin.replace(/\/$/, "")}${opts.path === "/" ? "/" : opts.path}`;
+  const robots =
+    opts.mode === "preview" || opts.noindexHost
+      ? opts.mode === "preview"
+        ? "noindex,nofollow"
+        : seo.robots || "noindex,nofollow"
+      : seo.robots || "index,follow,max-image-preview:large";
+  const ogTitle = seo.ogTitle || title;
+  const ogDesc = seo.ogDescription || desc;
+  const ogImage =
+    seo.ogImage || `${opts.siteOrigin.replace(/\/$/, "")}/img/og.jpg`;
+  const twitterCard = seo.twitterCard || "summary_large_image";
+
+  let jsonLd = "";
+  if (opts.mode === "public" && seo.jsonLd) {
+    const raw =
+      typeof seo.jsonLd === "string"
+        ? seo.jsonLd
+        : JSON.stringify(seo.jsonLd);
+    jsonLd = `<script type="application/ld+json">${raw.replace(/</g, "\\u003c")}</script>`;
+  }
+
+  const origin = opts.assetsOrigin.replace(/\/$/, "");
+  const abs = (href: string) =>
+    href.startsWith("http") ? href : `${origin}${href}`;
+
+  const css = opts.cssHrefs
+    .map((h) => `<link rel="stylesheet" href="${escAttr(abs(h))}">`)
+    .join("");
+
+  const previewTitle =
+    opts.mode === "preview" ? `${esc(title)} — предпросмотр` : esc(title);
+
+  const showCanonical =
+    opts.mode === "public" && !opts.noindexHost && !opts.skipCanonical;
+
+  return `<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>${previewTitle}</title>
+${desc ? `<meta name="description" content="${escAttr(desc)}">` : ""}
+${showCanonical ? `<link rel="canonical" href="${escAttr(canonical)}">` : ""}
+<meta name="robots" content="${escAttr(robots)}">
+<meta name="theme-color" content="#07051a">
+<meta property="og:type" content="website"><meta property="og:locale" content="ru_RU"><meta property="og:site_name" content="vaybik.ru">
+<meta property="og:title" content="${escAttr(ogTitle)}"><meta property="og:description" content="${escAttr(ogDesc)}">
+<meta property="og:url" content="${escAttr(canonical)}"><meta property="og:image" content="${escAttr(ogImage)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${escAttr(ogTitle)}">
+<meta name="twitter:card" content="${escAttr(twitterCard)}"><meta name="twitter:title" content="${escAttr(ogTitle)}"><meta name="twitter:description" content="${escAttr(ogDesc)}"><meta name="twitter:image" content="${escAttr(ogImage)}">
+<link rel="icon" href="${escAttr(abs("/img/favicon.svg"))}" type="image/svg+xml">
+<link rel="preload" href="${escAttr(abs("/fonts/manrope-cyrillic-400-normal.woff2"))}" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="${escAttr(abs("/fonts/unbounded-cyrillic-500-normal.woff2"))}" as="font" type="font/woff2" crossorigin>
+${css}
+<link rel="alternate" type="text/plain" href="${escAttr(abs("/llms.txt"))}" title="llms.txt">
+${jsonLd}`;
+}
+
+export type SiteDocumentOpts = {
+  mode: RenderMode;
+  title: string;
+  path: string;
+  template: string;
+  blocks: RenderBlock[];
+  nav: NavRenderItem[];
+  seo?: SeoRenderData | null;
+  contacts?: ContactsRender;
+  assetsOrigin: string;
+  /** Публичный origin для canonical/OG (site-test или vaybik.ru) */
+  siteOrigin: string;
+  assetVersions?: Partial<SiteAssetVersions> | null;
+  media?: MediaRenderContext | null;
+  banner?: string;
+  noindexHost?: boolean;
+  year?: number;
+};
+
+export function renderSiteDocument(opts: SiteDocumentOpts): string {
+  const versions = mergeAssetVersions(opts.assetVersions);
+  const assets = assetsForTemplate(opts.template, versions);
+  const body = renderBlocks(opts.blocks, {
+    mode: opts.mode,
+    media: opts.media,
+  });
+  const headerNav = renderHeaderNav(opts.nav, opts.path);
+  const contacts = opts.contacts || {};
+  const tg =
+    contacts.telegram ||
+    process.env.SITE_DEFAULT_TELEGRAM ||
+    "https://t.me/bilarius";
+  const mobile = renderMobileMenu(opts.nav, contacts, opts.path);
+  const footer = renderFooter(
+    opts.nav,
+    opts.year || new Date().getFullYear(),
+  );
+  const head = renderHead({
+    mode: opts.mode,
+    title: opts.title,
+    path: opts.path,
+    seo: opts.seo || null,
+    assetsOrigin: opts.assetsOrigin,
+    siteOrigin: opts.siteOrigin,
+    cssHrefs: assets.css,
+    noindexHost: opts.noindexHost,
+  });
+
+  const origin = opts.assetsOrigin.replace(/\/$/, "");
+  const scripts =
+    opts.mode === "public"
+      ? assets.js
+          .map(
+            (s) =>
+              `<script src="${escAttr(s.startsWith("http") ? s : `${origin}${s}`)}" defer></script>`,
+          )
+          .join("")
+      : "";
+
+  const previewStyle =
+    opts.mode === "preview"
+      ? `<style>
+.reveal{opacity:1;transform:none}
+.cms-preview-banner{position:sticky;top:0;z-index:9999;background:#1a1030;color:#fff;padding:10px 16px;font:600 14px/1.4 Manrope,system-ui,sans-serif;border-bottom:2px solid #ff8a1f}
+.cms-preview-banner a{color:#ff8a1f}
+</style>`
+      : "";
+
+  const banner =
+    opts.mode === "preview" && opts.banner
+      ? `<div class="cms-preview-banner">${esc(opts.banner)}</div>`
+      : "";
+
+  const bodyClass = assets.bodyClass
+    ? ` class="${escAttr(assets.bodyClass)}"`
+    : "";
+  const bodyAttrs = assets.bodyAttrs || "";
+
+  return `<!doctype html>
+<html lang="ru">
+<head>
+${head}
+${previewStyle}
+</head>
+<body${bodyClass}${bodyAttrs}>
+${banner}
+<a class="skip" href="#main">К содержанию</a>
+<header class="hdr"><div class="w">
+<a class="logo" href="/" aria-label="vaybik.ru — на главную">vaybik<b>.</b>ru</a>
+<nav class="nav" aria-label="Основное меню">${headerNav}</nav>
+<a class="bt-btn hdr-cta" href="${escAttr(tg)}" target="_blank" rel="noopener"><span class="bt-sl">Обсудить проект</span></a>
+<button class="burger" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="menu"><span></span></button>
+</div></header>
+${mobile}
+<main id="main">${body}</main>
+${footer}
+${scripts}
+</body>
+</html>`;
+}
+
+/** @deprecated используйте renderSiteDocument(..., mode: "preview") */
 export function renderPreviewDocument(opts: {
   title: string;
   template: string;
@@ -74,48 +363,77 @@ export function renderPreviewDocument(opts: {
   nav: NavRenderItem[];
   assetsOrigin: string;
   banner: string;
+  path?: string;
 }): string {
-  const origin = opts.assetsOrigin.replace(/\/$/, "");
-  const extraCss =
-    opts.template === "service" || opts.template === "calculator"
-      ? `<link rel="stylesheet" href="${escAttr(origin)}/css/service-pages.css">`
-      : opts.template === "home"
-        ? ""
-        : "";
-  const keysy =
-    opts.template === "default"
-      ? ""
-      : "";
+  return renderSiteDocument({
+    mode: "preview",
+    title: opts.title,
+    path: opts.path || "/",
+    template: opts.template,
+    blocks: opts.blocks,
+    nav: opts.nav,
+    assetsOrigin: opts.assetsOrigin,
+    siteOrigin: opts.assetsOrigin,
+    banner: opts.banner,
+  });
+}
 
-  const body = renderBlocks(opts.blocks);
-  const headerNav = renderHeaderNav(opts.nav);
-  const footer = renderFooter(opts.nav);
+export function renderNotFoundDocument(opts: {
+  nav: NavRenderItem[];
+  contacts?: ContactsRender;
+  assetsOrigin: string;
+  siteOrigin: string;
+  assetVersions?: Partial<SiteAssetVersions> | null;
+  year?: number;
+}): string {
+  const versions = mergeAssetVersions(opts.assetVersions);
+  const assets = assetsForTemplate("default", versions);
+  const head = renderHead({
+    mode: "public",
+    title: "Страница не найдена — vaybik.ru",
+    path: "/404.html",
+    seo: {
+      title: "Страница не найдена — vaybik.ru",
+      description: "Такой страницы нет. Перейдите на главную vaybik.ru.",
+      robots: "noindex,max-image-preview:large",
+      ogTitle: "vaybik.ru",
+      ogDescription: "Такой страницы нет. Перейдите на главную vaybik.ru.",
+    },
+    assetsOrigin: opts.assetsOrigin,
+    siteOrigin: opts.siteOrigin,
+    cssHrefs: assets.css,
+    skipCanonical: true,
+  });
+  const contacts = opts.contacts || {};
+  const tg =
+    contacts.telegram ||
+    process.env.SITE_DEFAULT_TELEGRAM ||
+    "https://t.me/bilarius";
+  const origin = opts.assetsOrigin.replace(/\/$/, "");
+  const scripts = assets.js
+    .map(
+      (s) =>
+        `<script src="${escAttr(s.startsWith("http") ? s : `${origin}${s}`)}" defer></script>`,
+    )
+    .join("");
 
   return `<!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(opts.title)} — предпросмотр</title>
-<meta name="robots" content="noindex,nofollow">
-<link rel="stylesheet" href="${escAttr(origin)}/css/fonts.css">
-<link rel="stylesheet" href="${escAttr(origin)}/css/site.css">
-${extraCss}${keysy}
-<style>
-.reveal{opacity:1;transform:none}
-.cms-preview-banner{position:sticky;top:0;z-index:9999;background:#1a1030;color:#fff;padding:10px 16px;font:600 14px/1.4 Manrope,system-ui,sans-serif;border-bottom:2px solid #ff8a1f}
-.cms-preview-banner a{color:#ff8a1f}
-</style>
+${head}
 </head>
 <body>
-${opts.banner ? `<div class="cms-preview-banner">${esc(opts.banner)}</div>` : ""}
 <a class="skip" href="#main">К содержанию</a>
 <header class="hdr"><div class="w">
-<a class="logo" href="/">vaybik<b>.</b>ru</a>
-<nav class="nav" aria-label="Основное меню">${headerNav}</nav>
+<a class="logo" href="/" aria-label="vaybik.ru — на главную">vaybik<b>.</b>ru</a>
+<nav class="nav" aria-label="Основное меню">${renderHeaderNav(opts.nav)}</nav>
+<a class="bt-btn hdr-cta" href="${escAttr(tg)}" target="_blank" rel="noopener"><span class="bt-sl">Обсудить проект</span></a>
+<button class="burger" type="button" aria-label="Открыть меню" aria-expanded="false" aria-controls="menu"><span></span></button>
 </div></header>
-<main id="main">${body}</main>
-${footer}
+${renderMobileMenu(opts.nav, contacts)}
+<main id="main"><section class="hero sub"><div class="w"><span class="kicker">404</span><h1>Страницы нет</h1><p class="lead">Такой адрес не найден. Вернитесь на главную или выберите раздел в меню.</p><div class="acts"><a class="bt-btn" href="/"><span class="bt-sl">На главную</span></a></div></div></section></main>
+${renderFooter(opts.nav, opts.year || new Date().getFullYear())}
+${scripts}
 </body>
 </html>`;
 }

@@ -1,0 +1,43 @@
+<section class="sec" id="studio" aria-labelledby="studio-title"><div class="w"><h2 id="studio-title" class="studio-sr">Студия Алексея и Игоря</h2><p class="studio-sr">Нажатие на Алексея или Игоря открывает страницу «О нас». Клик по коту — он мяукает.</p>
+<div class="stage-wrap"><div id="studio-stage" role="img" aria-label="Изометрическая студия: программист и маркетолог работают, обсуждают задачу, принимают клиента с заявкой. Рыжий кот бегает по комнате."></div>
+<div class="labels" aria-hidden="true"><span class="name" id="label-alex">Алексей</span><span class="name" id="label-igor">Игорь</span><span class="name" id="label-client">Клиент</span><span class="name" id="label-cat">Кот</span></div>
+<p id="studio-caption" class="studio-caption" aria-live="polite">Алексей пишет код. Игорь разбирает заявки.</p>
+<p id="studio-fallback" class="fallback muted" hidden>Сцена не включилась. Страница «О нас» доступна с клавиатуры.</p>
+<button type="button" class="studio-pause" id="pause" aria-pressed="false">Пауза</button></div>
+<a class="studio-sr" href="/o-nas/">Страница «О нас»</a>
+<noscript><p><a href="/o-nas/">О нас</a></p></noscript>
+<script>
+(function () {
+  var root = document.getElementById("studio");
+  if (!root) return;
+  var shown = false;
+  var booted = false;
+  function apply() {
+    if (window.LeadStudio && LeadStudio.setVisible) LeadStudio.setVisible(shown && document.visibilityState !== "hidden");
+  }
+  function load() {
+    if (booted) return;
+    booted = true;
+    var s = document.createElement("script");
+    s.src = "/js/studio-live.js?v=3";
+    s.async = true;
+    s.onload = apply;
+    s.onerror = function () {
+      var el = document.getElementById("studio-fallback");
+      if (el) el.hidden = false;
+    };
+    document.body.appendChild(s);
+  }
+  if (!("IntersectionObserver" in window)) { shown = true; load(); return; }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (entry) {
+      shown = entry.isIntersecting;
+      if (shown) load();
+      apply();
+    });
+  }, { rootMargin: "240px 0px", threshold: 0.01 });
+  io.observe(root);
+  document.addEventListener("visibilitychange", apply);
+})();
+</script>
+</div></section>

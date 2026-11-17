@@ -29,6 +29,9 @@ export default async function SitePageEditorPage({ params }: Props) {
       initialPage={JSON.parse(JSON.stringify(page))}
       seoPages={JSON.parse(JSON.stringify(seoPages))}
       isOwner={ctx.user.role === "OWNER"}
+      sitePublicOrigin={
+        process.env.SITE_PUBLIC_ORIGIN || "https://site-test.vaybik.ru"
+      }
     />
   );
 }

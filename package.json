@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "worker": "tsx src/worker/index.ts",
+    "site": "tsx src/site/server.ts",
+    "site:build": "esbuild src/site/server.ts --bundle --platform=node --target=node22 --format=cjs --outfile=dist/site.cjs --packages=external --alias:@=./src",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "postinstall": "prisma generate",
@@ -24,7 +26,9 @@
     "backup:restore": "tsx scripts/restore-backup.ts",
     "backup:restore-test": "tsx scripts/backup-restore-test.ts",
     "deploy:prod": "bash scripts/deploy-prod.sh",
-    "cms:import": "tsx scripts/cms-import-leadweb.ts"
+    "cms:import": "tsx scripts/cms-import-leadweb.ts",
+    "cms:seed-site": "tsx scripts/cms-seed-site-settings.ts",
+    "site:parity": "tsx scripts/site-parity.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

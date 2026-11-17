@@ -7,6 +7,7 @@ import {
   navReorderSchema,
 } from "@/server/cms/schemas";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 
@@ -69,6 +70,7 @@ export async function POST(req: NextRequest) {
       userAgent: userAgent(req),
     });
 
+    await bumpSiteVersion(prisma, "cms.nav.create");
     return jsonOk({ item }, { status: 201 });
   } catch (err) {
     return handleRouteError(err);
@@ -105,6 +107,7 @@ export async function PATCH(req: NextRequest) {
       const updated = await prisma.navItem.findMany({
         orderBy: [{ menu: "asc" }, { sortOrder: "asc" }],
       });
+      await bumpSiteVersion(prisma, "cms.nav.reorder");
       return jsonOk({ items: updated });
     }
 
@@ -141,6 +144,7 @@ export async function PATCH(req: NextRequest) {
       userAgent: userAgent(req),
     });
 
+    await bumpSiteVersion(prisma, "cms.nav.update");
     return jsonOk({ item });
   } catch (err) {
     return handleRouteError(err);
@@ -164,6 +168,7 @@ export async function DELETE(req: NextRequest) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    await bumpSiteVersion(prisma, "cms.nav.delete");
     return jsonOk({ ok: true });
   } catch (err) {
     return handleRouteError(err);

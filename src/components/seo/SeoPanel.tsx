@@ -47,9 +47,11 @@ function lenTone(n: number, soft: number, hard: number): "ok" | "warn" | "bad" {
 export function SeoPanel({
   initialPages,
   initialCounters,
+  initialRobots = "",
 }: {
   initialPages: SeoPageRow[];
   initialCounters: Counters;
+  initialRobots?: string;
 }) {
   const router = useRouter();
   const [path, setPath] = useState("/");
@@ -64,6 +66,7 @@ export function SeoPanel({
   );
   const [inSitemap, setInSitemap] = useState(true);
   const [counters, setCounters] = useState<Counters>(initialCounters);
+  const [robotsText, setRobotsText] = useState(initialRobots);
   const [inspectUrl, setInspectUrl] = useState("https://vaybik.ru/");
   const [inspect, setInspect] = useState<InspectResult | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
@@ -126,6 +129,16 @@ export function SeoPanel({
     });
     if (res.error) setErr(res.error.message);
     else setMsg("Счётчики сохранены");
+  }
+
+  async function saveRobots() {
+    setErr(null);
+    const res = await api("/api/seo/robots", {
+      method: "PUT",
+      body: JSON.stringify({ text: robotsText }),
+    });
+    if (res.error) setErr(res.error.message);
+    else setMsg("robots.txt сохранён");
   }
 
   async function runInspect() {
@@ -368,6 +381,25 @@ export function SeoPanel({
           <Button variant="ghost" onClick={() => void saveCounters()}>
             Сохранить счётчики
           </Button>
+        </div>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="robots.txt"
+          subtitle="публичный сайт; на site-test всегда Disallow: /"
+        />
+        <Field label="Текст robots.txt" htmlFor="robots">
+          <Textarea
+            id="robots"
+            rows={12}
+            value={robotsText}
+            onChange={(e) => setRobotsText(e.target.value)}
+            className="font-mono text-[12px]"
+          />
+        </Field>
+        <div className="mt-3">
+          <Button onClick={() => void saveRobots()}>Сохранить robots.txt</Button>
         </div>
       </Card>
 

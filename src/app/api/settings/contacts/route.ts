@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonOk } from "@/server/http/response";
 import { contactsSchema, SETTINGS_KEYS } from "@/server/settings/schemas";
@@ -49,6 +50,7 @@ export async function PUT(req: NextRequest) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    await bumpSiteVersion(prisma, "site.contacts");
     return jsonOk({ contacts: row.value });
   } catch (err) {
     return handleRouteError(err);

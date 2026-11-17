@@ -10,12 +10,22 @@ export default async function SeoPage() {
     redirect("/");
   }
 
-  const [pages, countersRow] = await Promise.all([
+  const [pages, countersRow, robotsRow] = await Promise.all([
     prisma.seoPage.findMany({
       orderBy: [{ host: "asc" }, { path: "asc" }],
     }),
     prisma.setting.findUnique({ where: { key: "seo.counters" } }),
+    prisma.setting.findUnique({ where: { key: "site.robots" } }),
   ]);
+
+  const robotsText =
+    typeof robotsRow?.value === "string"
+      ? robotsRow.value
+      : robotsRow?.value &&
+          typeof robotsRow.value === "object" &&
+          "text" in (robotsRow.value as object)
+        ? String((robotsRow.value as { text: string }).text)
+        : "";
 
   return (
     <SeoPanel
@@ -23,6 +33,7 @@ export default async function SeoPage() {
       initialCounters={
         (countersRow?.value as Record<string, string | null>) || {}
       }
+      initialRobots={robotsText}
     />
   );
 }

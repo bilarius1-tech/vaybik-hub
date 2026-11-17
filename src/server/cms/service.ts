@@ -5,6 +5,7 @@ import {
   syncRevisionMediaUsage,
 } from "@/server/cms/media/sync-usage";
 import { parseBlockData } from "./blocks";
+import { bumpSiteVersion } from "./site-version";
 
 const REVISION_LIMIT = 20;
 
@@ -133,6 +134,7 @@ export async function publishPage(
         where: { id: { in: old.map((o) => o.id) } },
       });
     }
+    await bumpSiteVersion(tx, "cms.page.publish");
     return { page, revision: rev };
   });
 }

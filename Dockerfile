@@ -42,6 +42,15 @@ RUN npx --yes esbuild@0.25.0 src/worker/index.ts \
   --outfile=dist/worker.cjs \
   --packages=external \
   --alias:@=./src
+# Публичный site-сервер (тот же образ)
+RUN npx --yes esbuild@0.25.0 src/site/server.ts \
+  --bundle \
+  --platform=node \
+  --target=node22 \
+  --format=cjs \
+  --outfile=dist/site.cjs \
+  --packages=external \
+  --alias:@=./src
 
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
@@ -74,12 +83,13 @@ COPY --from=builder /app/scripts ./scripts
 COPY --from=builder /app/src ./src
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 COPY --from=builder /app/dist/worker.cjs ./worker.cjs
+COPY --from=builder /app/dist/site.cjs ./site.cjs
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/static ./.next/static
 COPY docker/entrypoint.sh /entrypoint.sh
 
 RUN chmod +x /entrypoint.sh \
-  && mkdir -p /app/uploads /app/backups \
+  && mkdir -p /app/uploads /app/backups /app/site-cache \
   && chown -R nextjs:nodejs /app
 
 USER nextjs

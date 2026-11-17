@@ -254,14 +254,20 @@ export async function unpublishPage(pageId: string, userId: string) {
       code: "NOT_FOUND",
     });
   }
-  return prisma.page.update({
-    where: { id: pageId },
-    data: {
-      status: "DRAFT",
-      updatedById: userId,
-      source: "manual",
-    },
-    include: PAGE_INCLUDE,
+  const { bumpSiteVersion } = await import("./site-version");
+  return prisma.$transaction(async (tx) => {
+    const updated = await tx.page.update({
+      where: { id: pageId },
+      data: {
+        status: "DRAFT",
+        publishedRevisionId: null,
+        updatedById: userId,
+        source: "manual",
+      },
+      include: PAGE_INCLUDE,
+    });
+    await bumpSiteVersion(tx, "cms.page.unpublish");
+    return updated;
   });
 }
 

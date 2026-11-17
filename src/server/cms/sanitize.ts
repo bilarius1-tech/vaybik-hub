@@ -88,6 +88,7 @@ const BASE_OPTIONS: sanitizeHtml.IOptions = {
     "aside",
     "details",
     "summary",
+    "dialog",
     "h1",
     "h2",
     "h3",

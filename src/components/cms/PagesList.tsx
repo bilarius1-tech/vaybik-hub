@@ -418,6 +418,7 @@ export function PagesList({ isOwner = false }: { isOwner?: boolean }) {
             <option value="default">default</option>
             <option value="service">service</option>
             <option value="calculator">calculator</option>
+            <option value="keysy">keysy</option>
           </Select>
         </Field>
         <Field label="На странице">
@@ -747,6 +748,7 @@ export function PagesList({ isOwner = false }: { isOwner?: boolean }) {
                   <option value="default">default</option>
                   <option value="service">service</option>
                   <option value="calculator">calculator</option>
+            <option value="keysy">keysy</option>
                 </Select>
               </Field>
             </div>

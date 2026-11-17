@@ -8,6 +8,8 @@ import {
   MEDIA_MAX_BYTES,
   replaceMediaAsset,
 } from "@/server/cms/media/store";
+import { bumpSiteVersion } from "@/server/cms/site-version";
+import { prisma } from "@/server/db";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -39,6 +41,7 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    await bumpSiteVersion(prisma, "cms.media.replace");
     return jsonOk({ asset });
   } catch (err) {
     if (err instanceof MediaError) {

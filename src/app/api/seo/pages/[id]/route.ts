@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 import { seoPageSchema } from "@/server/seo/schemas";
@@ -15,6 +16,7 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const { id } = await ctx.params;
     const page = await prisma.seoPage.findUnique({ where: { id } });
     if (!page) return jsonError("NOT_FOUND", "Не найдено", 404);
+    await bumpSiteVersion(prisma, "seo.page.update");
     return jsonOk({ page });
   } catch (err) {
     return handleRouteError(err);
@@ -69,6 +71,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    await bumpSiteVersion(prisma, "seo.page.delete");
     return jsonOk({ ok: true });
   } catch (err) {
     return handleRouteError(err);

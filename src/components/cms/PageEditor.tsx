@@ -65,10 +65,12 @@ export function PageEditor({
   initialPage,
   seoPages,
   isOwner = false,
+  sitePublicOrigin = "https://site-test.vaybik.ru",
 }: {
   initialPage: PageData;
   seoPages: SeoOption[];
   isOwner?: boolean;
+  sitePublicOrigin?: string;
 }) {
   const router = useRouter();
   const [page, setPage] = useState(initialPage);
@@ -84,6 +86,7 @@ export function PageEditor({
   const [addType, setAddType] = useState<BlockType>("faq");
   const [deleteBlockId, setDeleteBlockId] = useState<string | null>(null);
   const [restoreId, setRestoreId] = useState<string | null>(null);
+  const [unpublishOpen, setUnpublishOpen] = useState(false);
   const [jsonOpen, setJsonOpen] = useState(false);
   const [formValid, setFormValid] = useState(true);
   const [previewKey, setPreviewKey] = useState(0);
@@ -437,6 +440,27 @@ export function PageEditor({
     router.refresh();
   }
 
+  async function unpublish() {
+    setErr(null);
+    const res = await api(`/api/cms/pages/${page.id}/unpublish`, {
+      method: "POST",
+      body: "{}",
+    });
+    if (res.error) {
+      setErr(res.error.message);
+      return;
+    }
+    setUnpublishOpen(false);
+    setMsg("Снято с публикации");
+    await refreshPage();
+    router.refresh();
+  }
+
+  const siteUrl = `${sitePublicOrigin.replace(/\/$/, "")}${page.path === "/" ? "/" : page.path}`;
+  const hasPublished = Boolean(page.publishedRevisionId);
+  const hasUnpublishedChanges =
+    hasPublished && (page.status !== "PUBLISHED" || dirty);
+
   async function restore() {
     if (!restoreId) return;
     const res = await api(`/api/cms/revisions/${restoreId}/restore`, {
@@ -477,6 +501,23 @@ export function PageEditor({
             >
               {page.status}
             </Pill>
+            {hasUnpublishedChanges && (
+              <>
+                {" "}
+                <Pill tone="yellow">
+                  Опубликована · есть неопубликованные изменения
+                </Pill>
+              </>
+            )}
+            {hasPublished && page.status === "PUBLISHED" && !dirty && (
+              <>
+                {" "}
+                <Pill tone="green">Опубликована</Pill>
+              </>
+            )}
+          </p>
+          <p className="mt-1 text-[12px] text-mu">
+            Меню и SEO применяются сразу; блоки — после публикации.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -488,6 +529,14 @@ export function PageEditor({
           >
             Предпросмотр
           </Button>
+          {hasPublished && (
+            <Button
+              variant="ghost"
+              onClick={() => window.open(siteUrl, "_blank")}
+            >
+              Открыть на сайте
+            </Button>
+          )}
           <Button
             variant="ghost"
             onClick={() => void saveBlock(false)}
@@ -495,6 +544,11 @@ export function PageEditor({
           >
             Сохранить черновик
           </Button>
+          {hasPublished && (
+            <Button variant="ghost" onClick={() => setUnpublishOpen(true)}>
+              Снять с публикации
+            </Button>
+          )}
           <Button onClick={() => void publish()}>Опубликовать</Button>
         </div>
       </div>
@@ -715,6 +769,7 @@ export function PageEditor({
                 <option value="default">default</option>
                 <option value="service">service</option>
                 <option value="calculator">calculator</option>
+                <option value="keysy">keysy</option>
               </Select>
             </Field>
             <Field label="Статус">
@@ -833,6 +888,17 @@ export function PageEditor({
           )}
         </Card>
       )}
+
+      <ConfirmDialog
+        open={unpublishOpen}
+        title="Снять с публикации?"
+        confirmLabel="Снять"
+        danger
+        onConfirm={() => void unpublish()}
+        onCancel={() => setUnpublishOpen(false)}
+      >
+        Страница исчезнет с публичного сайта. Черновик в админке останется.
+      </ConfirmDialog>
 
       <ConfirmDialog
         open={Boolean(deleteBlockId)}

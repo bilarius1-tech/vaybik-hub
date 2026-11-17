@@ -3,6 +3,7 @@ import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { redirectInputSchema, validateRedirect } from "@/server/cms/redirects";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 
@@ -78,6 +79,7 @@ export async function POST(req: NextRequest) {
       userAgent: userAgent(req),
     });
 
+    await bumpSiteVersion(prisma, "cms.redirect.create");
     return jsonOk(
       { redirect, warnings: check.warnings, suggestedToPath: check.suggestedToPath },
       { status: 201 },

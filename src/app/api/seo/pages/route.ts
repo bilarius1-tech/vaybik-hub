@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonOk } from "@/server/http/response";
 import { seoPageSchema } from "@/server/seo/schemas";
@@ -41,6 +42,7 @@ export async function POST(req: NextRequest) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    await bumpSiteVersion(prisma, "seo.page.create");
     return jsonOk({ page }, { status: 201 });
   } catch (err) {
     return handleRouteError(err);

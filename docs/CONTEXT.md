@@ -60,6 +60,7 @@
 - **2026-11-17** — CMS-1 в хабе: Page/Block/NavItem/Redirect/PageRevision, `/admin/site`, предпросмотр, импорт leadweb. Публичный рендер из БД — позже (часть 3). Новый env: `SITE_ASSETS_ORIGIN`.
 - **2026-11-17** — CMS-2.1: soft delete страниц + списки `/admin/site` (сортировка/пагинация/URL/bulk/корзина); purge — OWNER.
 - **2026-11-17** — Уникальность активных `Page.path` — partial index `Page_path_active_key` (`WHERE "deletedAt" IS NULL`). Prisma его не моделирует: в новой миграции, если появится `DROP INDEX "Page_path_active_key"`, **удалить эту строку** и оставить индекс.
+- **2026-11-17** — CMS-3: публичный сайт — лёгкий Node `site.cjs` в том же образе (не второй Next). Тестовый хост `site-test.vaybik.ru`; cutover через `SITE_PROD_PRIORITY` (1=off, 50=on). Контент только из `PageRevision`; DRAFT с `publishedRevisionId` остаётся публичным. Кеш инвалидируется `site.contentVersion` (опрос 5 с). vaybik-main не останавливаем.
 
 ## 6. Договорённости
 
@@ -76,12 +77,13 @@
 - chat.vaybik.ru: ТЗ v0.3 в репо vaybik-chat, Фаза 0 спроектирована (ждём «да» на Фазу 1). lead.vaybik.ru — ТЗ ещё нет.
 - 2FA для владельца: включить позже, когда будет удобно.
 
-## 8а. Сайт / CMS (часть 1–2, 2026-11-17)
+## 8а. Сайт / CMS (часть 1–3, 2026-11-17)
 
 - Модели: `Page`, `Block`, `NavItem`, `Redirect`, `PageRevision`, `Media*`; SEO через `Page.seoPageId` → `SeoPage`.
 - Админка: `/admin/site`, редактор `/admin/site/pages/[id]`, предпросмотр `/admin/site-preview/[id]` (noindex, CSS с `SITE_ASSETS_ORIGIN`).
-- **CMS-2.1:** список страниц — soft delete (`deletedAt`), корзина, duplicate/publish/unpublish/bulk, сортировка/пагинация/фильтры в URL (`?tab=&page=&sort=&q=&status=&template=&trash=`). Окончательный purge — только OWNER. Нельзя удалить `/` и страницы, на которые ссылается меню/редирект. Partial unique index `Page_path_active_key`.
-- Импорт: `npm run cms:import -- --src /opt/vaybik-site-src`. Публичный vaybik.ru пока статика; рендер из БД — часть 3.
+- **CMS-2.1:** список страниц — soft delete (`deletedAt`), корзина, duplicate/publish/unpublish/bulk, сортировка/пагинация/фильтры в URL. Purge — OWNER. Partial unique `Page_path_active_key`.
+- **CMS-3:** сервис `site` (`node site.cjs`, :3100) рендерит из БД; labels `site-test.vaybik.ru` + `vaybik.ru` (priority `SITE_PROD_PRIORITY`). Unpublish сбрасывает `publishedRevisionId`. Виджеты public — доверенные HTML из `src/server/cms/render/widgets/`. После cutover правки HTML в leadweb на тексты сайта не влияют (только css/js/img/kp).
+- Импорт: `npm run cms:import -- --src /opt/vaybik-site-src`. Seed robots/assets: `npm run cms:seed-site`.
 
 ## 8. Следующие шаги
 

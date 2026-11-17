@@ -159,16 +159,17 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 
 Промпт: `docs/prompts/12-cms-03-public-render.md`. Публичный vaybik.ru до cutover остаётся nginx-статикой; тестовый хост — `site-test.vaybik.ru`.
 
-- [ ] Общий код: visibility / load / renderSiteDocument(mode public|preview); шаблон keysy
-- [ ] Site-сервер `src/site/server.ts` → `dist/site.cjs`; сервис `site` в compose (порт 3100, cache volume)
-- [ ] Маршруты: healthz, media, sitemap/robots, redirects, slash/index, CMS-страницы, proxy → vaybik-main
-- [ ] Паритет разметки с leadweb (head/шапка/подвал/виджеты/медиа picture); 404
-- [ ] Кеш HTML+gzip/br + `site.contentVersion` / bumpSiteVersion на мутациях
-- [ ] Админка: бейдж неопубликованных изменений, unpublish, «Открыть на сайте» (SITE_PUBLIC_ORIGIN)
-- [ ] Traefik labels site-test + site (priority off=1); `scripts/site-cutover.sh` on/off/status
-- [ ] `scripts/site-parity.ts`; реестр сервиса; seed robots/assets; template keysy
-- [ ] vitest + e2e site-public; lint/typecheck/test/build
+- [x] Общий код: visibility / load / renderSiteDocument(mode public|preview); шаблон keysy
+- [x] Site-сервер `src/site/server.ts` → `dist/site.cjs`; сервис `site` в compose (порт 3100, cache volume)
+- [x] Маршруты: healthz, media, sitemap/robots, redirects, slash/index, CMS-страницы, proxy → vaybik-main
+- [x] Паритет разметки с leadweb (head/шапка/подвал/виджеты/медиа picture); 404
+- [x] Кеш HTML+gzip/br + `site.contentVersion` / bumpSiteVersion на мутациях
+- [x] Админка: бейдж неопубликованных изменений, unpublish, «Открыть на сайте» (SITE_PUBLIC_ORIGIN)
+- [x] Traefik labels site-test + site (priority off=1); `scripts/site-cutover.sh` on/off/status
+- [x] `scripts/site-parity.ts`; реестр сервиса; seed robots/assets; template keysy
+- [x] vitest + e2e site-public; lint/typecheck/test/build
 - [ ] Деплой A: тестовый хост (после «задеплой»); cutover B — только после «да»
+- [ ] Роль БД `vaybik_site` (SITE_DATABASE_URL) — только после «да»
 
 ## Фазы
 - [x] Фаза 0 — каркас

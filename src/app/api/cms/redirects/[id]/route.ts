@@ -3,6 +3,7 @@ import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { redirectInputSchema, validateRedirect } from "@/server/cms/redirects";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 
@@ -54,6 +55,7 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       userAgent: userAgent(req),
     });
 
+    await bumpSiteVersion(prisma, "cms.redirect.update");
     return jsonOk({
       redirect,
       warnings: check.warnings,
@@ -82,6 +84,7 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    await bumpSiteVersion(prisma, "cms.redirect.delete");
     return jsonOk({ ok: true });
   } catch (err) {
     return handleRouteError(err);

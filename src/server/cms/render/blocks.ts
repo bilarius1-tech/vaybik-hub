@@ -1,6 +1,13 @@
-import { mediaPublicBase } from "../media/url";
 import { sanitizeCmsHtml, sanitizeRichText } from "../sanitize";
 import { esc, escAttr, simpleMarkdown } from "./escape";
+import {
+  renderMediaPicture,
+  resolveMediaSrc,
+  type MediaRenderContext,
+} from "./media";
+import { renderWidgetHtml } from "./widgets";
+
+export type { MediaRenderContext };
 
 function richOrMd(
   html: unknown,
@@ -16,31 +23,10 @@ function richOrMd(
   return "";
 }
 
-function resolveMediaSrc(
-  photo: unknown,
-  fallbackAlt?: string,
-): { src: string; alt: string } {
-  if (typeof photo === "string") {
-    return { src: photo, alt: fallbackAlt || "" };
-  }
-  if (photo && typeof photo === "object") {
-    const p = photo as {
-      mediaId?: string | null;
-      src?: string | null;
-      alt?: string | null;
-      version?: number;
-    };
-    if (p.mediaId) {
-      const ver = p.version || 1;
-      return {
-        src: `${mediaPublicBase()}/${p.mediaId}/v${ver}/orig`,
-        alt: p.alt || fallbackAlt || "",
-      };
-    }
-    return { src: p.src || "", alt: p.alt || fallbackAlt || "" };
-  }
-  return { src: "", alt: fallbackAlt || "" };
-}
+export type RenderOptions = {
+  mode?: "public" | "preview";
+  media?: MediaRenderContext | null;
+};
 
 export type RenderBlock = {
   type: string;
@@ -176,18 +162,42 @@ function renderFaq(data: Record<string, unknown>, anchor?: string | null): strin
   return `${secOpen(anchor || "faq", data.background === "alt")}${secHeader(data.header as Header)}<div class="faq reveal">${details}</div>${secClose()}`;
 }
 
-function renderTeam(data: Record<string, unknown>, anchor?: string | null): string {
+function renderTeam(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions,
+): string {
   const people = (data.people as Array<Record<string, unknown>>) || [];
   const html = people
     .map((p) => {
-      const w = p.width ? ` width="${p.width}"` : "";
-      const h = p.height ? ` height="${p.height}"` : "";
-      const media = resolveMediaSrc(p.photo, String(p.photoAlt || p.name || ""));
+      const w = typeof p.width === "number" ? p.width : null;
+      const h = typeof p.height === "number" ? p.height : null;
+      let img = "";
+      if (opts.media) {
+        img = renderMediaPicture(p.photo, opts.media, {
+          fallbackAlt: String(p.photoAlt || p.name || ""),
+          lazy: true,
+          width: w,
+          height: h,
+        });
+      }
+      if (!img) {
+        const media = resolveMediaSrc(
+          p.photo,
+          opts.media ?? null,
+          String(p.photoAlt || p.name || ""),
+        );
+        const wh =
+          (w ? ` width="${w}"` : "") + (h ? ` height="${h}"` : "");
+        img = media.src
+          ? `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}"${wh} loading="lazy">`
+          : "";
+      }
       const bio =
         typeof p.textHtml === "string" && p.textHtml
           ? richOrMd(p.textHtml, null, "inline")
           : esc(String(p.text || ""));
-      return `<article class="person reveal"><img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}"${w}${h} loading="lazy"><div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p></div></article>`;
+      return `<article class="person reveal">${img}<div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p></div></article>`;
     })
     .join("");
   return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header)}<div class="team">${html}</div>${secClose()}`;
@@ -229,10 +239,12 @@ function renderText(data: Record<string, unknown>, anchor?: string | null): stri
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${wrap}${secClose()}`;
 }
 
-function renderWidget(data: Record<string, unknown>, anchor?: string | null): string {
-  const key = String(data.key || "studio");
-  const snap = sanitizeCmsHtml(String(data.htmlSnapshot || ""));
-  return `${secOpen(anchor || (key === "studio" ? "studio" : "calc-sec"))}<div class="widget widget-${escAttr(key)}">${snap || `<p class="muted">Виджет «${esc(key)}» (снимок пуст)</p>`}</div>${secClose()}`;
+function renderWidget(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions,
+): string {
+  return renderWidgetHtml(data, opts.mode || "preview", anchor);
 }
 
 function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): string {
@@ -329,7 +341,10 @@ function renderSteps(data: Record<string, unknown>, anchor?: string | null): str
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="steps reveal">${lis}</ol>${secClose()}`;
 }
 
-export function renderBlock(block: RenderBlock): string {
+export function renderBlock(
+  block: RenderBlock,
+  opts: RenderOptions = {},
+): string {
   if (block.isHidden) return "";
   const data = (block.data || {}) as Record<string, unknown>;
   switch (block.type) {
@@ -344,7 +359,7 @@ export function renderBlock(block: RenderBlock): string {
     case "faq":
       return renderFaq(data, block.anchor);
     case "team":
-      return renderTeam(data, block.anchor);
+      return renderTeam(data, block.anchor, opts);
     case "cases":
       return renderCases(data, block.anchor);
     case "cta":
@@ -352,7 +367,7 @@ export function renderBlock(block: RenderBlock): string {
     case "text":
       return renderText(data, block.anchor);
     case "widget":
-      return renderWidget(data, block.anchor);
+      return renderWidget(data, block.anchor, opts);
     case "iconList":
       return renderIconList(data, block.anchor);
     case "offer":
@@ -366,6 +381,9 @@ export function renderBlock(block: RenderBlock): string {
   }
 }
 
-export function renderBlocks(blocks: RenderBlock[]): string {
-  return blocks.map(renderBlock).join("\n");
+export function renderBlocks(
+  blocks: RenderBlock[],
+  opts: RenderOptions = {},
+): string {
+  return blocks.map((b) => renderBlock(b, opts)).join("\n");
 }

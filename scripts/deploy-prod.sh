@@ -71,7 +71,7 @@ fi
 
 if [ "$DRY" = 1 ]; then
   say "Пробный запуск: ничего не менял."
-  echo "Откат после реального деплоя будет: cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && docker compose up -d --no-build --force-recreate app worker"
+  echo "Откат после реального деплоя будет: cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && docker compose up -d --no-build --force-recreate app worker site"
   exit 0
 fi
 
@@ -91,7 +91,7 @@ else
   echo "Образа $IMAGE:latest нет — первый деплой, откатываться некуда."
 fi
 # Откат = вернуть прежний образ. Код в git остаётся новым: потом исправить и выкатить заново (git revert + деплой).
-ROLLBACK="cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && env -u DOCKER_HOST docker compose up -d --no-build --force-recreate app worker"
+ROLLBACK="cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && env -u DOCKER_HOST docker compose up -d --no-build --force-recreate app worker site"
 
 # ── Каталог бэкапов на хосте (bind-mount → /app/backups, uid nextjs=1001) ─
 BACKUPS_HOST="${BACKUPS_HOST_DIR:-/var/backups/vaybik}"
@@ -114,7 +114,7 @@ sudo chmod 700 "$BACKUPS_HOST"
 say "git pull → build → up -d"
 git merge -q --ff-only origin/main
 dc build app
-dc up -d app worker
+dc up -d app worker site
 
 # ── Проверка здоровья ──────────────────────────────────────────────────
 say "Жду healthy (до 3 минут)"
@@ -122,14 +122,16 @@ ok=0
 for _ in $(seq 1 36); do
   s_app="$(docker inspect -f '{{.State.Health.Status}}' vaybik-hub-prod-app-1 2>/dev/null || echo none)"
   s_wrk="$(docker inspect -f '{{.State.Health.Status}}' vaybik-hub-prod-worker-1 2>/dev/null || echo none)"
-  if [ "$s_app" = healthy ] && [ "$s_wrk" = healthy ] && curl -fsS -m 10 "$HEALTH_URL" >/dev/null 2>&1; then ok=1; break; fi
+  s_site="$(docker inspect -f '{{.State.Health.Status}}' vaybik-hub-prod-site-1 2>/dev/null || echo none)"
+  if [ "$s_app" = healthy ] && [ "$s_wrk" = healthy ] && [ "$s_site" = healthy ] && curl -fsS -m 10 "$HEALTH_URL" >/dev/null 2>&1; then ok=1; break; fi
   sleep 5
 done
 dc ps
 
 if [ "$ok" != 1 ]; then
   dc logs --tail 60 app || true
-  printf '\n\033[1;31m✖ Прод не стал здоровым (app=%s worker=%s).\033[0m\nОткат одной командой:\n  %s\n' "$s_app" "$s_wrk" "$ROLLBACK" >&2
+  dc logs --tail 40 site || true
+  printf '\n\033[1;31m✖ Прод не стал здоровым (app=%s worker=%s site=%s).\033[0m\nОткат одной командой:\n  %s\n' "$s_app" "$s_wrk" "$s_site" "$ROLLBACK" >&2
   exit 1
 fi
 

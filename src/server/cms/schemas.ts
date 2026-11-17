@@ -8,6 +8,7 @@ export const pageTemplateSchema = z.enum([
   "default",
   "service",
   "calculator",
+  "keysy",
 ]);
 
 export const pageStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);

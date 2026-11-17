@@ -5,6 +5,7 @@ import { requireCan, requireRole } from "@/server/auth/require";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import {
   MediaError,
   removeMediaAssetDir,
@@ -88,6 +89,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+    if (body.alt !== undefined) {
+      await bumpSiteVersion(prisma, "cms.media.update");
+    }
     return jsonOk({ asset: toMediaDto(updated) });
   } catch (err) {
     return handleRouteError(err);

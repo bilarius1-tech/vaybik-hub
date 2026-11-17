@@ -1,0 +1,21 @@
+<section class="hero sub lc-hero hero-mascot"><div class="w svc-hero-layout"><div class="svc-hero-copy"><nav class="crumbs" aria-label="Хлебные крошки"><a href="/">Главная</a> / <a href="/uslugi/">Услуги</a> / <span aria-current="page">Калькулятор</span></nav><span class="kicker">Калькулятор стоимости</span><h1><span class="grad">Сколько стоит ваш сайт</span></h1><p class="lead">Выберите тип сайта и платформу, отметьте нужные работы — цена пересчитается сразу. В конце заполните короткий бриф и скачайте предварительное КП в PDF или отправьте расчёт нам.</p></div><figure class="mascot"><picture><source type="image/webp" srcset="/img/vaybik-dumaet-240.webp 240w, /img/vaybik-dumaet-400.webp 400w, /img/vaybik-dumaet-640.webp 640w" sizes="(max-width: 899px) 60vw, 364px"><img src="/img/vaybik-dumaet.png" width="400" height="621" alt="Вайбик — рыжий кот в робото-доспехах, маскот vaybik.ru, задумался над расчётом. Это вымышленный персонаж. Это не сотрудник." decoding="async" fetchpriority="high"></picture></figure></div></section>
+<section class="sec lc-sec"><div class="w"><p class="lc-banner" id="lcBanner" role="status" hidden></p>
+<div class="lc-wrap"><div class="lc-main">
+ <div class="lc-box"><h2 class="lc-h">1. Сайт и платформа</h2><div id="lcCfg"></div>
+  <div class="lc-presets"><span class="lc-presets-l" id="lcPresetsL">Быстрый старт:</span><div id="lcPresets" class="lc-chips" role="group" aria-labelledby="lcPresetsL"></div></div></div>
+ <div class="lc-box"><h2 class="lc-h">2. Что входит в работу</h2><p class="lc-hint">Откройте раздел и отметьте пункты. Чего-то не хватает — добавьте свою строку в «Дополнительно», мы оценим её отдельно.</p><div id="lcGroups"></div></div>
+ <div class="lc-box" id="lcBriefBox"><h2 class="lc-h">3. Короткий бриф</h2><p class="lc-hint">Необязательно, но так КП получится точнее. Данные никуда не отправляются, пока вы сами не нажмёте «Отправить заявку».</p><form id="lcBrief" class="lc-form" onsubmit="return false"></form></div>
+ <div class="lc-box" id="lcOut"><h2 class="lc-h">4. Документы и заявка</h2>
+  <fieldset class="lc-docsel"><legend>Что положить в PDF</legend><label><input type="checkbox" data-doc="kp"> Предварительное КП</label><label><input type="checkbox" data-doc="brief"> Бриф</label><label><input type="checkbox" data-doc="tz"> Предварительное ТЗ</label></fieldset>
+  <div class="lc-acts"><button type="button" class="bt-btn2" id="lcPdf">Скачать PDF</button><button type="button" class="bt-btn2" id="lcPreview" aria-expanded="false" aria-controls="lcDocs">Предпросмотр документов</button><button type="button" class="bt-btn2" id="lcLink">Скопировать ссылку на расчёт</button></div>
+  <p class="lc-hint">PDF сохраняется через окно печати браузера: выберите «Сохранить как PDF».</p>
+  <h3 class="lc-h3">Отправить заявку</h3>
+  <div class="lc-acts"><a class="bt-btn" id="lcTg" href="https://t.me/bilarius" target="_blank" rel="noopener"><span class="bt-sl">Отправить в Telegram</span></a><a class="bt-btn2" id="lcMail" href="mailto:bilariuss@yandex.ru">Отправить на почту</a><button type="button" class="bt-btn2" id="lcCopy">Скопировать текст заявки</button></div>
+  <input id="lcLinkOut" class="lc-linkout" readonly hidden aria-label="Ссылка или текст для копирования">
+  <p class="lc-msg" id="lcMsg" role="status" aria-live="polite"></p></div>
+</div>
+<aside class="lc-side" aria-label="Итог расчёта"><div class="lc-pin"><h2 class="lc-h">Ваш расчёт</h2><div id="lcSum" aria-live="polite"></div>
+ <div class="lc-side-acts"><button type="button" class="bt-btn2" data-go="lcBriefBox">Заполнить бриф</button><button type="button" class="bt-btn2" data-go="lcOut">Получить КП</button></div></div></aside>
+</div>
+<div id="lcDocs" class="lc-docs" hidden></div>
+</div></section>

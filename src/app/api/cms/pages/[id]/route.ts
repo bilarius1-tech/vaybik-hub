@@ -5,6 +5,7 @@ import { purgePage, softDeletePage } from "@/server/cms/pages-list";
 import { assertPathAvailable, getPageWithBlocks } from "@/server/cms/service";
 import { pageUpdateSchema } from "@/server/cms/schemas";
 import { prisma } from "@/server/db";
+import { bumpSiteVersion } from "@/server/cms/site-version";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 
@@ -64,6 +65,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
+
+    if (
+      body.path !== undefined ||
+      body.template !== undefined ||
+      body.status !== undefined
+    ) {
+      await bumpSiteVersion(prisma, "cms.page.update");
+    }
 
     return jsonOk({ page });
   } catch (err) {
