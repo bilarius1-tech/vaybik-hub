@@ -153,7 +153,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] API: list/sort/paginate, trash/restore/purge, duplicate, unpublish, bulk + audit
 - [x] Меню/редиректы: create в модалке, действия; медиа: «Найдено» + сброс
 - [x] Unit + e2e; lint/typecheck/test/build
-- [x] Деплой CMS-2.1 — в процессе / см. devlog
+- [x] Деплой CMS-2.1 на прод (`680e299`, миграция `cms_pages_soft_delete`, `Page_path_active_key` OK)
 
 ## Фазы
 - [x] Фаза 0 — каркас
@@ -161,7 +161,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-2 на проде; списки CMS-2.1 на dev)
+- [ ] Фаза 5 — публичный хаб / CMS (CMS-2.1 на проде `680e299`)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)
