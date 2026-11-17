@@ -59,6 +59,8 @@ export const heroBlockSchema = z.object({
     .array(
       z.object({
         icon: iconField,
+        /** Заголовок в <b>; если пусто — text целиком в <b> (legacy) */
+        title: optionalString,
         text: z.string().min(1),
       }),
     )
@@ -69,6 +71,7 @@ export const heroBlockSchema = z.object({
 
 export const answerBlockSchema = z
   .object({
+    header: headerSchema,
     /** @deprecated — используйте html */
     text: z.string().optional().default(""),
     html: richHtml("basic"),
@@ -100,6 +103,7 @@ export const cardsBlockSchema = z.object({
       z.object({
         num: optionalString,
         icon: iconField,
+        kicker: optionalString,
         title: z.string().min(1),
         text: optionalString,
         textHtml: richHtml("inline"),
@@ -110,11 +114,15 @@ export const cardsBlockSchema = z.object({
           .optional()
           .nullable(),
         highlight: z.boolean().optional(),
+        cardStyle: z
+          .enum(["default", "dir-link", "teaser"])
+          .optional()
+          .default("default"),
+        image: z.union([z.string(), mediaRefSchema]).optional().nullable(),
       }),
     )
     .default([]),
 });
-
 export const stepsBlockSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
@@ -175,7 +183,13 @@ export const teamBlockSchema = z.object({
         width: z.number().int().positive().optional(),
         height: z.number().int().positive().optional(),
         links: z
-          .array(z.object({ label: z.string(), href: z.string() }))
+          .array(
+            z.object({
+              label: z.string(),
+              href: z.string(),
+              icon: iconField,
+            }),
+          )
           .optional(),
       }),
     )
@@ -192,9 +206,16 @@ export const casesBlockSchema = z.object({
         title: z.string().min(1),
         tag: optionalString,
         text: z.string().default(""),
-        textHtml: richHtml("inline"),
+        textHtml: richHtml("basic"),
+        /** «Было» */
+        before: optionalString,
+        /** «Сделали» — HTML (ul/li) */
+        didHtml: richHtml("basic"),
         result: optionalString,
         image: z.union([z.string(), mediaRefSchema]).optional().nullable(),
+        imageAlt: optionalString,
+        imageWidth: z.number().int().positive().optional(),
+        imageHeight: z.number().int().positive().optional(),
         href: optionalString,
         kicker: optionalString,
         more: optionalString,
@@ -202,7 +223,6 @@ export const casesBlockSchema = z.object({
     )
     .default([]),
 });
-
 export const ctaBlockSchema = z.object({
   title: z.string().min(1),
   lead: optionalString,

@@ -53,17 +53,33 @@ async function comparePage(path: string): Promise<Row> {
   const notes: string[] = [];
   let status: Row["status"] = "OK";
   const ua = await fetchText(`${A}${path}`);
-  const ub = await fetchText(`${B}${path}`);
+  let ub = await fetchText(`${B}${path}`);
   if (ua.status !== ub.status) {
-    notes.push(`status ${ua.status} vs ${ub.status}`);
-    status = "FAIL";
+    // nginx отдаёт /path/index.html как 200, CMS — 301 на канонический /path/
+    const canonPath = path.replace(/\/index\.html$/, "/");
+    const indexHtmlCanon =
+      path.endsWith("/index.html") &&
+      (ub.status === 301 || ub.status === 302) &&
+      (ub.location || "").replace(/\/$/, "") === canonPath.replace(/\/$/, "");
+    notes.push(
+      `status ${ua.status} vs ${ub.status}${ub.location ? ` → ${ub.location}` : ""}`,
+    );
+    if (indexHtmlCanon) {
+      status = "WARN";
+      ub = await fetchText(`${B}${canonPath}`);
+    } else {
+      status = "FAIL";
+    }
   }
   if (ua.status >= 400 || ub.status >= 400) {
-    return { url: path, status, notes: notes.length ? notes : [`http ${ua.status}/${ub.status}`] };
+    return {
+      url: path,
+      status,
+      notes: notes.length ? notes : [`http ${ua.status}/${ub.status}`],
+    };
   }
   const $a = cheerio.load(ua.text);
-  const $b = cheerio.load(ub.text);
-  const checks: Array<[string, string, string]> = [
+  const $b = cheerio.load(ub.text);  const checks: Array<[string, string, string]> = [
     ["title", $a("title").text().trim(), $b("title").text().trim()],
     [
       "description",

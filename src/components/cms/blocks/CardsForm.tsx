@@ -10,6 +10,7 @@ import { Field, Input, Select } from "@/components/ui/Field";
 type CardItem = {
   num?: string | null;
   icon?: string | null;
+  kicker?: string | null;
   title: string;
   text?: string | null;
   textHtml?: string | null;
@@ -17,6 +18,7 @@ type CardItem = {
   checklist?: string[];
   link?: { label: string; href: string } | null;
   highlight?: boolean;
+  cardStyle?: "default" | "dir-link" | "teaser";
 };
 
 type CardsData = {
@@ -71,14 +73,33 @@ export function CardsForm({
                 onChange={(e) => update({ title: e.target.value })}
               />
             </Field>
+            <Field label="Кикер">
+              <Input
+                value={it.kicker || ""}
+                onChange={(e) => update({ kicker: e.target.value || null })}
+              />
+            </Field>
+            <Field label="Стиль карточки">
+              <Select
+                value={it.cardStyle || "default"}
+                onChange={(e) =>
+                  update({
+                    cardStyle: e.target.value as CardItem["cardStyle"],
+                  })
+                }
+              >
+                <option value="default">default</option>
+                <option value="dir-link">dir-link</option>
+                <option value="teaser">teaser</option>
+              </Select>
+            </Field>
             <Field label="Номер">
               <Input
                 value={it.num || ""}
                 onChange={(e) => update({ num: e.target.value || null })}
               />
             </Field>
-            <IconField value={it.icon} onChange={(icon) => update({ icon })} />
-            <RichText
+            <IconField value={it.icon} onChange={(icon) => update({ icon })} />            <RichText
               label="Текст"
               preset="inline"
               value={it.textHtml || it.text || ""}

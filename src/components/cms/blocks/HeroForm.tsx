@@ -15,7 +15,7 @@ type HeroData = {
   lead?: string | null;
   buttons?: Array<{ label: string; href: string; style?: "primary" | "secondary" }>;
   mascot?: string;
-  feats?: Array<{ icon?: string | null; text: string }>;
+  feats?: Array<{ icon?: string | null; title?: string | null; text: string }>;
   rings?: unknown;
   image?: MediaRef;
 };
@@ -90,10 +90,16 @@ export function HeroForm({
         label="Фичи"
         items={data.feats || []}
         onChange={(feats) => onChange({ ...data, feats })}
-        createItem={() => ({ text: "Фича", icon: "" })}
+        createItem={() => ({ title: "Фича", text: "Описание", icon: "" })}
         renderItem={(it, _i, { update }) => (
           <>
-            <Field label="Текст">
+            <Field label="Заголовок">
+              <Input
+                value={it.title || ""}
+                onChange={(e) => update({ title: e.target.value || null })}
+              />
+            </Field>
+            <Field label="Описание">
               <Input
                 value={it.text}
                 onChange={(e) => update({ text: e.target.value })}

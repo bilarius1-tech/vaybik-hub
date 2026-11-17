@@ -61,11 +61,17 @@ function recognizeHero(
       style: cls.includes("bt-btn2") ? "secondary" : "primary",
     });
   });
-  const feats: Array<{ icon?: string; text: string }> = [];
+  const feats: Array<{ icon?: string; title?: string; text: string }> = [];
   $s.find(".feat").each((_, f) => {
     const $f = $(f);
     const icon = $f.find("svg").first().toString() || undefined;
-    feats.push({ icon, text: text($f) });
+    const title = text($f.find("b").first());
+    const desc = text($f.find("span").first());
+    if (title && desc) {
+      feats.push({ icon, title, text: desc });
+    } else {
+      feats.push({ icon, text: title || desc || text($f) });
+    }
   });
   let rings: unknown = null;
   const ringsAttr = $s.find("[data-magic-rings]").attr("data-magic-rings");
@@ -155,15 +161,28 @@ function recognizeTeam(
     .each((_, p) => {
       const $p = $(p);
       const img = $p.find("img").first();
+      const links: Array<{ label: string; href: string; icon?: string }> = [];
+      $p.find(".links a").each((_, a) => {
+        const $a = $(a);
+        const icon = $a.find("svg").first().toString() || undefined;
+        const clone = $a.clone();
+        clone.find("svg").remove();
+        links.push({
+          label: text(clone),
+          href: $a.attr("href") || "#",
+          icon,
+        });
+      });
       people.push({
         name: text($p.find("h3").first()),
         role: text($p.find(".role").first()),
         quote: text($p.find("q").first()),
-        text: text($p.find("p").first()),
+        text: text($p.find("p.muted").first()) || text($p.find("p").first()),
         photo: img.attr("src") || "",
         photoAlt: img.attr("alt") || "",
         width: Number(img.attr("width")) || undefined,
         height: Number(img.attr("height")) || undefined,
+        links: links.length ? links : undefined,
       });
     });
   return {
@@ -237,8 +256,66 @@ function recognizeAnswer(
   return {
     type: "answer",
     data: parseBlockData("answer", {
-      text: cheerio.load(`<div>${answerHtml}</div>`)("div").text().trim() || text($(section).find(".answer")),
+      header: headerFrom($, section),
+      html: sanitizeCmsHtml(answerHtml),
+      text:
+        cheerio.load(`<div>${answerHtml}</div>`)("div").text().trim() ||
+        text($(section).find(".answer")),
       facts,
+    }),
+    anchor: section.attribs?.id || null,
+  };
+}
+
+function recognizeCases(
+  $: cheerio.CheerioAPI,
+  section: Element,
+): RecognizedBlock | null {
+  const $cases = $(section).find(".card.case");
+  if ($cases.length < 2) return null;
+  // не путать с обычными карточками услуг
+  if (!$cases.find("dl, picture, img[src*='case-']").length) return null;
+  const items: Array<Record<string, unknown>> = [];
+  $cases.each((_, c) => {
+    const $c = $(c);
+    const img = $c.find("img").first();
+    const before = text($c.find("dl dt").filter((_, el) => text($(el)) === "Было").first().next("dd"));
+    const $didDd = $c
+      .find("dl dt")
+      .filter((_, el) => text($(el)) === "Сделали")
+      .first()
+      .next("dd");
+    const didHtml = $didDd.length ? sanitizeCmsHtml($didDd.html() || "") : null;
+    const result = text(
+      $c
+        .find("dl dt")
+        .filter((_, el) => text($(el)) === "Результат")
+        .first()
+        .next("dd"),
+    );
+    const $more = $c.find("a.more").first();
+    items.push({
+      title: text($c.find("h3").first()),
+      tag: text($c.find(".kicker").first()) || null,
+      before: before || null,
+      didHtml: didHtml || null,
+      result: result || null,
+      image: img.attr("src") || null,
+      imageAlt: img.attr("alt") || null,
+      imageWidth: Number(img.attr("width")) || undefined,
+      imageHeight: Number(img.attr("height")) || undefined,
+      href: $more.attr("href") || ($c.is("a") ? $c.attr("href") : null) || null,
+      more: $more.length ? text($more) : null,
+    });
+  });
+  if (!items.length) return null;
+  return {
+    type: "cases",
+    data: parseBlockData("cases", {
+      header: headerFrom($, section),
+      background: hasClass(section, "alt") ? "alt" : "default",
+      variant: "portfolio",
+      items,
     }),
     anchor: section.attribs?.id || null,
   };
@@ -250,24 +327,37 @@ function recognizeCards(
 ): RecognizedBlock | null {
   const $grid = $(section).find(".grid").first();
   if (!$grid.length || !$grid.find(".card").length) return null;
+  // кейсы портфолио — отдельный тип
+  if ($grid.find(".card.case").length >= 2) return null;
   const cls = $grid.attr("class") || "";
   const columns = cls.includes("g4") ? 4 : cls.includes("g2") ? 2 : 3;
   const items: Array<Record<string, unknown>> = [];
   $grid.find("> .card, > a.card").each((_, c) => {
     const $c = $(c);
+    const cardCls = $c.attr("class") || "";
     const linkHref = $c.is("a") ? $c.attr("href") : $c.find("a.more").attr("href");
-    const linkLabel = $c.find("a.more").length
-      ? text($c.find("a.more").first())
-      : $c.is("a")
-        ? "Подробнее"
-        : null;
+    const $more = $c.find(".more").first();
+    let linkLabel: string | null = null;
+    if ($more.length) {
+      const clone = $more.clone();
+      clone.find("svg").remove();
+      linkLabel = text(clone) || "Подробнее";
+    } else if ($c.is("a")) {
+      linkLabel = "Подробнее";
+    }
     const checklist: string[] = [];
     $c.find("ul.chk li").each((_, li) => {
       checklist.push(text($(li)));
     });
+    const cardStyle = cardCls.includes("dir-link")
+      ? "dir-link"
+      : cardCls.includes("vaybik-teaser")
+        ? "teaser"
+        : "default";
     items.push({
       num: text($c.find(".num").first()) || null,
       icon: $c.find(".ibox").html() || null,
+      kicker: text($c.find(".kicker").first()) || null,
       title: text($c.find("h3").first()),
       text: text($c.find("p").first()) || null,
       price: text($c.find(".price").first()) || null,
@@ -276,9 +366,34 @@ function recognizeCards(
         linkHref && linkLabel
           ? { href: linkHref, label: linkLabel }
           : null,
-      highlight: ($c.attr("class") || "").includes("hl-card"),
+      highlight: cardCls.includes("hl-card"),
+      cardStyle,
+      image: $c.find("img").first().attr("src") || null,
     });
   });
+  // teaser часто после grid
+  $(section)
+    .find("> .w > a.card.vaybik-teaser, > a.card.vaybik-teaser")
+    .each((_, c) => {
+      const $c = $(c);
+      const cloneMore = $c.find(".more").first().clone();
+      cloneMore.find("svg").remove();
+      items.push({
+        num: null,
+        icon: null,
+        kicker: text($c.find(".kicker").first()) || null,
+        title: text($c.find("h3").first()),
+        text: text($c.find("p").first()) || null,
+        price: null,
+        link: {
+          href: $c.attr("href") || "#",
+          label: text(cloneMore) || "Подробнее",
+        },
+        highlight: false,
+        cardStyle: "teaser",
+        image: $c.find("img").first().attr("src") || null,
+      });
+    });
   if (!items.length) return null;
   return {
     type: "cards",
@@ -349,9 +464,9 @@ export function recognizeSection(
     recognizeTeam,
     recognizeCta,
     recognizeAnswer,
+    recognizeCases,
     recognizeCards,
-  ];
-  for (const fn of tryFns) {
+  ];  for (const fn of tryFns) {
     try {
       const r = fn($, section);
       if (r) return r;

@@ -151,12 +151,33 @@ function tryConvert($: cheerio.CheerioAPI): ConvertResult {
     const items: Array<Record<string, unknown>> = [];
     $("a.card.case, article.card.case, .card.case").each((_, c) => {
       const $c = $(c);
+      const img = $c.find("img").first();
+      const dtText = (label: string) =>
+        $c
+          .find("dl dt")
+          .filter((_, el) => $(el).text().trim() === label)
+          .first()
+          .next("dd");
+      const $before = dtText("Было");
+      const $did = dtText("Сделали");
+      const $result = dtText("Результат");
+      const $more = $c.find("a.more").first();
       items.push({
         title: $c.find("h3").text().trim(),
         tag: $c.find(".kicker").text().trim() || null,
-        textHtml: sanitizeRichText($c.find("p").first().html() || "", "inline"),
-        href: $c.is("a") ? $c.attr("href") || null : $c.find("a").attr("href") || null,
-        image: $c.find("img").attr("src") || null,
+        before: $before.text().trim() || null,
+        didHtml: sanitizeRichText($did.html() || "", "basic") || null,
+        result: $result.text().trim() || null,
+        textHtml: sanitizeRichText($c.find("p").first().html() || "", "basic"),
+        href:
+          $more.attr("href") ||
+          ($c.is("a") ? $c.attr("href") : null) ||
+          null,
+        more: $more.text().trim() || null,
+        image: img.attr("src") || null,
+        imageAlt: img.attr("alt") || null,
+        imageWidth: Number(img.attr("width")) || undefined,
+        imageHeight: Number(img.attr("height")) || undefined,
       });
     });
     if (items.length) {

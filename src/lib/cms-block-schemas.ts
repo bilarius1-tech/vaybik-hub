@@ -53,6 +53,7 @@ export const heroClientSchema = z.object({
     .array(
       z.object({
         icon: optionalString,
+        title: optionalString,
         text: z.string().min(1),
       }),
     )
@@ -62,6 +63,7 @@ export const heroClientSchema = z.object({
 });
 
 export const answerClientSchema = z.object({
+  header: headerSchema,
   text: z.string().optional().default(""),
   html: optionalString,
   facts: z
@@ -83,6 +85,7 @@ export const cardsClientSchema = z.object({
       z.object({
         num: optionalString,
         icon: optionalString,
+        kicker: optionalString,
         title: z.string().min(1),
         text: optionalString,
         textHtml: optionalString,
@@ -93,11 +96,15 @@ export const cardsClientSchema = z.object({
           .optional()
           .nullable(),
         highlight: z.boolean().optional(),
+        cardStyle: z
+          .enum(["default", "dir-link", "teaser"])
+          .optional()
+          .default("default"),
+        image: mediaRefSchema.optional(),
       }),
     )
     .default([]),
 });
-
 export const stepsClientSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
@@ -144,7 +151,13 @@ export const teamClientSchema = z.object({
         width: z.number().int().positive().optional(),
         height: z.number().int().positive().optional(),
         links: z
-          .array(z.object({ label: z.string(), href: z.string() }))
+          .array(
+            z.object({
+              label: z.string(),
+              href: z.string(),
+              icon: optionalString,
+            }),
+          )
           .optional(),
       }),
     )
@@ -162,8 +175,13 @@ export const casesClientSchema = z.object({
         tag: optionalString,
         text: z.string().default(""),
         textHtml: optionalString,
+        before: optionalString,
+        didHtml: optionalString,
         result: optionalString,
         image: mediaRefSchema.optional(),
+        imageAlt: optionalString,
+        imageWidth: z.number().int().positive().optional(),
+        imageHeight: z.number().int().positive().optional(),
         href: optionalString,
         kicker: optionalString,
         more: optionalString,
@@ -171,7 +189,6 @@ export const casesClientSchema = z.object({
     )
     .default([]),
 });
-
 export const ctaClientSchema = z.object({
   title: z.string().min(1),
   lead: optionalString,

@@ -121,11 +121,17 @@ function renderHero(data: Record<string, unknown>, anchor?: string | null): stri
     : "";
   const mascot = String(data.mascot || "privet");
   const feats = Array.isArray(data.feats)
-    ? `<div class="feats">${(data.feats as Array<{ icon?: string; text: string }>)
-        .map(
-          (f) =>
-            `<div class="feat">${f.icon || ""}<b>${esc(f.text)}</b></div>`,
-        )
+    ? `<div class="feats">${(
+        data.feats as Array<{ icon?: string; title?: string | null; text: string }>
+      )
+        .map((f) => {
+          const title = (f.title || "").trim();
+          const body = (f.text || "").trim();
+          const bold = esc(title || body);
+          const span =
+            title && body ? `<span>${esc(body)}</span>` : "";
+          return `<div class="feat">${f.icon || ""}<b>${bold}</b>${span}</div>`;
+        })
         .join("")}</div>`
     : "";
 
@@ -136,47 +142,104 @@ function renderHero(data: Record<string, unknown>, anchor?: string | null): stri
   }${buttonsHtml(data.buttons as never)}</div><figure class="mascot"><img src="/img/vaybik-${escAttr(mascot)}.png" alt="" width="400" height="539"></figure></div>${feats}</div></section>`;
 }
 
+const MORE_ARROW =
+  '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>';
+
 function renderAnswer(data: Record<string, unknown>, anchor?: string | null): string {
   const facts = Array.isArray(data.facts)
     ? `<div class="facts reveal">${(data.facts as Array<{ value: string; label: string }>)
         .map((f) => `<div class="fact"><b>${esc(f.value)}</b><span>${esc(f.label)}</span></div>`)
         .join("")}</div>`
     : "";
-  const body = richOrMd(data.html, data.text, "basic")
-    .replace(/<p>/, '<div class="answer reveal"><p>')
-    .replace(/<\/p>$/, "</p></div>");
-  return `${secOpen(anchor)}${body}${facts ? `<div style="margin-top:40px">${facts}</div>` : ""}${secClose()}`;
+  let body = richOrMd(data.html, data.text, "basic");
+  if (body && !body.includes('class="answer')) {
+    if (body.startsWith("<p>")) {
+      body = body.replace(/<p>/, '<div class="answer reveal"><p>').replace(/<\/p>$/, "</p></div>");
+    } else {
+      body = `<div class="answer reveal">${body}</div>`;
+    }
+  }
+  return `${secOpen(anchor)}${secHeader(data.header as Header)}${body}${facts ? `<div style="margin-top:40px">${facts}</div>` : ""}${secClose()}`;
 }
 
-function renderCards(data: Record<string, unknown>, anchor?: string | null): string {
+function cardTextHtml(it: Record<string, unknown>): string {
+  const textHtml = richOrMd(it.textHtml, null, "inline");
+  if (textHtml) return `<p>${textHtml}</p>`;
+  if (it.text) return `<p>${esc(String(it.text))}</p>`;
+  return "";
+}
+
+function renderCardItem(
+  it: Record<string, unknown>,
+  opts: RenderOptions,
+): string {
+  const style = String(it.cardStyle || "default");
+  const hl = it.highlight ? " hl-card" : "";
+  const num = it.num ? `<span class="num">${esc(String(it.num))}</span>` : "";
+  const icon = it.icon ? `<span class="ibox">${it.icon}</span>` : "";
+  const kicker = it.kicker
+    ? `<span class="kicker">${esc(String(it.kicker))}</span>`
+    : "";
+  const price = it.price ? `<div class="price">${esc(String(it.price))}</div>` : "";
+  const text = cardTextHtml(it);
+  const chk = Array.isArray(it.checklist)
+    ? `<ul class="chk">${(it.checklist as string[]).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>`
+    : "";
+  const linkObj =
+    it.link && typeof it.link === "object"
+      ? (it.link as { href: string; label: string })
+      : null;
+
+  if (style === "teaser" && linkObj) {
+    let img = "";
+    if (opts.media) {
+      img = renderMediaPicture(it.image, opts.media, {
+        fallbackAlt: String(it.title || ""),
+        lazy: true,
+      });
+    }
+    if (!img) {
+      const media = resolveMediaSrc(
+        it.image,
+        opts.media ?? null,
+        String(it.title || ""),
+      );
+      img = media.src
+        ? `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}" loading="lazy">`
+        : "";
+    }
+    return `<a class="card vaybik-teaser reveal" href="${escAttr(linkObj.href)}">${img}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${text}<span class="more">${esc(linkObj.label)}${MORE_ARROW}</span></div></a>`;
+  }
+
+  if (style === "dir-link" && linkObj) {
+    return `<a class="card dir-link reveal" href="${escAttr(linkObj.href)}">${icon}<h3>${esc(String(it.title || ""))}</h3>${text}<span class="more">${esc(linkObj.label)}${MORE_ARROW}</span></a>`;
+  }
+
+  const link = linkObj
+    ? `<a class="more" href="${escAttr(linkObj.href)}">${esc(linkObj.label)}</a>`
+    : "";
+  if (kicker && it.highlight) {
+    return `<article class="card reveal${hl}">${icon}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${price}${text}${chk}${link}</div></article>`;
+  }
+  const head = kicker
+    ? `${kicker}<h3>${esc(String(it.title || ""))}</h3>`
+    : `<h3>${esc(String(it.title || ""))}</h3>`;
+  return `<article class="card reveal${hl}">${num}${icon}${head}${price}${text}${chk}${link}</article>`;
+}
+
+function renderCards(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const cols = Number(data.columns) || 3;
   const items = (data.items as Array<Record<string, unknown>>) || [];
-  const cards = items
-    .map((it) => {
-      const hl = it.highlight ? " hl-card" : "";
-      const num = it.num ? `<span class="num">${esc(String(it.num))}</span>` : "";
-      const icon = it.icon ? `<span class="ibox">${it.icon}</span>` : "";
-      const price = it.price ? `<div class="price">${esc(String(it.price))}</div>` : "";
-      const textHtml = richOrMd(it.textHtml, null, "inline");
-      const text = textHtml
-        ? `<p>${textHtml}</p>`
-        : it.text
-          ? `<p>${esc(String(it.text))}</p>`
-          : "";
-      const chk = Array.isArray(it.checklist)
-        ? `<ul class="chk">${(it.checklist as string[]).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>`
-        : "";
-      const link =
-        it.link && typeof it.link === "object"
-          ? `<a class="more" href="${escAttr(String((it.link as { href: string }).href))}">${esc(String((it.link as { label: string }).label))}</a>`
-          : "";
-      return `<article class="card reveal${hl}">${num}${icon}<h3>${esc(String(it.title || ""))}</h3>${price}${text}${chk}${link}</article>`;
-    })
-    .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g${cols}">${cards}</div>${secClose()}`;
-}
-
-function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
+  const gridItems = items.filter((it) => String(it.cardStyle || "default") !== "teaser");
+  const teasers = items.filter((it) => String(it.cardStyle || "default") === "teaser");
+  const cards = gridItems.map((it) => renderCardItem(it, opts)).join("");
+  const teaserHtml = teasers.map((it) => renderCardItem(it, opts)).join("");
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g${cols}">${cards}</div>${teaserHtml}${secClose()}`;
+}function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
   const items =
     (data.items as Array<{
       question: string;
@@ -227,30 +290,103 @@ function renderTeam(
         typeof p.textHtml === "string" && p.textHtml
           ? richOrMd(p.textHtml, null, "inline")
           : esc(String(p.text || ""));
-      return `<article class="person reveal">${img}<div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p></div></article>`;
-    })
+      const links = Array.isArray(p.links)
+        ? `<div class="links">${(p.links as Array<{ label: string; href: string; icon?: string | null }>)
+            .map((l) => {
+              const ext =
+                /^https?:\/\//i.test(l.href) && !l.href.includes("vaybik.ru")
+                  ? ' target="_blank" rel="noopener"'
+                  : "";
+              return `<a href="${escAttr(l.href)}"${ext}>${l.icon || ""}${esc(l.label)}</a>`;
+            })
+            .join("")}</div>`
+        : "";
+      return `<article class="person reveal">${img}<div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p>${links}</div></article>`;    })
     .join("");
   return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header)}<div class="team">${html}</div>${secClose()}`;
 }
 
-function renderCases(data: Record<string, unknown>, anchor?: string | null): string {
-  const items = (data.items as Array<Record<string, string>>) || [];
+function renderCases(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
+  const items = (data.items as Array<Record<string, unknown>>) || [];
+  const variant = String(data.variant || "default");
   const cards = items
     .map((it) => {
-      const caseText =
-        it.textHtml && String(it.textHtml).trim()
-          ? richOrMd(it.textHtml, null, "inline")
-          : esc(it.text || "");
-      const inner = `${it.tag ? `<span class="kicker">${esc(it.tag)}</span>` : ""}<h3>${esc(it.title || "")}</h3><p>${caseText}</p>${it.result ? `<p><em>${esc(it.result)}</em></p>` : ""}`;
-      if (it.href) {
-        return `<a class="card case reveal" href="${escAttr(it.href)}">${inner}</a>`;
+      const tag = String(it.tag || it.kicker || "");
+      const title = esc(String(it.title || ""));
+      const kicker = tag ? `<span class="kicker">${esc(tag)}</span>` : "";
+      const before = it.before != null ? String(it.before).trim() : "";
+      const didHtml = richOrMd(it.didHtml, null, "basic");
+      const result = it.result != null ? String(it.result).trim() : "";
+      const hasDl = before || didHtml || result;
+
+      let img = "";
+      if (opts.media) {
+        img = renderMediaPicture(it.image, opts.media, {
+          fallbackAlt: String(it.imageAlt || it.title || ""),
+          lazy: true,
+          width: typeof it.imageWidth === "number" ? it.imageWidth : null,
+          height: typeof it.imageHeight === "number" ? it.imageHeight : null,
+        });
+      }
+      if (!img) {
+        const media = resolveMediaSrc(
+          it.image,
+          opts.media ?? null,
+          String(it.imageAlt || it.title || ""),
+        );
+        const w = typeof it.imageWidth === "number" ? it.imageWidth : null;
+        const h = typeof it.imageHeight === "number" ? it.imageHeight : null;
+        const wh = (w ? ` width="${w}"` : "") + (h ? ` height="${h}"` : "");
+        img = media.src
+          ? `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}"${wh} loading="lazy">`
+          : "";
+      }
+
+      let body: string;
+      if (hasDl) {
+        const rows: string[] = [];
+        if (before) rows.push(`<dt>Было</dt><dd>${esc(before)}</dd>`);
+        if (didHtml) rows.push(`<dt>Сделали</dt><dd>${didHtml}</dd>`);
+        if (result) rows.push(`<dt>Результат</dt><dd>${esc(result)}</dd>`);
+        body = `<dl>${rows.join("")}</dl>`;
+      } else {
+        const caseText =
+          it.textHtml && String(it.textHtml).trim()
+            ? richOrMd(it.textHtml, null, "basic")
+            : esc(String(it.text || ""));
+        body = caseText
+          ? caseText.startsWith("<")
+            ? caseText
+            : `<p>${caseText}</p>`
+          : "";
+        if (result && !hasDl) body += `<p><em>${esc(result)}</em></p>`;
+      }
+
+      const moreLabel = String(it.more || "").trim();
+      const href = it.href ? String(it.href) : "";
+      const more =
+        href && moreLabel
+          ? `<a class="more" href="${escAttr(href)}">${esc(moreLabel)}</a>`
+          : "";
+
+      if (variant === "portfolio" || img || hasDl) {
+        const inner = `${img}<div>${kicker}<h3>${title}</h3>${body}${more}</div>`;
+        return `<article class="card case reveal">${inner}</article>`;
+      }
+
+      const inner = `${kicker}<h3>${title}</h3>${body}`;
+      if (href) {
+        return `<a class="card case reveal" href="${escAttr(href)}">${inner}</a>`;
       }
       return `<article class="card case reveal">${inner}</article>`;
     })
     .join("");
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g3">${cards}</div>${secClose()}`;
 }
-
 function renderCta(data: Record<string, unknown>, anchor?: string | null): string {
   const rings = data.rings
     ? `<div class="sec-rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
@@ -383,7 +519,7 @@ export function renderBlock(
     case "answer":
       return renderAnswer(data, block.anchor);
     case "cards":
-      return renderCards(data, block.anchor);
+      return renderCards(data, block.anchor, opts);
     case "steps":
       return renderSteps(data, block.anchor);
     case "faq":
@@ -391,8 +527,7 @@ export function renderBlock(
     case "team":
       return renderTeam(data, block.anchor, opts);
     case "cases":
-      return renderCases(data, block.anchor);
-    case "cta":
+      return renderCases(data, block.anchor, opts);    case "cta":
       return renderCta(data, block.anchor);
     case "text":
       return renderText(data, block.anchor);
