@@ -74,29 +74,32 @@ export const publishSchema = z.object({
   note: z.string().max(300).optional().nullable(),
 });
 
-export const navItemSchema = z
-  .object({
-    menu: z.enum(["HEADER", "FOOTER"]),
-    parentId: z.string().cuid().nullable().optional(),
-    label: z.string().min(1).max(120),
-    url: z.string().max(500).nullable().optional(),
-    pageId: z.string().cuid().nullable().optional(),
-    sortOrder: z.number().int().default(0),
-    isHidden: z.boolean().default(false),
-    isHighlighted: z.boolean().default(false),
-    openInNewTab: z.boolean().default(false),
-  })
-  .superRefine((v, ctx) => {
-    const hasUrl = Boolean(v.url);
-    const hasPage = Boolean(v.pageId);
-    if (hasUrl === hasPage) {
-      ctx.addIssue({
-        code: "custom",
-        message: "нужно ровно одно из: url или pageId",
-        path: ["url"],
-      });
-    }
-  });
+const navItemBaseSchema = z.object({
+  menu: z.enum(["HEADER", "FOOTER"]),
+  parentId: z.string().cuid().nullable().optional(),
+  label: z.string().min(1).max(120),
+  url: z.string().max(500).nullable().optional(),
+  pageId: z.string().cuid().nullable().optional(),
+  sortOrder: z.number().int().default(0),
+  isHidden: z.boolean().default(false),
+  isHighlighted: z.boolean().default(false),
+  openInNewTab: z.boolean().default(false),
+});
+
+export const navItemSchema = navItemBaseSchema.superRefine((v, ctx) => {
+  const hasUrl = Boolean(v.url);
+  const hasPage = Boolean(v.pageId);
+  if (hasUrl === hasPage) {
+    ctx.addIssue({
+      code: "custom",
+      message: "нужно ровно одно из: url или pageId",
+      path: ["url"],
+    });
+  }
+});
+
+/** Частичное обновление пункта меню (без требования url XOR pageId) */
+export const navItemPatchSchema = navItemBaseSchema.partial();
 
 export const navReorderSchema = z.object({
   items: z.array(
