@@ -7,8 +7,14 @@
 set -euo pipefail
 
 PROD_DIR="${PROD_DIR:-/opt/apps/vaybik-hub}"
-unset DOCKER_HOST || true
-dc() { env -u DOCKER_HOST docker compose "$@"; }
+# shell/.bashrc может подставить чужие POSTGRES_*/SITE_* в ${...} compose — как в deploy-prod.sh
+unset DOCKER_HOST POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DATABASE_URL \
+  SITE_PROD_PRIORITY SITE_PUBLIC_ORIGIN || true
+dc() {
+  env -u DOCKER_HOST -u POSTGRES_USER -u POSTGRES_PASSWORD -u POSTGRES_DB -u DATABASE_URL \
+    -u SITE_PROD_PRIORITY -u SITE_PUBLIC_ORIGIN \
+    docker compose "$@"
+}
 
 cmd="status"
 force=0
