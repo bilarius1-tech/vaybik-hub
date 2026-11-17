@@ -3,7 +3,9 @@
  */
 import path from "node:path";
 import { PgBoss } from "pg-boss";
+import { runConnectionBackup } from "@/server/backup/connection-dump";
 import { runAdminBackup } from "@/server/backup/run";
+import { ensureAdminConnection } from "@/server/databases/ensure-admin";
 import { prisma } from "@/server/db";
 import {
   aggregateOldHealthChecks,
@@ -11,6 +13,7 @@ import {
 } from "@/server/services/aggregate";
 import { checkAllDueServices } from "@/server/services/check-runner";
 import { collectHostMetrics } from "@/server/services/metrics";
+import { notifyEvent } from "@/server/services/telegram";
 
 const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
@@ -33,11 +36,19 @@ async function main() {
   await boss.createQueue("server-metrics");
   await boss.createQueue("maintenance");
   await boss.createQueue("admin-backup");
+  await boss.createQueue("db-connection-backups");
 
   await boss.schedule("health-checks", "*/1 * * * *", {}, { tz: "Europe/Moscow" });
   await boss.schedule("server-metrics", "*/1 * * * *", {}, { tz: "Europe/Moscow" });
   await boss.schedule("maintenance", "15 3 * * *", {}, { tz: "Europe/Moscow" });
   await boss.schedule("admin-backup", "0 3 * * *", {}, { tz: "Europe/Moscow" });
+  // Каждую минуту сверяем cron подключений (лёгкая проверка)
+  await boss.schedule(
+    "db-connection-backups",
+    "* * * * *",
+    {},
+    { tz: "Europe/Moscow" },
+  );
 
   await boss.work("health-checks", async () => {
     const n = await checkAllDueServices();
@@ -73,15 +84,83 @@ async function main() {
 
   await boss.work("admin-backup", async () => {
     try {
+      const admin = await ensureAdminConnection();
       const r = await runAdminBackup();
+      if (admin) {
+        await prisma.backup.create({
+          data: {
+            dbConnectionId: admin.id,
+            target: "admin-db",
+            trigger: "schedule",
+            file: r.dbFile,
+            status: "ok",
+            sizeBytes: BigInt(r.dbBytes),
+            finishedAt: new Date(),
+          },
+        });
+        await prisma.backup.create({
+          data: {
+            dbConnectionId: admin.id,
+            target: "uploads",
+            trigger: "schedule",
+            file: r.uploadsFile,
+            status: "ok",
+            finishedAt: new Date(),
+          },
+        });
+      }
       console.log(
         `[worker] backup ok id=${r.id} pruned=${r.pruned} dbBytes=${r.dbBytes} file=${path.basename(r.dbFile)}`,
       );
+      await notifyEvent({
+        event: "backup.ok",
+        entityId: admin?.id,
+        text: `Ночной бэкап админки OK (${path.basename(r.dbFile)})`,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error("[worker] backup failed:", msg);
+      await notifyEvent({
+        event: "backup.failed",
+        text: `Ночной бэкап админки ОШИБКА: ${msg.slice(0, 200)}`,
+      });
       throw err;
     }
+  });
+
+  await boss.work("db-connection-backups", async () => {
+    const admin = await ensureAdminConnection();
+    const connections = await prisma.dbConnection.findMany({
+      where: {
+        backupSchedule: { not: null },
+        isSystem: false,
+      },
+    });
+    const now = new Date(
+      new Date().toLocaleString("en-US", { timeZone: "Europe/Moscow" }),
+    );
+    for (const conn of connections) {
+      if (!conn.backupSchedule) continue;
+      if (!cronMatchesNow(conn.backupSchedule, now)) continue;
+      // Не дублировать, если уже ок за эту минуту
+      const since = new Date(Date.now() - 90_000);
+      const recent = await prisma.backup.findFirst({
+        where: {
+          dbConnectionId: conn.id,
+          trigger: "schedule",
+          startedAt: { gte: since },
+        },
+      });
+      if (recent) continue;
+      try {
+        await runConnectionBackup({ connection: conn, trigger: "schedule" });
+        console.log(`[worker] connection backup ok slug=${conn.slug}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[worker] connection backup failed slug=${conn.slug}:`, msg);
+      }
+    }
+    void admin;
   });
 
   const shutdown = async () => {
@@ -92,6 +171,35 @@ async function main() {
   };
   process.on("SIGINT", () => void shutdown());
   process.on("SIGTERM", () => void shutdown());
+}
+
+/** Упрощённый cron (5 полей): min hour dom month dow. Шаг вида star/N поддерживается. */
+function cronMatchesNow(expr: string, now: Date): boolean {
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return false;
+  const [min, hour, dom, month, dow] = parts;
+  const vals = [
+    now.getMinutes(),
+    now.getHours(),
+    now.getDate(),
+    now.getMonth() + 1,
+    now.getDay(),
+  ];
+  const specs = [min, hour, dom, month, dow];
+  return specs.every((spec, i) => matchField(spec!, vals[i]!));
+}
+
+function matchField(spec: string, value: number): boolean {
+  if (spec === "*") return true;
+  if (/^\*\/\d+$/.test(spec)) {
+    const step = Number(spec.slice(2));
+    return step > 0 && value % step === 0;
+  }
+  if (/^\d+$/.test(spec)) return Number(spec) === value;
+  if (spec.includes(",")) {
+    return spec.split(",").some((p) => matchField(p, value));
+  }
+  return false;
 }
 
 main().catch(async (err) => {
