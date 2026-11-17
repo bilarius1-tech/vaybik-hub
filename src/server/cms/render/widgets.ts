@@ -45,8 +45,14 @@ export function renderWidgetHtml(
   anchor?: string | null,
 ): string {
   const key = String(data.key || "studio");
+  // studio/calcFull — интерактивные шаблоны с <button>; снимок sanitize их выкидывает
+  const preferTemplate = key === "studio" || key === "calcFull";
+  if (preferTemplate && mode === "public") {
+    const partial = loadWidgetPartial(key);
+    if (partial?.trim()) return partial.trim();
+  }
   const snap = sanitizeCmsHtml(String(data.htmlSnapshot || ""));
-  // снимок со страницы важнее общего шаблона (на /uslugi/ нет calc-more, на главной — есть)
+  // calcMini: снимок со страницы (на /uslugi/ нет calc-more, на главной — есть)
   if (snap.trim()) {
     if (snap.trim().startsWith("<section")) return snap;
     const id = anchor || (key === "studio" ? "studio" : "calc-sec");
@@ -54,9 +60,7 @@ export function renderWidgetHtml(
   }
   if (mode === "public") {
     const partial = loadWidgetPartial(key);
-    if (partial?.trim()) {
-      return partial.trim();
-    }
+    if (partial?.trim()) return partial.trim();
   }
   const id = anchor || (key === "studio" ? "studio" : "calc-sec");
   return `<section class="sec" id="${escAttr(id)}"><div class="w"><div class="widget widget-${escAttr(key)}"><p class="muted">Виджет «${esc(key)}» (снимок пуст)</p></div></div></section>`;

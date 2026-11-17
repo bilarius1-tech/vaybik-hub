@@ -90,6 +90,9 @@ async function comparePage(path: string): Promise<Row> {
   const followedIndexHtml = path.endsWith("/index.html") && status === "WARN";
   const $a = cheerio.load(ua.text);
   const $b = cheerio.load(ub.text);
+  // скрипты/стили в main (studio bootstrap) не контент страницы
+  $a("main script, main style, main noscript").remove();
+  $b("main script, main style, main noscript").remove();
   const checks: Array<[string, string, string]> = [
     ["title", $a("title").text().trim(), $b("title").text().trim()],
     [
@@ -105,7 +108,8 @@ async function comparePage(path: string): Promise<Row> {
       status = status === "FAIL" ? "FAIL" : "WARN";
     }
   }
-  const sim = similarity($a("main").text(), $b("main").text());
+  // html→spaces, не .text(): иначе соседние теги склеивают слова («целиПодробнее»)
+  const sim = similarity($a("main").html() || "", $b("main").html() || "");
   if (sim < 0.97) {
     notes.push(`main text similarity ${sim.toFixed(3)} < 0.97`);
     // /path/index.html → канон уже сравнивается отдельно как /path/

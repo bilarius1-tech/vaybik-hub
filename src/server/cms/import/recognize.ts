@@ -158,23 +158,39 @@ function recognizeSteps(
   $: cheerio.CheerioAPI,
   section: Element,
 ): RecognizedBlock | null {
-  if (!$(section).find("ol.steps").length) return null;
-  const items: Array<{ title: string; text: string; result: string }> = [];
-  $(section)
-    .find("ol.steps li")
-    .each((_, li) => {
-      const $li = $(li);
-      items.push({
-        title: text($li.find("b").first()),
-        text: text($li.find("span").first()),
-        result: text($li.find("em").first()),
-      });
+  const $ol = $(section).find("ol.steps").first();
+  if (!$ol.length) return null;
+  const olCls = $ol.attr("class") || "";
+  const variant = olCls.includes("av-steps")
+    ? "av"
+    : olCls.includes("k-steps")
+      ? "k-steps"
+      : olCls.includes("flow5")
+        ? "flow5"
+        : "default";
+  const items: Array<{
+    title: string;
+    text: string;
+    result: string;
+    icon?: string;
+  }> = [];
+  $ol.find("> li").each((_, li) => {
+    const $li = $(li);
+    const icon = $li.find(".ibox").first().html() || undefined;
+    items.push({
+      title: text($li.find("b").first()),
+      // не брать .ibox (там только svg)
+      text: text($li.find("> span").not(".ibox").first()) || text($li.find("span").not(".ibox").first()),
+      result: text($li.find("em").first()),
+      icon,
     });
+  });
   return {
     type: "steps",
     data: parseBlockData("steps", {
       header: headerFrom($, section),
       background: hasClass(section, "alt") ? "alt" : "default",
+      variant,
       items,
     }),
     anchor: section.attribs?.id || null,
