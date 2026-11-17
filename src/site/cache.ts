@@ -148,9 +148,10 @@ export function clearMemoryCache(): void {
 export function clearAllCache(): void {
   memory.clear();
   try {
-    if (existsSync(diskDir)) {
-      rmSync(diskDir, { recursive: true, force: true });
-      mkdirSync(diskDir, { recursive: true });
+    mkdirSync(diskDir, { recursive: true });
+    // Не rm -rf сам mount-point (EBUSY в Docker) — чистим содержимое.
+    for (const name of readdirSync(diskDir)) {
+      rmSync(path.join(diskDir, name), { recursive: true, force: true });
     }
   } catch (err) {
     console.warn("[site-cache] clear failed", err);

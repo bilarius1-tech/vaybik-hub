@@ -18,8 +18,55 @@ async function main() {
   try {
     robots = readFileSync(robotsPath, "utf8");
   } catch {
-    robots =
-      "User-agent: *\nAllow: /\nDisallow: /admin/\n\nSitemap: https://vaybik.ru/sitemap.xml\n";
+    // В контейнере leadweb нет — полный текст с хоста (как в leadweb robots.txt)
+    robots = `User-agent: GPTBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: YandexBot
+Allow: /
+
+User-agent: YandexAdditional
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: *
+Allow: /
+Disallow: /admin/
+
+Sitemap: https://vaybik.ru/sitemap.xml
+`;
   }
 
   console.log(dry ? "[dry-run]" : "[write]");
