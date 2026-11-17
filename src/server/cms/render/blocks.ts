@@ -1,5 +1,19 @@
-import { sanitizeCmsHtml } from "../sanitize";
+import { sanitizeCmsHtml, sanitizeRichText } from "../sanitize";
 import { esc, escAttr, simpleMarkdown } from "./escape";
+
+function richOrMd(
+  html: unknown,
+  legacy: unknown,
+  preset: "full" | "basic" | "inline",
+): string {
+  if (typeof html === "string" && html.trim()) {
+    return sanitizeRichText(html, preset);
+  }
+  if (typeof legacy === "string" && legacy.trim()) {
+    return simpleMarkdown(legacy);
+  }
+  return "";
+}
 
 export type RenderBlock = {
   type: string;
@@ -85,7 +99,10 @@ function renderAnswer(data: Record<string, unknown>, anchor?: string | null): st
         .map((f) => `<div class="fact"><b>${esc(f.value)}</b><span>${esc(f.label)}</span></div>`)
         .join("")}</div>`
     : "";
-  return `${secOpen(anchor)}${simpleMarkdown(String(data.text || "")).replace(/<p>/, '<div class="answer reveal"><p>').replace(/<\/p>$/, "</p></div>")}${facts ? `<div style="margin-top:40px">${facts}</div>` : ""}${secClose()}`;
+  const body = richOrMd(data.html, data.text, "basic")
+    .replace(/<p>/, '<div class="answer reveal"><p>')
+    .replace(/<\/p>$/, "</p></div>");
+  return `${secOpen(anchor)}${body}${facts ? `<div style="margin-top:40px">${facts}</div>` : ""}${secClose()}`;
 }
 
 function renderCards(data: Record<string, unknown>, anchor?: string | null): string {
@@ -97,7 +114,12 @@ function renderCards(data: Record<string, unknown>, anchor?: string | null): str
       const num = it.num ? `<span class="num">${esc(String(it.num))}</span>` : "";
       const icon = it.icon ? `<span class="ibox">${it.icon}</span>` : "";
       const price = it.price ? `<div class="price">${esc(String(it.price))}</div>` : "";
-      const text = it.text ? `<p>${esc(String(it.text))}</p>` : "";
+      const textHtml = richOrMd(it.textHtml, null, "inline");
+      const text = textHtml
+        ? `<p>${textHtml}</p>`
+        : it.text
+          ? `<p>${esc(String(it.text))}</p>`
+          : "";
       const chk = Array.isArray(it.checklist)
         ? `<ul class="chk">${(it.checklist as string[]).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>`
         : "";
@@ -123,11 +145,16 @@ function renderSteps(data: Record<string, unknown>, anchor?: string | null): str
 }
 
 function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
-  const items = (data.items as Array<{ question: string; answer: string }>) || [];
+  const items =
+    (data.items as Array<{
+      question: string;
+      answer?: string;
+      answerHtml?: string;
+    }>) || [];
   const details = items
     .map(
       (it) =>
-        `<details><summary><span>${esc(it.question)}</span></summary><div>${simpleMarkdown(it.answer)}</div></details>`,
+        `<details><summary><span>${esc(it.question)}</span></summary><div>${richOrMd(it.answerHtml, it.answer, "basic")}</div></details>`,
     )
     .join("");
   return `${secOpen(anchor || "faq", data.background === "alt")}${secHeader(data.header as Header)}<div class="faq reveal">${details}</div>${secClose()}`;
@@ -139,7 +166,11 @@ function renderTeam(data: Record<string, unknown>, anchor?: string | null): stri
     .map((p) => {
       const w = p.width ? ` width="${p.width}"` : "";
       const h = p.height ? ` height="${p.height}"` : "";
-      return `<article class="person reveal"><img src="${escAttr(String(p.photo || ""))}" alt="${escAttr(String(p.photoAlt || p.name || ""))}"${w}${h} loading="lazy"><div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${esc(String(p.text || ""))}</p></div></article>`;
+      const bio =
+        typeof p.textHtml === "string" && p.textHtml
+          ? richOrMd(p.textHtml, null, "inline")
+          : esc(String(p.text || ""));
+      return `<article class="person reveal"><img src="${escAttr(String(p.photo || ""))}" alt="${escAttr(String(p.photoAlt || p.name || ""))}"${w}${h} loading="lazy"><div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p></div></article>`;
     })
     .join("");
   return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header)}<div class="team">${html}</div>${secClose()}`;
@@ -149,7 +180,11 @@ function renderCases(data: Record<string, unknown>, anchor?: string | null): str
   const items = (data.items as Array<Record<string, string>>) || [];
   const cards = items
     .map((it) => {
-      const inner = `${it.tag ? `<span class="kicker">${esc(it.tag)}</span>` : ""}<h3>${esc(it.title || "")}</h3><p>${esc(it.text || "")}</p>${it.result ? `<p><em>${esc(it.result)}</em></p>` : ""}`;
+      const caseText =
+        it.textHtml && String(it.textHtml).trim()
+          ? richOrMd(it.textHtml, null, "inline")
+          : esc(it.text || "");
+      const inner = `${it.tag ? `<span class="kicker">${esc(it.tag)}</span>` : ""}<h3>${esc(it.title || "")}</h3><p>${caseText}</p>${it.result ? `<p><em>${esc(it.result)}</em></p>` : ""}`;
       if (it.href) {
         return `<a class="card case reveal" href="${escAttr(it.href)}">${inner}</a>`;
       }
@@ -169,7 +204,8 @@ function renderCta(data: Record<string, unknown>, anchor?: string | null): strin
 }
 
 function renderText(data: Record<string, unknown>, anchor?: string | null): string {
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="reveal">${simpleMarkdown(String(data.markdown || ""))}</div>${secClose()}`;
+  const body = richOrMd(data.html, data.markdown, "full");
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="reveal">${body}</div>${secClose()}`;
 }
 
 function renderWidget(data: Record<string, unknown>, anchor?: string | null): string {

@@ -4,11 +4,22 @@ import {
   BLOCK_TYPES,
   type BlockType,
 } from "@/lib/cms-block-meta";
-import { sanitizeCmsHtml, sanitizeSvgIcon } from "./sanitize";
+import {
+  sanitizeCmsHtml,
+  sanitizeRichText,
+  sanitizeSvgIcon,
+} from "./sanitize";
 
 export { BLOCK_META, BLOCK_TYPES, type BlockType };
 
 const optionalString = z.string().optional().nullable();
+
+const richHtml = (preset: "full" | "basic" | "inline") =>
+  z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeRichText(v, preset) : v));
 
 const headerSchema = z
   .object({
@@ -52,17 +63,29 @@ export const heroBlockSchema = z.object({
   rings: z.unknown().optional().nullable(),
 });
 
-export const answerBlockSchema = z.object({
-  text: z.string().min(1),
-  facts: z
-    .array(
-      z.object({
-        value: z.string().min(1),
-        label: z.string().min(1),
-      }),
-    )
-    .default([]),
-});
+export const answerBlockSchema = z
+  .object({
+    /** @deprecated — используйте html */
+    text: z.string().optional().default(""),
+    html: richHtml("basic"),
+    facts: z
+      .array(
+        z.object({
+          value: z.string().min(1),
+          label: z.string().min(1),
+        }),
+      )
+      .default([]),
+  })
+  .superRefine((v, ctx) => {
+    if (!(v.html || "").trim() && !(v.text || "").trim()) {
+      ctx.addIssue({
+        code: "custom",
+        message: "Нужен текст ответа",
+        path: ["html"],
+      });
+    }
+  });
 
 export const cardsBlockSchema = z.object({
   header: headerSchema,
@@ -75,6 +98,7 @@ export const cardsBlockSchema = z.object({
         icon: iconField,
         title: z.string().min(1),
         text: optionalString,
+        textHtml: richHtml("inline"),
         price: optionalString,
         checklist: z.array(z.string()).optional(),
         link: z
@@ -106,10 +130,22 @@ export const faqBlockSchema = z.object({
   background: backgroundSchema,
   items: z
     .array(
-      z.object({
-        question: z.string().min(1),
-        answer: z.string().min(1),
-      }),
+      z
+        .object({
+          question: z.string().min(1),
+          /** @deprecated — используйте answerHtml */
+          answer: z.string().optional().default(""),
+          answerHtml: richHtml("basic"),
+        })
+        .superRefine((v, ctx) => {
+          if (!(v.answerHtml || "").trim() && !(v.answer || "").trim()) {
+            ctx.addIssue({
+              code: "custom",
+              message: "Нужен ответ",
+              path: ["answerHtml"],
+            });
+          }
+        }),
     )
     .default([]),
 });
@@ -124,6 +160,7 @@ export const teamBlockSchema = z.object({
         role: z.string().default(""),
         quote: z.string().default(""),
         text: z.string().default(""),
+        textHtml: richHtml("inline"),
         photo: z.string().default(""),
         photoAlt: z.string().default(""),
         width: z.number().int().positive().optional(),
@@ -142,6 +179,7 @@ export const casesBlockSchema = z.object({
         title: z.string().min(1),
         tag: optionalString,
         text: z.string().default(""),
+        textHtml: richHtml("inline"),
         result: optionalString,
         image: optionalString,
         href: optionalString,
@@ -161,7 +199,9 @@ export const ctaBlockSchema = z.object({
 export const textBlockSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
+  /** @deprecated — используйте html */
   markdown: z.string().default(""),
+  html: richHtml("full"),
 });
 
 export const widgetBlockSchema = z.object({

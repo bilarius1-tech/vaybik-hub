@@ -247,3 +247,41 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* Tiptap rich text в админке */
+.prose-cms p {
+  margin: 0.35em 0;
+}
+.prose-cms ul,
+.prose-cms ol {
+  margin: 0.35em 0;
+  padding-left: 1.25rem;
+}
+.prose-cms h2,
+.prose-cms h3,
+.prose-cms h4 {
+  margin: 0.5em 0 0.25em;
+  font-weight: 800;
+}
+.prose-cms a {
+  color: var(--ac);
+  text-decoration: underline;
+}
+.prose-cms img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+.prose-cms blockquote {
+  margin: 0.5em 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid var(--bd);
+  color: var(--mu);
+}
+.tiptap p.is-editor-empty:first-child::before {
+  color: var(--mu);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}

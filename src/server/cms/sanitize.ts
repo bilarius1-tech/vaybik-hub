@@ -1,4 +1,7 @@
 import sanitizeHtml from "sanitize-html";
+import type { RichTextPreset } from "@/lib/cms-richtext";
+
+export type { RichTextPreset };
 
 /** SVG-теги, которые встречаются в lucide-подобных иконках leadweb */
 const SVG_TAGS = [
@@ -116,8 +119,6 @@ const BASE_OPTIONS: sanitizeHtml.IOptions = {
   // style — запрещён (XSS через expression/url)
   disallowedTagsMode: "discard",
 };
-
-export type RichTextPreset = "full" | "basic" | "inline";
 
 const RICH_TAGS: Record<RichTextPreset, string[]> = {
   full: [
