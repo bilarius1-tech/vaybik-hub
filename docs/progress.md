@@ -185,7 +185,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Header: без дубля «Обсудить проект»; `sub-uslugi`/`sub-auto`; aria-current; mascot picture; FAQ/карточки svg
 - [x] Parity: DOM header/main/footer + #calc-sec + lc-bar + css/js + svg viewBox
 - [x] lint / typecheck / test / build зелёные
-- [ ] Деплой на site-test (ждать «задеплой»)
+- [x] Деплой на site-test (`a09220d`, 17:24 МСК)
 - [ ] Cutover vaybik.ru (ждать «да»)
 
 ## Фазы
