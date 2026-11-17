@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
-import { requireCan } from "@/server/auth/require";
+import { requireCan, requireRole } from "@/server/auth/require";
+import { purgePage, softDeletePage } from "@/server/cms/pages-list";
 import { assertPathAvailable, getPageWithBlocks } from "@/server/cms/service";
 import { pageUpdateSchema } from "@/server/cms/schemas";
 import { prisma } from "@/server/db";
@@ -14,7 +15,9 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     await requireCan("content.manage");
     const { id } = await ctx.params;
     const page = await getPageWithBlocks(id);
-    if (!page) return jsonError("NOT_FOUND", "Страница не найдена", 404);
+    if (!page || page.deletedAt) {
+      return jsonError("NOT_FOUND", "Страница не найдена", 404);
+    }
     return jsonOk({ page });
   } catch (err) {
     return handleRouteError(err);
@@ -28,7 +31,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     const { id } = await ctx.params;
     const body = pageUpdateSchema.parse(await req.json());
 
-    const existing = await prisma.page.findUnique({ where: { id } });
+    const existing = await prisma.page.findFirst({
+      where: { id, deletedAt: null },
+    });
     if (!existing) return jsonError("NOT_FOUND", "Страница не найдена", 404);
 
     if (body.path && body.path !== existing.path) {
@@ -71,20 +76,34 @@ export async function DELETE(req: NextRequest, ctx: Ctx) {
     assertSameOrigin(req);
     const auth = await requireCan("content.manage");
     const { id } = await ctx.params;
-    const existing = await prisma.page.findUnique({ where: { id } });
-    if (!existing) return jsonError("NOT_FOUND", "Страница не найдена", 404);
+    const purge = req.nextUrl.searchParams.get("purge") === "1";
 
-    await prisma.page.delete({ where: { id } });
+    if (purge) {
+      requireRole(auth.user, "OWNER");
+      const page = await purgePage(id);
+      await writeAudit({
+        actorId: auth.user.id,
+        action: "cms.page.purge",
+        entity: "Page",
+        entityId: id,
+        diff: { path: page.path },
+        ip: clientIp(req),
+        userAgent: userAgent(req),
+      });
+      return jsonOk({ ok: true });
+    }
+
+    const page = await softDeletePage(id, auth.user.id);
     await writeAudit({
       actorId: auth.user.id,
-      action: "cms.page.delete",
+      action: "cms.page.trash",
       entity: "Page",
       entityId: id,
-      diff: { path: existing.path },
+      diff: { path: page.path },
       ip: clientIp(req),
       userAgent: userAgent(req),
     });
-    return jsonOk({ ok: true });
+    return jsonOk({ page });
   } catch (err) {
     return handleRouteError(err);
   }

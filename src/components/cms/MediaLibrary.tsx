@@ -317,6 +317,9 @@ export function MediaLibrary({ isOwner = false }: { isOwner?: boolean }) {
 
       <div className="space-y-3">
         <div className="flex flex-wrap items-end gap-2">
+          <span className="mb-2 self-end text-[12.5px] text-mu">
+            Найдено: {total}
+          </span>
           <Field label="Поиск" className="min-w-[160px] flex-1">
             <Input
               value={q}
@@ -336,6 +339,18 @@ export function MediaLibrary({ isOwner = false }: { isOwner?: boolean }) {
               <option value="GIF">GIF</option>
             </Select>
           </Field>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => {
+              setQ("");
+              setKind("");
+              setFolder("");
+              setTrash(false);
+            }}
+          >
+            Сбросить
+          </Button>
           <Button
             variant="primary"
             onClick={() => fileRef.current?.click()}

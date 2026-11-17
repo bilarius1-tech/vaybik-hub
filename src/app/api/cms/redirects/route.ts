@@ -43,11 +43,16 @@ export async function POST(req: NextRequest) {
 
     if (body.toPath.startsWith("/")) {
       const archived = await prisma.page.findFirst({
-        where: { path: body.toPath, status: "ARCHIVED" },
+        where: {
+          path: body.toPath,
+          OR: [{ status: "ARCHIVED" }, { deletedAt: { not: null } }],
+        },
       });
       if (archived) {
         check.warnings.push(
-          `цель «${body.toPath}» — страница в статусе ARCHIVED`,
+          archived.deletedAt
+            ? `цель «${body.toPath}» — страница в корзине`
+            : `цель «${body.toPath}» — страница в статусе ARCHIVED`,
         );
       }
     }

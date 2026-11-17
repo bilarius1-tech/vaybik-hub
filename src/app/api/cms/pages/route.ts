@@ -2,7 +2,11 @@ import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { assertPathAvailable } from "@/server/cms/service";
-import { pageCreateSchema } from "@/server/cms/schemas";
+import {
+  listPages,
+  parsePageSize,
+} from "@/server/cms/pages-list";
+import { pageCreateSchema, pageStatusSchema } from "@/server/cms/schemas";
 import { prisma } from "@/server/db";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonOk } from "@/server/http/response";
@@ -10,27 +14,23 @@ import { handleRouteError, jsonOk } from "@/server/http/response";
 export async function GET(req: NextRequest) {
   try {
     await requireCan("content.manage");
-    const status = req.nextUrl.searchParams.get("status");
-    const q = req.nextUrl.searchParams.get("q")?.trim();
-
-    const pages = await prisma.page.findMany({
-      where: {
-        ...(status ? { status: status as "DRAFT" | "PUBLISHED" | "ARCHIVED" } : {}),
-        ...(q
-          ? {
-              OR: [
-                { path: { contains: q, mode: "insensitive" } },
-                { title: { contains: q, mode: "insensitive" } },
-              ],
-            }
-          : {}),
-      },
-      orderBy: [{ sortOrder: "asc" }, { path: "asc" }],
-      include: {
-        _count: { select: { blocks: true } },
-      },
+    const sp = req.nextUrl.searchParams;
+    const statusRaw = sp.get("status");
+    const status =
+      statusRaw && statusRaw !== "ALL"
+        ? pageStatusSchema.parse(statusRaw)
+        : "ALL";
+    const template = sp.get("template") || "ALL";
+    const result = await listPages({
+      q: sp.get("q") || undefined,
+      status,
+      template,
+      sort: sp.get("sort") || undefined,
+      page: Number(sp.get("page") || "1") || 1,
+      pageSize: parsePageSize(sp.get("pageSize")),
+      trash: sp.get("trash") === "1",
     });
-    return jsonOk({ pages });
+    return jsonOk(result);
   } catch (err) {
     return handleRouteError(err);
   }
@@ -52,6 +52,10 @@ export async function POST(req: NextRequest) {
         sortOrder: body.sortOrder,
         updatedById: ctx.user.id,
         source: "manual",
+      },
+      include: {
+        _count: { select: { blocks: true } },
+        updatedBy: { select: { id: true, email: true, name: true } },
       },
     });
 

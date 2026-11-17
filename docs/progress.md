@@ -146,13 +146,22 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Тесты lint/typecheck/test/build + e2e site-media; деплой — только после «задеплой»
 - [ ] CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop, клик-для-правки в предпросмотре
 
+## CMS-2.1 — списки /admin/site (страницы, медиа, меню, редиректы)
+
+- [x] Page.deletedAt (soft delete) + partial unique path; updatedBy → User
+- [x] Список страниц: действия, сортировка, пагинация в URL, поиск debounce, фильтры, bulk, «Изменил», корзина
+- [x] API: list/sort/paginate, trash/restore/purge, duplicate, unpublish, bulk + audit
+- [x] Меню/редиректы: create в модалке, действия; медиа: «Найдено» + сброс
+- [x] Unit + e2e; lint/typecheck/test/build
+- [ ] Деплой — после «задеплой»
+
 ## Фазы
 - [x] Фаза 0 — каркас
 - [x] Фаза 1 — MVP (auth, сервисы, vault, SEO, настройки, деплой-пакет)
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-2 на проде `6cdf520`; richtext/convert — ждать «да»)
+- [ ] Фаза 5 — публичный хаб / CMS (CMS-2 на проде; списки CMS-2.1 на dev)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)

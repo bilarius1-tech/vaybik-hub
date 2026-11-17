@@ -2,6 +2,7 @@ import { SitePanel } from "@/components/cms/SitePanel";
 import { requireCan } from "@/server/auth/require";
 import { prisma } from "@/server/db";
 import { redirect } from "next/navigation";
+import { Suspense } from "react";
 
 export default async function SitePage() {
   let ctx;
@@ -11,10 +12,11 @@ export default async function SitePage() {
     redirect("/");
   }
 
-  const [pages, navItems, redirects] = await Promise.all([
+  const [navPages, navItems, redirects] = await Promise.all([
     prisma.page.findMany({
-      orderBy: [{ sortOrder: "asc" }, { path: "asc" }],
-      include: { _count: { select: { blocks: true } } },
+      where: { deletedAt: null },
+      orderBy: { path: "asc" },
+      select: { id: true, path: true, title: true },
     }),
     prisma.navItem.findMany({
       orderBy: [{ menu: "asc" }, { sortOrder: "asc" }],
@@ -24,11 +26,13 @@ export default async function SitePage() {
   ]);
 
   return (
-    <SitePanel
-      initialPages={JSON.parse(JSON.stringify(pages))}
-      initialNav={JSON.parse(JSON.stringify(navItems))}
-      initialRedirects={JSON.parse(JSON.stringify(redirects))}
-      isOwner={ctx.user.role === "OWNER"}
-    />
+    <Suspense fallback={<p className="text-sm text-mu">Загрузка…</p>}>
+      <SitePanel
+        navPages={JSON.parse(JSON.stringify(navPages))}
+        initialNav={JSON.parse(JSON.stringify(navItems))}
+        initialRedirects={JSON.parse(JSON.stringify(redirects))}
+        isOwner={ctx.user.role === "OWNER"}
+      />
+    </Suspense>
   );
 }

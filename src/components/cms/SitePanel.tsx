@@ -6,25 +6,14 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { DataTable } from "@/components/ui/DataTable";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, Input, Select } from "@/components/ui/Field";
-import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
 import { MediaLibrary } from "@/components/cms/MediaLibrary";
+import { PagesList } from "@/components/cms/PagesList";
 import { api } from "@/lib/api-client";
-import { formatDateTime } from "@/lib/format";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 
-type PageRow = {
-  id: string;
-  path: string;
-  title: string;
-  template: string;
-  status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
-  updatedAt: string;
-  updatedById: string | null;
-  _count: { blocks: number };
-};
+type NavPageOpt = { id: string; path: string; title: string };
 
 type NavRow = {
   id: string;
@@ -50,86 +39,62 @@ type RedirectRow = {
   note: string | null;
 };
 
-const STATUS_PILL: Record<
-  PageRow["status"],
-  { tone: "green" | "yellow" | "demo"; label: string }
-> = {
-  PUBLISHED: { tone: "green", label: "опубликована" },
-  DRAFT: { tone: "yellow", label: "черновик" },
-  ARCHIVED: { tone: "demo", label: "архив" },
-};
+type Tab = "pages" | "nav" | "redirects" | "media";
 
 export function SitePanel({
-  initialPages,
   initialNav,
   initialRedirects,
+  navPages,
   isOwner = false,
 }: {
-  initialPages: PageRow[];
   initialNav: NavRow[];
   initialRedirects: RedirectRow[];
+  navPages: NavPageOpt[];
   isOwner?: boolean;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"pages" | "nav" | "redirects" | "media">(
-    "pages",
-  );
-  const [pages, setPages] = useState(initialPages);
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab") as Tab | null;
+  const tab: Tab =
+    tabParam === "nav" ||
+    tabParam === "redirects" ||
+    tabParam === "media" ||
+    tabParam === "pages"
+      ? tabParam
+      : "pages";
+
   const [nav, setNav] = useState(initialNav);
   const [redirects, setRedirects] = useState(initialRedirects);
-  const [statusFilter, setStatusFilter] = useState("ALL");
-  const [q, setQ] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
-
-  const [newPath, setNewPath] = useState("/");
-  const [newTitle, setNewTitle] = useState("");
-  const [newTemplate, setNewTemplate] = useState("default");
 
   const [navMenu, setNavMenu] = useState<"HEADER" | "FOOTER">("HEADER");
   const [navLabel, setNavLabel] = useState("");
   const [navUrl, setNavUrl] = useState("");
   const [navPageId, setNavPageId] = useState("");
   const [navParentId, setNavParentId] = useState("");
+  const [navCreateOpen, setNavCreateOpen] = useState(false);
 
   const [fromPath, setFromPath] = useState("");
   const [toPath, setToPath] = useState("");
   const [match, setMatch] = useState<"EXACT" | "PREFIX">("EXACT");
+  const [redirectCreateOpen, setRedirectCreateOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [redirQ, setRedirQ] = useState("");
 
-  const filtered = useMemo(() => {
-    return pages.filter((p) => {
-      if (statusFilter !== "ALL" && p.status !== statusFilter) return false;
-      if (!q.trim()) return true;
-      const s = q.trim().toLowerCase();
-      return (
-        p.path.toLowerCase().includes(s) || p.title.toLowerCase().includes(s)
-      );
-    });
-  }, [pages, statusFilter, q]);
-
-  async function createPage() {
-    setErr(null);
-    setMsg(null);
-    const res = await api<{ page: PageRow }>("/api/cms/pages", {
-      method: "POST",
-      body: JSON.stringify({
-        path: newPath,
-        title: newTitle,
-        template: newTemplate,
-      }),
-    });
-    if (res.error) {
-      setErr(res.error.message);
-      return;
+  function setTab(next: Tab) {
+    const sp = new URLSearchParams(searchParams.toString());
+    sp.set("tab", next);
+    if (next !== "pages") {
+      sp.delete("page");
+      sp.delete("pageSize");
+      sp.delete("sort");
+      sp.delete("q");
+      sp.delete("status");
+      sp.delete("template");
+      sp.delete("trash");
     }
-    setMsg("Страница создана");
-    setPages((prev) => [
-      ...prev,
-      { ...res.data!.page, _count: { blocks: 0 } },
-    ]);
-    router.push(`/site/pages/${res.data!.page.id}`);
-    router.refresh();
+    router.replace(`/site?${sp.toString()}`, { scroll: false });
   }
 
   async function createNav() {
@@ -154,6 +119,7 @@ export function SitePanel({
     setNavLabel("");
     setNavUrl("");
     setNavPageId("");
+    setNavCreateOpen(false);
     setMsg("Пункт меню добавлен");
     router.refresh();
   }
@@ -178,6 +144,7 @@ export function SitePanel({
     );
     setFromPath("");
     setToPath("");
+    setRedirectCreateOpen(false);
     setMsg(
       res.data!.warnings?.length
         ? `Редирект создан (${res.data!.warnings.join("; ")})`
@@ -198,6 +165,23 @@ export function SitePanel({
     setRedirects((prev) => prev.filter((r) => r.id !== deleteId));
     setDeleteId(null);
     setMsg("Редирект удалён");
+  }
+
+  async function toggleRedirect(id: string, isActive: boolean) {
+    const res = await api<{ redirect: RedirectRow }>(
+      `/api/cms/redirects/${id}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ isActive }),
+      },
+    );
+    if (res.error) {
+      setErr(res.error.message);
+      return;
+    }
+    setRedirects((prev) =>
+      prev.map((r) => (r.id === id ? res.data!.redirect : r)),
+    );
   }
 
   async function moveNav(id: string, dir: -1 | 1) {
@@ -239,6 +223,19 @@ export function SitePanel({
     );
   }
 
+  async function deleteNav(id: string) {
+    const res = await api("/api/cms/nav", {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
+    });
+    if (res.error) {
+      setErr(res.error.message);
+      return;
+    }
+    setNav((prev) => prev.filter((n) => n.id !== id && n.parentId !== id));
+    setMsg("Пункт меню удалён");
+  }
+
   const headerRoots = nav
     .filter((n) => n.menu === "HEADER" && !n.parentId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
@@ -246,10 +243,20 @@ export function SitePanel({
     .filter((n) => n.menu === "FOOTER" && !n.parentId)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  const filteredRedirects = useMemo(() => {
+    const s = redirQ.trim().toLowerCase();
+    if (!s) return redirects;
+    return redirects.filter(
+      (r) =>
+        r.fromPath.toLowerCase().includes(s) ||
+        r.toPath.toLowerCase().includes(s),
+    );
+  }, [redirects, redirQ]);
+
   function renderNavTree(roots: NavRow[]) {
     if (!roots.length) {
       return (
-        <EmptyState title="Пусто" description="Добавьте пункт меню ниже" />
+        <EmptyState title="Пусто" description="Добавьте пункт меню" />
       );
     }
     return (
@@ -291,6 +298,13 @@ export function SitePanel({
                 >
                   {r.isHidden ? "Показать" : "Скрыть"}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => void deleteNav(r.id)}
+                >
+                  Удалить
+                </Button>
               </div>
               {children.length > 0 && (
                 <ul className="mt-2 space-y-1 border-l border-bd pl-3">
@@ -323,6 +337,13 @@ export function SitePanel({
                         onClick={() => void toggleNavHidden(c.id, !c.isHidden)}
                       >
                         {c.isHidden ? "Показать" : "Скрыть"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void deleteNav(c.id)}
+                      >
+                        Удалить
                       </Button>
                     </li>
                   ))}
@@ -361,132 +382,109 @@ export function SitePanel({
       {msg && <p className="text-sm text-gr">{msg}</p>}
       {err && <p className="text-sm text-rd">{err}</p>}
 
-      {tab === "pages" && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card>
-            <CardHeader
-              title="Страницы"
-              action={
-                <div className="flex flex-wrap gap-2">
-                  <Select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    aria-label="Фильтр статуса"
-                  >
-                    <option value="ALL">Все статусы</option>
-                    <option value="DRAFT">Черновик</option>
-                    <option value="PUBLISHED">Опубликована</option>
-                    <option value="ARCHIVED">Архив</option>
-                  </Select>
-                  <Input
-                    placeholder="Поиск…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                    className="w-40"
-                  />
-                </div>
-              }
-            />
-            {filtered.length === 0 ? (
-              <EmptyState
-                title="Нет страниц"
-                description="Создайте страницу или запустите импорт leadweb"
-              />
-            ) : (
-              <DataTable
-                rowKey={(p) => p.id}
-                columns={[
-                  {
-                    key: "path",
-                    header: "Путь",
-                    render: (p) => (
-                      <Link
-                        className="font-medium text-ac hover:underline"
-                        href={`/site/pages/${p.id}`}
-                      >
-                        {p.path}
-                      </Link>
-                    ),
-                  },
-                  { key: "title", header: "Название", render: (p) => p.title },
-                  {
-                    key: "template",
-                    header: "Шаблон",
-                    render: (p) => p.template,
-                  },
-                  {
-                    key: "status",
-                    header: "Статус",
-                    render: (p) => (
-                      <Pill tone={STATUS_PILL[p.status].tone}>
-                        {STATUS_PILL[p.status].label}
-                      </Pill>
-                    ),
-                  },
-                  {
-                    key: "blocks",
-                    header: "Блоков",
-                    render: (p) => p._count.blocks,
-                  },
-                  {
-                    key: "updated",
-                    header: "Изменено",
-                    render: (p) => formatDateTime(p.updatedAt),
-                  },
-                ]}
-                rows={filtered}
-              />
-            )}
-          </Card>
+      {tab === "pages" && <PagesList isOwner={isOwner} />}
 
-          <Card>
-            <CardHeader title="Создать страницу" />
-            <div className="space-y-3">
-              <Field label="Путь">
-                <Input
-                  value={newPath}
-                  onChange={(e) => setNewPath(e.target.value)}
-                  placeholder="/uslugi/"
-                />
-              </Field>
-              <Field label="Название">
-                <Input
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                />
-              </Field>
-              <Field label="Шаблон">
-                <Select
-                  value={newTemplate}
-                  onChange={(e) => setNewTemplate(e.target.value)}
-                >
-                  <option value="home">home</option>
-                  <option value="default">default</option>
-                  <option value="service">service</option>
-                  <option value="calculator">calculator</option>
-                </Select>
-              </Field>
-              <Button onClick={() => void createPage()} disabled={!newTitle.trim()}>
-                Создать страницу
-              </Button>
-            </div>
-          </Card>
+      {tab === "nav" && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => setNavCreateOpen(true)}>
+              + Пункт меню
+            </Button>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader title="HEADER" />
+              {renderNavTree(headerRoots)}
+            </Card>
+            <Card>
+              <CardHeader title="FOOTER" />
+              {renderNavTree(footerRoots)}
+            </Card>
+          </div>
         </div>
       )}
 
-      {tab === "nav" && (
-        <div className="grid gap-4 lg:grid-cols-2">
-          <Card>
-            <CardHeader title="HEADER" />
-            {renderNavTree(headerRoots)}
-          </Card>
-          <Card>
-            <CardHeader title="FOOTER" />
-            {renderNavTree(footerRoots)}
-          </Card>
-          <Card className="lg:col-span-2">
-            <CardHeader title="Добавить пункт" />
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      {tab === "redirects" && (
+        <Card>
+          <CardHeader
+            title="Редиректы"
+            action={
+              <div className="flex flex-wrap gap-2">
+                <span className="self-center text-[12.5px] text-mu">
+                  Найдено: {filteredRedirects.length}
+                </span>
+                <Input
+                  placeholder="Поиск…"
+                  value={redirQ}
+                  onChange={(e) => setRedirQ(e.target.value)}
+                  className="w-40"
+                  aria-label="Поиск редиректов"
+                />
+                <Button size="sm" onClick={() => setRedirectCreateOpen(true)}>
+                  + Редирект
+                </Button>
+              </div>
+            }
+          />
+          {filteredRedirects.length === 0 ? (
+            <EmptyState title="Нет редиректов" />
+          ) : (
+            <DataTable
+              rowKey={(r) => r.id}
+              columns={[
+                {
+                  key: "from",
+                  header: "Откуда",
+                  render: (r) => r.fromPath,
+                },
+                { key: "to", header: "Куда", render: (r) => r.toPath },
+                { key: "code", header: "Код", render: (r) => r.code },
+                { key: "match", header: "Тип", render: (r) => r.match },
+                {
+                  key: "active",
+                  header: "Активен",
+                  render: (r) => (r.isActive ? "да" : "нет"),
+                },
+                {
+                  key: "actions",
+                  header: "Действия",
+                  render: (r) => (
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => void toggleRedirect(r.id, !r.isActive)}
+                      >
+                        {r.isActive ? "Выключить" : "Включить"}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => setDeleteId(r.id)}
+                      >
+                        Удалить
+                      </Button>
+                    </div>
+                  ),
+                },
+              ]}
+              rows={filteredRedirects}
+            />
+          )}
+        </Card>
+      )}
+
+      {tab === "media" && <MediaLibrary isOwner={isOwner} />}
+
+      {navCreateOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-lg rounded-2xl border border-bd bg-gradient-to-b from-card2 to-card p-4 shadow-card">
+            <h3 className="text-[14.5px] font-extrabold">Добавить пункт меню</h3>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <Field label="Меню">
                 <Select
                   value={navMenu}
@@ -528,14 +526,14 @@ export function SitePanel({
                   }}
                 >
                   <option value="">— URL вручную —</option>
-                  {pages.map((p) => (
+                  {navPages.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.path} — {p.title}
                     </option>
                   ))}
                 </Select>
               </Field>
-              <Field label="Или URL">
+              <Field label="Или URL" className="sm:col-span-2">
                 <Input
                   value={navUrl}
                   onChange={(e) => {
@@ -546,63 +544,31 @@ export function SitePanel({
                   disabled={Boolean(navPageId)}
                 />
               </Field>
-              <div className="flex items-end">
-                <Button
-                  onClick={() => void createNav()}
-                  disabled={!navLabel.trim()}
-                >
-                  Добавить
-                </Button>
-              </div>
             </div>
-          </Card>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button variant="ghost" onClick={() => setNavCreateOpen(false)}>
+                Отмена
+              </Button>
+              <Button
+                onClick={() => void createNav()}
+                disabled={!navLabel.trim()}
+              >
+                Добавить
+              </Button>
+            </div>
+          </div>
         </div>
-      )}
+      ) : null}
 
-      {tab === "redirects" && (
-        <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
-          <Card>
-            <CardHeader title="Редиректы" />
-            {redirects.length === 0 ? (
-              <EmptyState title="Нет редиректов" />
-            ) : (
-              <DataTable
-                rowKey={(r) => r.id}
-                columns={[
-                  {
-                    key: "from",
-                    header: "Откуда",
-                    render: (r) => r.fromPath,
-                  },
-                  { key: "to", header: "Куда", render: (r) => r.toPath },
-                  { key: "code", header: "Код", render: (r) => r.code },
-                  { key: "match", header: "Тип", render: (r) => r.match },
-                  {
-                    key: "active",
-                    header: "Активен",
-                    render: (r) => (r.isActive ? "да" : "нет"),
-                  },
-                  {
-                    key: "actions",
-                    header: "",
-                    render: (r) => (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setDeleteId(r.id)}
-                      >
-                        Удалить
-                      </Button>
-                    ),
-                  },
-                ]}
-                rows={redirects}
-              />
-            )}
-          </Card>
-          <Card>
-            <CardHeader title="Новый редирект" />
-            <div className="space-y-3">
+      {redirectCreateOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/55 p-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-bd bg-gradient-to-b from-card2 to-card p-4 shadow-card">
+            <h3 className="text-[14.5px] font-extrabold">Новый редирект</h3>
+            <div className="mt-3 space-y-3">
               <Field label="from">
                 <Input
                   value={fromPath}
@@ -628,13 +594,19 @@ export function SitePanel({
                   <option value="PREFIX">PREFIX</option>
                 </Select>
               </Field>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => setRedirectCreateOpen(false)}
+              >
+                Отмена
+              </Button>
               <Button onClick={() => void createRedirect()}>Создать</Button>
             </div>
-          </Card>
+          </div>
         </div>
-      )}
-
-      {tab === "media" && <MediaLibrary isOwner={isOwner} />}
+      ) : null}
 
       <ConfirmDialog
         open={Boolean(deleteId)}

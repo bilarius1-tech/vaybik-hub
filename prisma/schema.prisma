@@ -26,6 +26,7 @@ model User {
   isBlocked     Boolean      @default(false)
   sessions      Session[]
   backupCodes   BackupCode[]
+  pagesUpdated  Page[]       @relation("PageUpdatedBy")
   createdAt     DateTime     @default(now())
   lastLoginAt   DateTime?
 }
@@ -220,7 +221,8 @@ enum RedirectMatch {
 model Page {
   id                  String         @id @default(cuid())
   /// Как на сайте: "/", "/uslugi/landing/"
-  path                String         @unique
+  /// Уникальность активных путей — partial unique index (см. миграцию cms_pages_soft_delete)
+  path                String
   title               String
   status              PageStatus     @default(DRAFT)
   /// home | default | service | calculator
@@ -237,10 +239,18 @@ model Page {
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   updatedById         String?
+  updatedBy           User?          @relation("PageUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  /// Soft delete: корзина; null = активна
+  deletedAt           DateTime?
   blocks              Block[]
   revisions           PageRevision[]
   navItems            NavItem[]
   mediaUsages         MediaUsage[]
+
+  @@index([deletedAt])
+  @@index([updatedAt])
+  @@index([status])
+  @@index([template])
 }
 
 model Block {

@@ -58,6 +58,7 @@
 - **2026-11-17** — сервис **chat.vaybik.ru**: отдельный репо `bilarius1-tech/vaybik-chat`, рабочая копия `/opt/vaybik-chat`; Фаза 0 (проектирование) в docs; код/прод не поднимали.
 - **2026-11-17** — главный сайт vaybik.ru: статика из `bilarius1-tech/leadweb` (`/opt/vaybik-site-src`), выкладка `scripts/deploy-site.sh` в `/opt/apps/vaybik-main` (nginx reload). `/admin` остаётся хабом (Traefik priority 100). URL: `/automation.html`→`/avtomatizaciya-1c/`, `/bitrix.html`→`/bitrix/` (301).
 - **2026-11-17** — CMS-1 в хабе: Page/Block/NavItem/Redirect/PageRevision, `/admin/site`, предпросмотр, импорт leadweb. Публичный рендер из БД — позже (часть 3). Новый env: `SITE_ASSETS_ORIGIN`.
+- **2026-11-17** — CMS-2.1: soft delete страниц + списки `/admin/site` (сортировка/пагинация/URL/bulk/корзина); purge — OWNER.
 
 ## 6. Договорённости
 
@@ -74,18 +75,17 @@
 - chat.vaybik.ru: ТЗ v0.3 в репо vaybik-chat, Фаза 0 спроектирована (ждём «да» на Фазу 1). lead.vaybik.ru — ТЗ ещё нет.
 - 2FA для владельца: включить позже, когда будет удобно.
 
-## 8а. Сайт / CMS (часть 1, 2026-11-17)
+## 8а. Сайт / CMS (часть 1–2, 2026-11-17)
 
-- Модели: `Page`, `Block`, `NavItem`, `Redirect`, `PageRevision`; SEO через связь `Page.seoPageId` → `SeoPage` (поля SEO не дублируются).
+- Модели: `Page`, `Block`, `NavItem`, `Redirect`, `PageRevision`, `Media*`; SEO через `Page.seoPageId` → `SeoPage`.
 - Админка: `/admin/site`, редактор `/admin/site/pages/[id]`, предпросмотр `/admin/site-preview/[id]` (noindex, CSS с `SITE_ASSETS_ORIGIN`).
-- Импорт: `npm run cms:import -- --src /opt/vaybik-site-src` (`--dry-run`, `--force`, `--only=/path/`). На проде — через временную папку в worker (см. промпт CMS-1 §9).
-- Публичный vaybik.ru пока статика leadweb; рендер из БД — часть 3.
-- Санитайзер: `sanitize-html` в `src/server/cms/sanitize.ts`.
+- **CMS-2.1:** список страниц — soft delete (`deletedAt`), корзина, duplicate/publish/unpublish/bulk, сортировка/пагинация/фильтры в URL (`?tab=&page=&sort=&q=&status=&template=&trash=`). Окончательный purge — только OWNER. Нельзя удалить `/` и страницы, на которые ссылается меню/редирект. Partial unique index `Page_path_active_key`.
+- Импорт: `npm run cms:import -- --src /opt/vaybik-site-src`. Публичный vaybik.ru пока статика; рендер из БД — часть 3.
 
 ## 8. Следующие шаги
 
-1. CMS-1: «задеплой» хаба (миграция + `SITE_ASSETS_ORIGIN`) → бэкап → импорт на прод после «да».
-2. CMS-2: Tiptap + медиагалерея (вместо JSON-редактора блоков).
+1. «задеплой» CMS-2.1 (миграция `cms_pages_soft_delete`) на прод.
+2. CMS-2b / публичный рендер — по отдельному промпту.
 3. chat.vaybik.ru — Фаза 1 после «да» по DESIGN (не трогать region/proxy).
 4. Яндекс.Метрика на дашборд (отложено).
 5. Промпт 8 — партнёры и лиды.

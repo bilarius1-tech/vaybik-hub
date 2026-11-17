@@ -9,8 +9,8 @@ import { parseBlockData } from "./blocks";
 const REVISION_LIMIT = 20;
 
 export async function getPageWithBlocks(id: string) {
-  return prisma.page.findUnique({
-    where: { id },
+  return prisma.page.findFirst({
+    where: { id, deletedAt: null },
     include: {
       blocks: { orderBy: { sortOrder: "asc" } },
       seoPage: true,
@@ -32,8 +32,14 @@ export async function assertPathAvailable(
   path: string,
   excludePageId?: string,
 ): Promise<void> {
-  const existing = await prisma.page.findUnique({ where: { path } });
-  if (existing && existing.id !== excludePageId) {
+  const existing = await prisma.page.findFirst({
+    where: {
+      path,
+      deletedAt: null,
+      ...(excludePageId ? { id: { not: excludePageId } } : {}),
+    },
+  });
+  if (existing) {
     throw Object.assign(new Error(`Путь «${path}» уже занят`), {
       status: 409,
       code: "CONFLICT",
@@ -81,7 +87,7 @@ export async function buildPageSnapshot(pageId: string) {
 
 export async function publishPage(
   pageId: string,
-  userId: string,
+  userId: string | null,
   note?: string | null,
 ) {
   const snapshot = await buildPageSnapshot(pageId);
@@ -100,8 +106,8 @@ export async function publishPage(
         status: "PUBLISHED",
         publishedRevisionId: rev.id,
         publishedAt: new Date(),
-        updatedById: userId,
-        source: "manual",
+        ...(userId ? { updatedById: userId } : {}),
+        source: userId ? "manual" : "import",
       },
     });
     const snapBlocks = (

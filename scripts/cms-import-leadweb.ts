@@ -192,8 +192,8 @@ async function main() {
       }
     }
 
-    const existing = await prisma.page.findUnique({
-      where: { path },
+    const existing = await prisma.page.findFirst({
+      where: { path, deletedAt: null },
       include: { revisions: { orderBy: { createdAt: "desc" }, take: 1 } },
     });
 
@@ -291,7 +291,7 @@ async function main() {
     }
 
     const leadwebSha = sha256(html).slice(0, 12);
-    await publishPage(pageId, "import", `импорт из leadweb ${leadwebSha}`);
+    await publishPage(pageId, null, `импорт из leadweb ${leadwebSha}`);
 
     pathToPageId.set(path, pageId);
     report.pages.push({
@@ -385,8 +385,8 @@ async function main() {
       if (url.includes("#")) return null; // якоря — через url
       return pathToPageId.get(pathOnly) ||
         (
-          await prisma.page.findUnique({
-            where: { path: pathOnly },
+          await prisma.page.findFirst({
+            where: { path: pathOnly, deletedAt: null },
             select: { id: true },
           })
         )?.id ||

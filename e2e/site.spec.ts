@@ -37,17 +37,18 @@ test("сайт: создать страницу, faq-блок, предпрос�
 
   await page.goto("/admin/site");
   await expect(page.getByRole("heading", { name: "Сайт" })).toBeVisible();
+  await expect(page.getByText(/Найдено:/)).toBeVisible();
 
-  const createCard = page.locator("text=Создать страницу").locator("..").locator("..");
-  await createCard.getByPlaceholder("/uslugi/").fill(path);
-  await createCard.locator("input").nth(1).fill(title);
-  await page.getByRole("button", { name: "Создать страницу" }).click();
+  await page.getByRole("button", { name: "+ Создать страницу" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByPlaceholder("/uslugi/").fill(path);
+  await dialog.locator('input').nth(1).fill(title);
+  await dialog.getByRole("button", { name: "Создать" }).click();
 
   await expect(page.getByRole("heading", { name: title })).toBeVisible({
     timeout: 15_000,
   });
 
-  // select типа блока перед кнопкой «Добавить блок»
   const addSelect = page
     .getByRole("button", { name: "Добавить блок" })
     .locator("..")
@@ -70,4 +71,41 @@ test("сайт: создать страницу, faq-блок, предпрос�
   await expect(popup.locator(".cms-preview-banner")).toContainText(
     "Предпросмотр",
   );
+});
+
+test("сайт: список — URL-параметры сортировки и корзина", async ({ page }) => {
+  await login(page);
+  await page.goto("/admin/site?tab=pages&sort=path&pageSize=25");
+  await expect(page.getByRole("heading", { name: "Сайт" })).toBeVisible();
+  await expect(page.getByText(/Найдено:/)).toBeVisible({ timeout: 10_000 });
+
+  await page.getByRole("columnheader", { name: /Изменено/ }).click();
+  await expect(page).toHaveURL(/sort=-updatedAt/);
+
+  const slug = Date.now().toString(36);
+  const path = `/e2e-list-${slug}/`;
+  await page.getByRole("button", { name: "+ Создать страницу" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByPlaceholder("/uslugi/").fill(path);
+  await dialog.locator("input").nth(1).fill(`List ${slug}`);
+  await dialog.getByRole("button", { name: "Создать" }).click();
+  await expect(page.getByRole("heading", { name: `List ${slug}` })).toBeVisible(
+    { timeout: 15_000 },
+  );
+
+  await page.goto("/admin/site?tab=pages&q=" + encodeURIComponent(path));
+  await expect(page.getByText(path).first()).toBeVisible({ timeout: 10_000 });
+  const row = page.locator("tr", { hasText: path });
+  await row.getByRole("button", { name: "Удалить" }).click();
+  await page.getByRole("button", { name: "В корзину" }).click();
+  await expect(page.getByText(/В корзине:/)).toBeVisible({ timeout: 10_000 });
+
+  await page.getByRole("button", { name: "Корзина" }).click();
+  await expect(page).toHaveURL(/trash=1/);
+  await expect(page.getByText(path).first()).toBeVisible();
+  await page
+    .locator("tr", { hasText: path })
+    .getByRole("button", { name: "Восстановить" })
+    .click();
+  await expect(page.getByText("Восстановлено")).toBeVisible({ timeout: 10_000 });
 });

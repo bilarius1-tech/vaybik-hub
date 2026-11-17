@@ -19,7 +19,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     assertSameOrigin(req);
     const auth = await requireCan("content.manage");
     const { id: pageId } = await ctx.params;
-    const page = await prisma.page.findUnique({ where: { id: pageId } });
+    const page = await prisma.page.findFirst({
+      where: { id: pageId, deletedAt: null },
+    });
     if (!page) return jsonError("NOT_FOUND", "Страница не найдена", 404);
 
     const body = blockCreateSchema.parse(await req.json());

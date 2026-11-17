@@ -16,7 +16,9 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     const { id } = await ctx.params;
     const body = publishSchema.parse(await req.json().catch(() => ({})));
 
-    const existing = await prisma.page.findUnique({ where: { id } });
+    const existing = await prisma.page.findFirst({
+      where: { id, deletedAt: null },
+    });
     if (!existing) return jsonError("NOT_FOUND", "Страница не найдена", 404);
 
     const { page, revision } = await publishPage(id, auth.user.id, body.note);
