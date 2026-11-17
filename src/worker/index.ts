@@ -1,6 +1,7 @@
 /**
  * Фоновый worker (pg-boss): health-checks, метрики сервера, агрегация, бэкапы, Telegram.
  */
+import path from "node:path";
 import { PgBoss } from "pg-boss";
 import { runAdminBackup } from "@/server/backup/run";
 import { prisma } from "@/server/db";
@@ -74,10 +75,11 @@ async function main() {
     try {
       const r = await runAdminBackup();
       console.log(
-        `[worker] backup id=${r.id} pruned=${r.pruned} db=${r.dbFile}`,
+        `[worker] backup ok id=${r.id} pruned=${r.pruned} dbBytes=${r.dbBytes} file=${path.basename(r.dbFile)}`,
       );
     } catch (err) {
-      console.error("[worker] backup failed", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("[worker] backup failed:", msg);
       throw err;
     }
   });

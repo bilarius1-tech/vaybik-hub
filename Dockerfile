@@ -45,12 +45,15 @@ RUN npx --yes esbuild@0.25.0 src/worker/index.ts \
 
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
+# Клиент PostgreSQL 16 (сервер — 16); пакет из PGDG, не bookworm-default 15.
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    openssl \
-    postgresql-client \
+  && apt-get install -y --no-install-recommends ca-certificates curl gnupg openssl \
+  && curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc \
+    | gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg \
+  && echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt bookworm-pgdg main" \
+    > /etc/apt/sources.list.d/pgdg.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends postgresql-client-16 \
   && rm -rf /var/lib/apt/lists/* \
   && groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs --create-home nextjs
