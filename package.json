@@ -23,7 +23,8 @@
     "backup:now": "tsx scripts/backup-now.ts",
     "backup:restore": "tsx scripts/restore-backup.ts",
     "backup:restore-test": "tsx scripts/backup-restore-test.ts",
-    "deploy:prod": "bash scripts/deploy-prod.sh"
+    "deploy:prod": "bash scripts/deploy-prod.sh",
+    "cms:import": "tsx scripts/cms-import-leadweb.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
