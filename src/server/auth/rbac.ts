@@ -13,6 +13,7 @@ export type Action =
   | "settings.manage"
   | "databases.read"
   | "databases.restore"
+  | "content.manage"
   | "partner.self";
 
 const ROLE_PERMS: Record<Role, ReadonlySet<Action>> = {
@@ -29,6 +30,7 @@ const ROLE_PERMS: Record<Role, ReadonlySet<Action>> = {
     "settings.manage",
     "databases.read",
     "databases.restore",
+    "content.manage",
   ]),
   ADMIN: new Set([
     "activity.read",
@@ -37,6 +39,7 @@ const ROLE_PERMS: Record<Role, ReadonlySet<Action>> = {
     "vault.manage",
     "settings.manage",
     "databases.read",
+    "content.manage",
   ]),
   PARTNER: new Set(["partner.self"]),
 };

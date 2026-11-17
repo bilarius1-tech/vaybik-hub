@@ -30,4 +30,10 @@ describe("rbac", () => {
     expect(() => requireRole(admin, "OWNER")).toThrow(/прав/);
     expect(() => requireRole(owner, ["OWNER", "ADMIN"])).not.toThrow();
   });
+
+  it("content.manage — OWNER и ADMIN, не PARTNER", () => {
+    expect(can(owner, "content.manage")).toBe(true);
+    expect(can(admin, "content.manage")).toBe(true);
+    expect(can(partner, "content.manage")).toBe(false);
+  });
 });
