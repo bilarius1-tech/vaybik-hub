@@ -34,7 +34,7 @@
 
 ## 4. Текущее состояние (на 2026-11-17)
 
-- Фазы 0–3 + CMS-3 cutover на проде. Прод: **`a0ae891`**. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`, `X-Vaybik-Site: cms`); `site-test.vaybik.ru` тоже CMS. Статика nginx — запасной путь (priority 17). Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- Фазы 0–3 + CMS-3 на проде. Прод: **`a0ae891`** (+ docs `74f5c53`). Публичный **vaybik.ru = nginx-статика** (`SITE_PROD_PRIORITY=1`); CMS на `site-test.vaybik.ru`. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
 - Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
@@ -62,6 +62,8 @@
 - **2026-11-17** — Уникальность активных `Page.path` — partial index `Page_path_active_key` (`WHERE "deletedAt" IS NULL`). Prisma его не моделирует: в новой миграции, если появится `DROP INDEX "Page_path_active_key"`, **удалить эту строку** и оставить индекс.
 - **2026-11-17** — CMS-3: публичный сайт — лёгкий Node `site.cjs` в том же образе (не второй Next). Тестовый хост `site-test.vaybik.ru`; cutover через `SITE_PROD_PRIORITY` (1=off, 50=on). Контент только из `PageRevision`; DRAFT с `publishedRevisionId` остаётся публичным. Кеш инвалидируется `site.contentVersion` (опрос 5 с). vaybik-main не останавливаем.
 - **2026-11-17** — Cutover ON: `SITE_PROD_PRIORITY=50`, `SITE_PUBLIC_ORIGIN=https://vaybik.ru`. Тексты сайта — только через админку; HTML в leadweb на тексты больше не влияет (css/js/img/kp — по-прежнему). Откат: `scripts/site-cutover.sh off` или `docker compose stop site`.
+- **2026-11-17** — Cutover OFF (~17:02): снова nginx на vaybik.ru; CMS на site-test.
+- **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
 
 ## 6. Договорённости
 

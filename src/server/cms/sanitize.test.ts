@@ -54,6 +54,32 @@ describe("sanitizeCmsHtml", () => {
     expect(out).toContain("<path");
     expect(out).toContain('d="M1 2"');
   });
+
+  it("сохраняет viewBox (регистр)", () => {
+    const out = sanitizeCmsHtml(
+      '<svg class="ic" width="18" height="18" viewBox="0 0 24 24"><path d="M1 2"/></svg>',
+    );
+    expect(out).toMatch(/viewBox="0 0 24 24"/i);
+    expect(out).not.toMatch(/onclick/i);
+  });
+
+  it("по-прежнему режет on*, style и javascript:", () => {
+    const out = sanitizeCmsHtml(
+      '<a href="javascript:alert(1)" onclick="x" style="color:red">t</a><svg viewBox="0 0 1 1" onclick="y"></svg>',
+    );
+    expect(out).not.toMatch(/javascript:/i);
+    expect(out).not.toMatch(/onclick/i);
+    expect(out).not.toMatch(/style=/i);
+  });
+});
+
+describe("sanitizeSvgIcon viewBox", () => {
+  it("сохраняет viewBox", () => {
+    const out = sanitizeSvgIcon(
+      '<svg viewBox="0 0 24 24" width="24" height="24"><path d="M1 2"/></svg>',
+    );
+    expect(out).toMatch(/viewBox="0 0 24 24"/i);
+  });
 });
 
 describe("sanitizeSvgIcon", () => {

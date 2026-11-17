@@ -678,6 +678,15 @@ export function PageEditor({
                   type={selected.type}
                   data={draftData}
                   onChange={onDraftChange}
+                  heroFromCalcTemplate={
+                    selected.type === "hero" &&
+                    page.blocks.some(
+                      (b) =>
+                        b.type === "widget" &&
+                        (b.data as { key?: string } | null)?.key ===
+                          "calcFull",
+                    )
+                  }
                 />
                 <Button
                   onClick={() => void saveBlock(false)}

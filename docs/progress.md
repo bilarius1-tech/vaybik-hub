@@ -171,7 +171,22 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Деплой A: тестовый хост `site-test.vaybik.ru` (`2dcca18`); vaybik.ru без X-Vaybik-Site
 - [x] Роль БД `vaybik_site` + SITE_DATABASE_URL + Vault
 - [x] Parity без FAIL на site-test (`a0ae891`, только WARN)
-- [x] Cutover B: vaybik.ru → CMS (`SITE_PROD_PRIORITY=50`, 16:53 МСК)
+- [x] Cutover B: vaybik.ru → CMS (`SITE_PROD_PRIORITY=50`, 16:53 МСК); **OFF** снова (`PRIORITY=1`, 17:02) — site-test CMS, vaybik.ru nginx
+
+## CMS-3a — калькуляторы + DOM-parity (продолжение CMS-3)
+
+Промпт: `docs/prompts/13-cms-03a-calc-form.md`. Деплой — после «задеплой»; cutover — после отдельного «да».
+
+- [x] calcMini всегда из `widgets/calcMini.html` (+ `showMore` / детект `calc-more`)
+- [x] sanitize: `viewBox` / `preserveAspectRatio` (parser без lowerCaseAttributeNames)
+- [x] Рендер: `fixMissingSvgViewBox` для уже сохранённых svg; скрипт `cms-repair-svg-viewbox.ts` (на прод — после «да»)
+- [x] calculator assets: calc.css + data/content/calc/client.js; `afterMain` = lc-bar
+- [x] Двойной hero: skip `hero` при widget calcFull; подсказка в редакторе
+- [x] Header: без дубля «Обсудить проект»; `sub-uslugi`/`sub-auto`; aria-current; mascot picture; FAQ/карточки svg
+- [x] Parity: DOM header/main/footer + #calc-sec + lc-bar + css/js + svg viewBox
+- [x] lint / typecheck / test / build зелёные
+- [ ] Деплой на site-test (ждать «задеплой»)
+- [ ] Cutover vaybik.ru (ждать «да»)
 
 ## Фазы
 - [x] Фаза 0 — каркас
@@ -179,7 +194,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-2.1 на проде; **сейчас CMS-3**)
+- [ ] Фаза 5 — публичный хаб / CMS (CMS-3 на проде; **сейчас CMS-3a**, cutover OFF)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)

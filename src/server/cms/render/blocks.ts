@@ -1,6 +1,14 @@
 import { sanitizeCmsHtml, sanitizeRichText } from "../sanitize";
 import { esc, escAttr, simpleMarkdown } from "./escape";
 import {
+  CHECK_ICON,
+  FAQ_ICON,
+  MORE_ARROW,
+  PRICE_ICON,
+  fixMissingSvgViewBox,
+  renderMascotPicture,
+} from "./leadweb-icons";
+import {
   renderMediaPicture,
   resolveMediaSrc,
   type MediaRenderContext,
@@ -173,14 +181,15 @@ function renderHero(
           const bold = esc(title || body);
           const span =
             title && body ? `<span>${esc(body)}</span>` : "";
-          return `<div class="feat">${f.icon || ""}<b>${bold}</b>${span}</div>`;
+          const ic = f.icon ? fixMissingSvgViewBox(String(f.icon)) : "";
+          return `<div class="feat">${ic}<b>${bold}</b>${span}</div>`;
         })
         .join("")}</div>`
     : "";
   const crumbs = variant === "home" ? "" : renderCrumbs(opts);
   const brand =
     typeof data.brandHtml === "string" && data.brandHtml.trim()
-      ? sanitizeCmsHtml(data.brandHtml)
+      ? fixMissingSvgViewBox(sanitizeCmsHtml(data.brandHtml))
       : "";
   const notes = Array.isArray(data.notes)
     ? (data.notes as string[])
@@ -194,10 +203,9 @@ function renderHero(
   }${buttonsHtml(data.buttons as never)}${notes}`;
 
   // service/av: layout с маскотом; обычный sub тоже с маскотом как на статике
-  return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${copy}</div><figure class="mascot"><img src="/img/vaybik-${escAttr(mascot)}.png" alt="" width="400" height="539"></figure></div>${feats}</div></section>`;
+  const mascotHtml = renderMascotPicture(mascot, { fetchPriority: "high" });
+  return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${copy}</div>${mascotHtml}</div>${feats}</div></section>`;
 }
-const MORE_ARROW =
-  '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>';
 
 function renderAnswer(data: Record<string, unknown>, anchor?: string | null): string {
   const facts = Array.isArray(data.facts)
@@ -237,14 +245,20 @@ function renderCardItem(
   const style = String(it.cardStyle || "default");
   const hl = it.highlight ? " hl-card" : "";
   const num = it.num ? `<span class="num">${esc(String(it.num))}</span>` : "";
-  const icon = it.icon ? `<span class="ibox">${it.icon}</span>` : "";
+  const icon = it.icon
+    ? `<span class="ibox">${fixMissingSvgViewBox(String(it.icon))}</span>`
+    : "";
   const kicker = it.kicker
     ? `<span class="kicker">${esc(String(it.kicker))}</span>`
     : "";
-  const price = it.price ? `<div class="price">${esc(String(it.price))}</div>` : "";
+  const price = it.price
+    ? `<div class="price">${PRICE_ICON}${esc(String(it.price))}</div>`
+    : "";
   const text = cardTextHtml(it);
   const chk = Array.isArray(it.checklist)
-    ? `<ul class="chk">${(it.checklist as string[]).map((c) => `<li>${esc(c)}</li>`).join("")}</ul>`
+    ? `<ul class="chk">${(it.checklist as string[])
+        .map((c) => `<li>${CHECK_ICON}${esc(c)}</li>`)
+        .join("")}</ul>`
     : "";
   const linkObj =
     it.link && typeof it.link === "object"
@@ -277,7 +291,7 @@ function renderCardItem(
   }
 
   const link = linkObj
-    ? `<a class="more" href="${escAttr(linkObj.href)}">${esc(linkObj.label)}</a>`
+    ? `<a class="more" href="${escAttr(linkObj.href)}">${esc(linkObj.label)}${MORE_ARROW}</a>`
     : "";
   if (kicker && it.highlight) {
     return `<article class="card reveal${hl}">${icon}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${price}${text}${chk}${link}</div></article>`;
@@ -301,11 +315,11 @@ function renderCards(
   const teaserHtml = teasers.map((it) => renderCardItem(it, opts)).join("");
   const before =
     typeof data.beforeHtml === "string" && data.beforeHtml.trim()
-      ? sanitizeCmsHtml(data.beforeHtml)
+      ? fixMissingSvgViewBox(sanitizeCmsHtml(data.beforeHtml))
       : "";
   const after =
     typeof data.afterHtml === "string" && data.afterHtml.trim()
-      ? sanitizeCmsHtml(data.afterHtml)
+      ? fixMissingSvgViewBox(sanitizeCmsHtml(data.afterHtml))
       : "";
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${before}<div class="grid g${cols}">${cards}</div>${teaserHtml}${after}${secClose()}`;
 }
@@ -313,14 +327,17 @@ function renderFaq(data: Record<string, unknown>, anchor?: string | null): strin
   const items =
     (data.items as Array<{
       question: string;
+      icon?: string | null;
       answer?: string;
       answerHtml?: string;
     }>) || [];
   const details = items
-    .map(
-      (it) =>
-        `<details><summary><span>${esc(it.question)}</span></summary><div>${richOrMd(it.answerHtml, it.answer, "basic")}</div></details>`,
-    )
+    .map((it) => {
+      const icon = it.icon
+        ? fixMissingSvgViewBox(String(it.icon))
+        : FAQ_ICON;
+      return `<details><summary>${icon}<span>${esc(it.question)}</span></summary><div>${richOrMd(it.answerHtml, it.answer, "basic")}</div></details>`;
+    })
     .join("");
   return `${secOpen(anchor || "faq", data.background === "alt")}${secHeader(data.header as Header)}<div class="faq reveal">${details}</div>${secClose()}`;
 }
@@ -484,7 +501,7 @@ function renderWidget(
 }
 
 function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): string {
-  const html = sanitizeCmsHtml(String(data.html || ""));
+  const html = fixMissingSvgViewBox(sanitizeCmsHtml(String(data.html || "")));
   if (html.trim().startsWith("<section")) return html;
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
   return `<section class="sec"${id}>${html}</section>`;
@@ -497,7 +514,8 @@ function renderIconList(data: Record<string, unknown>, anchor?: string | null): 
     const lis = items
       .map((it) => {
         const body = richOrMd(it.textHtml, it.text, "inline");
-        return `<li><span class="ibox">${it.icon || ""}</span><div><h3>${esc(String(it.title || ""))}</h3><p>${body}</p></div></li>`;
+        const ic = it.icon ? fixMissingSvgViewBox(String(it.icon)) : "";
+        return `<li><span class="ibox">${ic}</span><div><h3>${esc(String(it.title || ""))}</h3><p>${body}</p></div></li>`;
       })
       .join("");
     return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="safe reveal">${lis}</ul>${secClose()}`;
@@ -505,7 +523,8 @@ function renderIconList(data: Record<string, unknown>, anchor?: string | null): 
   const lis = items
     .map((it) => {
       const body = richOrMd(it.textHtml, it.text, "inline");
-      return `<li><span class="ibox">${it.icon || ""}</span><span>${body || esc(String(it.title || ""))}</span></li>`;
+      const ic = it.icon ? fixMissingSvgViewBox(String(it.icon)) : "";
+      return `<li><span class="ibox">${ic}</span><span>${body || esc(String(it.title || ""))}</span></li>`;
     })
     .join("");
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="plist-cards reveal">${lis}</ul>${secClose()}`;
@@ -599,7 +618,8 @@ export function renderBlock(
     case "team":
       return renderTeam(data, block.anchor, opts);
     case "cases":
-      return renderCases(data, block.anchor, opts);    case "cta":
+      return renderCases(data, block.anchor, opts);
+    case "cta":
       return renderCta(data, block.anchor);
     case "text":
       return renderText(data, block.anchor);
@@ -618,9 +638,22 @@ export function renderBlock(
   }
 }
 
+export function pageHasCalcFull(blocks: RenderBlock[]): boolean {
+  return blocks.some((b) => {
+    if (b.type !== "widget" || b.isHidden) return false;
+    const data = (b.data || {}) as Record<string, unknown>;
+    return data.key === "calcFull";
+  });
+}
+
 export function renderBlocks(
   blocks: RenderBlock[],
   opts: RenderOptions = {},
 ): string {
-  return blocks.map((b) => renderBlock(b, opts)).join("\n");
+  // calcFull.html уже содержит section.hero.lc-hero — не дублировать блок hero
+  const skipHero = pageHasCalcFull(blocks);
+  return blocks
+    .filter((b) => !(skipHero && b.type === "hero"))
+    .map((b) => renderBlock(b, opts))
+    .join("\n");
 }

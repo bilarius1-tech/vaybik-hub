@@ -3,6 +3,7 @@
 import { RichText } from "@/components/cms/RichText";
 import { BackgroundSelect } from "@/components/cms/fields/BackgroundSelect";
 import { HeaderFields } from "@/components/cms/fields/HeaderFields";
+import { IconField } from "@/components/cms/fields/IconField";
 import { Repeater } from "@/components/cms/fields/Repeater";
 import { Field, Input } from "@/components/ui/Field";
 
@@ -11,6 +12,7 @@ type FaqData = {
   background?: "default" | "alt";
   items?: Array<{
     question: string;
+    icon?: string | null;
     answer?: string;
     answerHtml?: string | null;
   }>;
@@ -50,6 +52,11 @@ export function FaqForm({
                 onChange={(e) => update({ question: e.target.value })}
               />
             </Field>
+            <IconField
+              label="Иконка"
+              value={it.icon || ""}
+              onChange={(icon) => update({ icon: icon || null })}
+            />
             <RichText
               label="Ответ"
               preset="basic"

@@ -19,15 +19,23 @@ export function BlockForm({
   type,
   data,
   onChange,
+  heroFromCalcTemplate,
 }: {
   type: string;
   data: Record<string, unknown>;
   onChange: (data: Record<string, unknown>) => void;
+  heroFromCalcTemplate?: boolean;
 }) {
   const set = (next: object) => onChange(next as Record<string, unknown>);
   switch (type) {
     case "hero":
-      return <HeroForm data={data} onChange={set} />;
+      return (
+        <HeroForm
+          data={data}
+          onChange={set}
+          heroFromCalcTemplate={heroFromCalcTemplate}
+        />
+      );
     case "answer":
       return <AnswerForm data={data} onChange={set} />;
     case "cards":

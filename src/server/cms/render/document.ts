@@ -52,13 +52,88 @@ function hrefOf(item: NavRenderItem): string {
   return item.url || item.pagePath || "#";
 }
 
+/** Как в leadweb: sub-uslugi / sub-auto, не кириллица. */
+const SUBMENU_SLUGS: Record<string, string> = {
+  Услуги: "uslugi",
+  Автоматизация: "auto",
+};
+
+const CYR_TO_LAT: Record<string, string> = {
+  а: "a",
+  б: "b",
+  в: "v",
+  г: "g",
+  д: "d",
+  е: "e",
+  ё: "e",
+  ж: "zh",
+  з: "z",
+  и: "i",
+  й: "y",
+  к: "k",
+  л: "l",
+  м: "m",
+  н: "n",
+  о: "o",
+  п: "p",
+  р: "r",
+  с: "s",
+  т: "t",
+  у: "u",
+  ф: "f",
+  х: "h",
+  ц: "ts",
+  ч: "ch",
+  ш: "sh",
+  щ: "sch",
+  ъ: "",
+  ы: "y",
+  ь: "",
+  э: "e",
+  ю: "yu",
+  я: "ya",
+};
+
 function slugForSub(label: string, id: string): string {
+  if (SUBMENU_SLUGS[label]) return SUBMENU_SLUGS[label];
   const s = label
     .toLowerCase()
-    .replace(/[^a-zа-яё0-9]+/gi, "-")
+    .split("")
+    .map((ch) => CYR_TO_LAT[ch] ?? ch)
+    .join("")
+    .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
     .slice(0, 24);
   return s || id.slice(0, 8);
+}
+
+/** Пункт «Обсудить проект» дублирует hdr-cta — в меню leadweb его нет. */
+function isDiscussCta(item: NavRenderItem): boolean {
+  return (
+    /^обсудить проект$/i.test(item.label.trim()) &&
+    /t\.me\//i.test(item.url || item.pagePath || "")
+  );
+}
+
+function normPath(p: string): string {
+  if (!p || p === "/") return "/";
+  const noHash = p.split("#")[0] || "/";
+  return noHash.endsWith("/") ? noHash : `${noHash}/`;
+}
+
+/** aria-current: точное совпадение → page; префикс родителя → true. */
+function ariaCurrentFor(
+  href: string,
+  currentPath: string | undefined,
+): string {
+  if (!currentPath || !href || href === "#" || /^https?:/i.test(href)) {
+    return "";
+  }
+  const cur = normPath(currentPath);
+  const h = normPath(href);
+  if (h === cur) return ' aria-current="page"';
+  if (h !== "/" && cur.startsWith(h)) return ' aria-current="true"';
+  return "";
 }
 
 function renderHeaderNav(
@@ -66,7 +141,13 @@ function renderHeaderNav(
   currentPath?: string,
 ): string {
   const roots = items
-    .filter((i) => i.menu === "HEADER" && !i.parentId && !i.isHidden)
+    .filter(
+      (i) =>
+        i.menu === "HEADER" &&
+        !i.parentId &&
+        !i.isHidden &&
+        !isDiscussCta(i),
+    )
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   return roots
@@ -78,24 +159,23 @@ function renderHeaderNav(
       const target = root.openInNewTab
         ? ' target="_blank" rel="noopener"'
         : "";
-      const current =
-        currentPath && (href === currentPath || href === `${currentPath}`)
-          ? ' aria-current="page"'
-          : "";
+      const current = ariaCurrentFor(href, currentPath);
       if (!children.length) {
         return `<div class="nav-item"><a class="nav-link" href="${escAttr(href)}"${target}${current}>${esc(root.label)}</a></div>`;
       }
       const subId = `sub-${slugForSub(root.label, root.id)}`;
       const sub = children
         .map((c) => {
+          const chref = hrefOf(c);
           const hl = c.isHighlighted ? ' class="sub-hl"' : "";
           const t = c.openInNewTab
             ? ' target="_blank" rel="noopener"'
             : "";
-          return `<li><a href="${escAttr(hrefOf(c))}"${hl}${t}>${esc(c.label)}</a></li>`;
+          const cur = ariaCurrentFor(chref, currentPath);
+          return `<li><a href="${escAttr(chref)}"${hl}${t}${cur}>${esc(c.label)}</a></li>`;
         })
         .join("");
-      return `<div class="nav-item has-sub"><a class="nav-link" href="${escAttr(href)}">${esc(root.label)}</a><button class="nav-caret" type="button" aria-expanded="false" aria-controls="${escAttr(subId)}" aria-label="Подменю: ${escAttr(root.label)}">${CARET_SVG}</button><ul class="nav-sub" id="${escAttr(subId)}">${sub}</ul></div>`;
+      return `<div class="nav-item has-sub"><a class="nav-link" href="${escAttr(href)}"${current}>${esc(root.label)}</a><button class="nav-caret" type="button" aria-expanded="false" aria-controls="${escAttr(subId)}" aria-label="Подменю: ${escAttr(root.label)}">${CARET_SVG}</button><ul class="nav-sub" id="${escAttr(subId)}">${sub}</ul></div>`;
     })
     .join("");
 }
@@ -106,14 +186,17 @@ function renderMobileMenu(
   currentPath?: string,
 ): string {
   const roots = items
-    .filter((i) => i.menu === "HEADER" && !i.parentId && !i.isHidden)
+    .filter(
+      (i) =>
+        i.menu === "HEADER" &&
+        !i.parentId &&
+        !i.isHidden &&
+        !isDiscussCta(i),
+    )
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const homeCurrent =
-    currentPath === "/" ? ' aria-current="page"' : "";
-  const parts: string[] = [
-    `<a href="/"${homeCurrent}>Главная</a>`,
-  ];
+  const homeCurrent = ariaCurrentFor("/", currentPath);
+  const parts: string[] = [`<a href="/"${homeCurrent}>Главная</a>`];
 
   for (const root of roots) {
     const children = items
@@ -121,20 +204,20 @@ function renderMobileMenu(
       .sort((a, b) => a.sortOrder - b.sortOrder);
     if (root.isHighlighted) {
       parts.push(
-        `<a class="menu-hl" href="${escAttr(hrefOf(root))}">${esc(root.label)}</a>`,
+        `<a class="menu-hl" href="${escAttr(hrefOf(root))}"${ariaCurrentFor(hrefOf(root), currentPath)}>${esc(root.label)}</a>`,
       );
       continue;
     }
     if (!children.length) {
       parts.push(
-        `<a href="${escAttr(hrefOf(root))}">${esc(root.label)}</a>`,
+        `<a href="${escAttr(hrefOf(root))}"${ariaCurrentFor(hrefOf(root), currentPath)}>${esc(root.label)}</a>`,
       );
       continue;
     }
     const lis = children
       .map(
         (c) =>
-          `<a href="${escAttr(hrefOf(c))}">${esc(c.label)}</a>`,
+          `<a href="${escAttr(hrefOf(c))}"${ariaCurrentFor(hrefOf(c), currentPath)}>${esc(c.label)}</a>`,
       )
       .join("");
     parts.push(
@@ -352,6 +435,7 @@ ${banner}
 </div></header>
 ${mobile}
 <main id="main">${body}</main>
+${assets.afterMain || ""}
 ${footer}
 ${scripts}
 </body>

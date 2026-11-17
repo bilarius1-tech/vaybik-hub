@@ -6,6 +6,7 @@
  */
 import { writeFileSync } from "node:fs";
 import * as cheerio from "cheerio";
+import type { Element } from "domhandler";
 
 const A = (process.env.SITE_A || "https://vaybik.ru").replace(/\/$/, "");
 const B = (process.env.SITE_B || "https://site-test.vaybik.ru").replace(
@@ -20,13 +21,31 @@ type Row = {
   notes: string[];
 };
 
+const STRUCT_ATTRS = [
+  "id",
+  "class",
+  "name",
+  "type",
+  "value",
+  "checked",
+  "for",
+  "viewBox",
+  "viewbox",
+  "style",
+] as const;
+
 async function fetchText(url: string) {
   const res = await fetch(url, {
     redirect: "manual",
     headers: { "User-Agent": "vaybik-site-parity" },
   });
   const text = res.status < 400 || res.status === 404 ? await res.text() : "";
-  return { status: res.status, headers: res.headers, text, location: res.headers.get("location") };
+  return {
+    status: res.status,
+    headers: res.headers,
+    text,
+    location: res.headers.get("location"),
+  };
 }
 
 function words(s: string): Set<string> {
@@ -49,13 +68,123 @@ function similarity(a: string, b: string): number {
   return inter / Math.max(Aset.size, Bset.size);
 }
 
+function assetPath(href: string): string {
+  try {
+    const u = new URL(href, "https://example.test");
+    return `${u.pathname}${u.search}`;
+  } catch {
+    return href;
+  }
+}
+
+function listAssets(
+  $: cheerio.CheerioAPI,
+  kind: "css" | "js",
+): string[] {
+  if (kind === "css") {
+    return $("link[rel='stylesheet']")
+      .map((_, el) => assetPath($(el).attr("href") || ""))
+      .get()
+      .filter(Boolean);
+  }
+  return $("script[src]")
+    .map((_, el) => assetPath($(el).attr("src") || ""))
+    .get()
+    .filter(Boolean);
+}
+
+function nodeSignature(el: Element): string {
+  const tag = el.tagName.toLowerCase();
+  const attrs = el.attribs || {};
+  const parts: string[] = [tag];
+  for (const key of STRUCT_ATTRS) {
+    if (attrs[key] != null && attrs[key] !== "") {
+      parts.push(`${key}=${attrs[key]}`);
+    }
+  }
+  for (const [k, v] of Object.entries(attrs)) {
+    if (k.startsWith("data-") || k.startsWith("aria-")) {
+      parts.push(`${k}=${v}`);
+    }
+  }
+  return parts.join("|");
+}
+
+function walkSignatures(
+  $: cheerio.CheerioAPI,
+  root: cheerio.Cheerio<Element>,
+): string[] {
+  const out: string[] = [];
+  root.find("*").addBack().each((_, el) => {
+    if (el.type !== "tag") return;
+    // скрипты/стили внутри секции не структурный контент
+    if (el.tagName === "script" || el.tagName === "style" || el.tagName === "noscript") {
+      return;
+    }
+    out.push(nodeSignature(el));
+  });
+  return out;
+}
+
+function diffSignatures(
+  label: string,
+  a: string[],
+  b: string[],
+  notes: string[],
+): boolean {
+  const max = Math.max(a.length, b.length);
+  const diffs: string[] = [];
+  for (let i = 0; i < max; i += 1) {
+    if (a[i] !== b[i]) {
+      diffs.push(`#${i}: «${(a[i] || "∅").slice(0, 80)}» ≠ «${(b[i] || "∅").slice(0, 80)}»`);
+      if (diffs.length >= 5) break;
+    }
+  }
+  if (diffs.length) {
+    notes.push(
+      `DOM ${label}: ${a.length} vs ${b.length} узлов; ${diffs.join("; ")}`,
+    );
+    return true;
+  }
+  return false;
+}
+
+function countSvgWithoutViewBox($: cheerio.CheerioAPI): number {
+  let n = 0;
+  $("svg").each((_, el) => {
+    const attrs = el.attribs || {};
+    if (!attrs.viewBox && !attrs.viewbox) n += 1;
+  });
+  return n;
+}
+
+function compareAssetLists(
+  kind: "css" | "js",
+  a: string[],
+  b: string[],
+  notes: string[],
+): boolean {
+  if (a.length === b.length && a.every((v, i) => v === b[i])) return false;
+  notes.push(
+    `${kind}: [${a.join(", ")}] ≠ [${b.join(", ")}]`,
+  );
+  return true;
+}
+
 async function comparePage(path: string): Promise<Row> {
   const notes: string[] = [];
   let status: Row["status"] = "OK";
+  const fail = () => {
+    status = "FAIL";
+  };
+  const warn = () => {
+    if (status === "OK") status = "WARN";
+  };
+
   const ua = await fetchText(`${A}${path}`);
   let ub = await fetchText(`${B}${path}`);
+  let followedIndexHtml = false;
   if (ua.status !== ub.status) {
-    // nginx отдаёт /path/index.html как 200, CMS — 301 на канонический /path/
     const canonPath = path.replace(/\/index\.html$/, "/");
     const indexHtmlCanon =
       path.endsWith("/index.html") &&
@@ -65,10 +194,11 @@ async function comparePage(path: string): Promise<Row> {
       `status ${ua.status} vs ${ub.status}${ub.location ? ` → ${ub.location}` : ""}`,
     );
     if (indexHtmlCanon) {
-      status = "WARN";
+      warn();
+      followedIndexHtml = true;
       ub = await fetchText(`${B}${canonPath}`);
     } else {
-      status = "FAIL";
+      fail();
     }
   }
   if (ua.status >= 400 || ub.status >= 400) {
@@ -78,21 +208,19 @@ async function comparePage(path: string): Promise<Row> {
       notes: notes.length ? notes : [`http ${ua.status}/${ub.status}`],
     };
   }
-  // оба редиректят (например /uslugi → /uslugi/) — контент не сравниваем
   if (
     (ua.status === 301 || ua.status === 302) &&
     (ub.status === 301 || ub.status === 302)
   ) {
     notes.push("оба 3xx — контент пропущен");
-    if (status === "OK") status = "WARN";
+    warn();
     return { url: path, status, notes };
   }
-  const followedIndexHtml = path.endsWith("/index.html") && status === "WARN";
   const $a = cheerio.load(ua.text);
   const $b = cheerio.load(ub.text);
-  // скрипты/стили в main (studio bootstrap) не контент страницы
   $a("main script, main style, main noscript").remove();
   $b("main script, main style, main noscript").remove();
+
   const checks: Array<[string, string, string]> = [
     ["title", $a("title").text().trim(), $b("title").text().trim()],
     [
@@ -105,24 +233,83 @@ async function comparePage(path: string): Promise<Row> {
   for (const [name, va, vb] of checks) {
     if (va !== vb) {
       notes.push(`${name}: «${va.slice(0, 60)}» ≠ «${vb.slice(0, 60)}»`);
-      status = status === "FAIL" ? "FAIL" : "WARN";
+      warn();
     }
   }
-  // html→spaces, не .text(): иначе соседние теги склеивают слова («целиПодробнее»)
+
   const sim = similarity($a("main").html() || "", $b("main").html() || "");
   if (sim < 0.97) {
     notes.push(`main text similarity ${sim.toFixed(3)} < 0.97`);
-    // /path/index.html → канон уже сравнивается отдельно как /path/
-    status = followedIndexHtml ? "WARN" : "FAIL";
+    if (followedIndexHtml) warn();
+    else fail();
   } else if (sim < 0.995) {
     notes.push(`main text similarity ${sim.toFixed(3)}`);
-    if (status === "OK") status = "WARN";
+    warn();
   }
+
   const marker = ub.headers.get("x-vaybik-site");
   if (marker !== "cms") {
     notes.push(`X-Vaybik-Site=${marker || "missing"}`);
-    status = "FAIL";
-  }  return { url: path, status, notes };
+    fail();
+  }
+
+  // CSS/JS списки (путь + ?v=)
+  if (
+    compareAssetLists("css", listAssets($a, "css"), listAssets($b, "css"), notes)
+  ) {
+    fail();
+  }
+  if (
+    compareAssetLists("js", listAssets($a, "js"), listAssets($b, "js"), notes)
+  ) {
+    fail();
+  }
+
+  // svg без viewBox: CMS не должно быть больше статики
+  const svgA = countSvgWithoutViewBox($a);
+  const svgB = countSvgWithoutViewBox($b);
+  if (svgB > svgA) {
+    notes.push(`svg без viewBox: static ${svgA} < cms ${svgB}`);
+    fail();
+  }
+
+  // DOM header / main / footer
+  for (const sel of ["header.hdr", "main#main", "footer.ftr"] as const) {
+    const sa = walkSignatures($a, $a(sel).first() as cheerio.Cheerio<Element>);
+    const sb = walkSignatures($b, $b(sel).first() as cheerio.Cheerio<Element>);
+    if (diffSignatures(sel, sa, sb, notes)) fail();
+  }
+
+  // Мини-калькулятор
+  if ($a("#calc-sec").length || $b("#calc-sec").length) {
+    const sa = walkSignatures(
+      $a,
+      $a("#calc-sec").first() as cheerio.Cheerio<Element>,
+    );
+    const sb = walkSignatures(
+      $b,
+      $b("#calc-sec").first() as cheerio.Cheerio<Element>,
+    );
+    if (diffSignatures("#calc-sec", sa, sb, notes)) fail();
+  }
+
+  // Полный калькулятор
+  if (path.includes("kalkulyator")) {
+    const sa = walkSignatures($a, $a("main").first() as cheerio.Cheerio<Element>);
+    const sb = walkSignatures($b, $b("main").first() as cheerio.Cheerio<Element>);
+    if (diffSignatures("main@kalkulyator", sa, sb, notes)) fail();
+    const ba = walkSignatures(
+      $a,
+      $a(".lc-bar").first() as cheerio.Cheerio<Element>,
+    );
+    const bb = walkSignatures(
+      $b,
+      $b(".lc-bar").first() as cheerio.Cheerio<Element>,
+    );
+    if (diffSignatures(".lc-bar", ba, bb, notes)) fail();
+  }
+
+  return { url: path, status, notes };
 }
 
 async function main() {
@@ -134,12 +321,13 @@ async function main() {
       return "/";
     }
   });
-  const paths = Array.from(new Set(["/", ...locs, "/uslugi", "/uslugi/index.html"]));
+  const paths = Array.from(
+    new Set(["/", ...locs, "/uslugi", "/uslugi/index.html"]),
+  );
   const rows: Row[] = [];
   for (const p of paths) {
     rows.push(await comparePage(p));
   }
-  // redirects sample
   for (const p of ["/uslugi", "/uslugi/index.html"]) {
     const r = await fetchText(`${B}${p}`);
     rows.push({

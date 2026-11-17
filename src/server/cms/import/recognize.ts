@@ -132,14 +132,21 @@ function recognizeFaq(
   section: Element,
 ): RecognizedBlock | null {
   if (!$(section).find(".faq").length) return null;
-  const items: Array<{ question: string; answer: string }> = [];
+  const items: Array<{
+    question: string;
+    answer: string;
+    icon?: string;
+  }> = [];
   $(section)
     .find(".faq details")
     .each((_, d) => {
       const $d = $(d);
+      const icon = $d.find("summary svg").first().toString() || undefined;
       items.push({
-        question: text($d.find("summary span").first()) || text($d.find("summary")),
+        question:
+          text($d.find("summary span").first()) || text($d.find("summary")),
         answer: $d.find("div").first().text().trim() || text($d.find("div")),
+        icon,
       });
     });
   if (!items.length) return null;
@@ -560,12 +567,14 @@ function recognizeWidget(
   if ($(section).find("form.calc, .calc").length && !$(section).find(".lc-").length) {
     const clone = $(section).clone();
     clone.find("script").remove();
+    const raw = $.html(clone) || "";
     // убрать onsubmit javascript handlers via sanitize
     return {
       type: "widget",
       data: parseBlockData("widget", {
         key: "calcMini",
-        htmlSnapshot: sanitizeCmsHtml($.html(clone) || ""),
+        htmlSnapshot: sanitizeCmsHtml(raw),
+        showMore: /calc-more/.test(raw),
       }),
       anchor: section.attribs?.id || "calc-sec",
     };

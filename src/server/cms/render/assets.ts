@@ -7,6 +7,11 @@ export type SiteAssetVersions = {
   magicRingsJs: string;
   gradientBlindsJs: string;
   keysyJs: string;
+  calcCss: string;
+  calcDataJs: string;
+  calcContentJs: string;
+  calcJs: string;
+  calcClientJs: string;
 };
 
 export const DEFAULT_ASSET_VERSIONS: SiteAssetVersions = {
@@ -17,6 +22,11 @@ export const DEFAULT_ASSET_VERSIONS: SiteAssetVersions = {
   magicRingsJs: "1",
   gradientBlindsJs: "1",
   keysyJs: "2",
+  calcCss: "2",
+  calcDataJs: "2",
+  calcContentJs: "2",
+  calcJs: "2",
+  calcClientJs: "2",
 };
 
 export function mergeAssetVersions(
@@ -30,17 +40,19 @@ export type TemplateAssets = {
   bodyAttrs: string;
   css: string[];
   js: string[];
+  /** HTML сразу после &lt;/main&gt; (например lc-bar на /kalkulyator/) */
+  afterMain?: string;
 };
+
+export const LC_BAR_HTML =
+  '<div class="lc-bar" aria-hidden="false"><span class="lc-bar-l">Разработка</span><b id="lcBarSum"></b><button type="button" class="bt-btn2" data-go="lcOut">Заявка</button></div>';
 
 /** CSS/JS и body-класс по шаблону страницы */
 export function assetsForTemplate(
   template: string,
   versions: SiteAssetVersions = DEFAULT_ASSET_VERSIONS,
 ): TemplateAssets {
-  const css = [
-    `/css/fonts.css`,
-    `/css/site.css?v=${versions.siteCss}`,
-  ];
+  const css = [`/css/fonts.css`, `/css/site.css?v=${versions.siteCss}`];
   const js = [`/js/main.js?v=${versions.mainJs}`];
 
   if (template === "keysy") {
@@ -62,12 +74,18 @@ export function assetsForTemplate(
   }
 
   if (template === "calculator") {
+    css.push(`/kalkulyator/calc.css?v=${versions.calcCss}`);
+    js.push(`/kalkulyator/data.js?v=${versions.calcDataJs}`);
+    js.push(`/kalkulyator/content.js?v=${versions.calcContentJs}`);
+    js.push(`/kalkulyator/calc.js?v=${versions.calcJs}`);
+    js.push(`/kalkulyator/client.js?v=${versions.calcClientJs}`);
     js.push(`/js/metrika.js`);
     return {
       bodyClass: "lc-page",
       bodyAttrs: ' data-mode="client"',
       css,
       js,
+      afterMain: LC_BAR_HTML,
     };
   }
 

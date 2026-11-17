@@ -132,6 +132,7 @@ export const faqClientSchema = z.object({
     .array(
       z.object({
         question: z.string().min(1, "Нужен вопрос"),
+        icon: optionalString,
         answer: z.string().optional().default(""),
         answerHtml: optionalString,
       }),
@@ -212,6 +213,7 @@ export const textClientSchema = z.object({
 export const widgetClientSchema = z.object({
   key: z.enum(["studio", "calcMini", "calcFull"]),
   htmlSnapshot: z.string().default(""),
+  showMore: z.boolean().optional(),
 });
 
 export const rawHtmlClientSchema = z.object({

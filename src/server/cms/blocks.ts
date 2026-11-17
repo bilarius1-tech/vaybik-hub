@@ -172,6 +172,7 @@ export const faqBlockSchema = z.object({
       z
         .object({
           question: z.string().min(1),
+          icon: iconField,
           /** @deprecated — используйте answerHtml */
           answer: z.string().optional().default(""),
           answerHtml: richHtml("basic"),
@@ -268,6 +269,8 @@ export const widgetBlockSchema = z.object({
     .string()
     .default("")
     .transform((v) => sanitizeCmsHtml(v)),
+  /** calcMini: ссылка «Подробный калькулятор» (на главной да, на /uslugi/ нет) */
+  showMore: z.boolean().optional(),
 });
 
 export const rawHtmlBlockSchema = z.object({

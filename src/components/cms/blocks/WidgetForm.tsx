@@ -5,6 +5,7 @@ import { Field, Select, Textarea } from "@/components/ui/Field";
 type WidgetData = {
   key?: "studio" | "calcMini" | "calcFull";
   htmlSnapshot?: string;
+  showMore?: boolean;
 };
 
 export function WidgetForm({
@@ -31,7 +32,19 @@ export function WidgetForm({
           <option value="calcFull">calcFull</option>
         </Select>
       </Field>
-      <Field label="HTML-снимок">
+      {data.key === "calcMini" ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={data.showMore !== false}
+            onChange={(e) =>
+              onChange({ ...data, showMore: e.target.checked })
+            }
+          />
+          Ссылка «Подробный калькулятор» (calc-more)
+        </label>
+      ) : null}
+      <Field label="HTML-снимок (запасной, публичный рендер берёт шаблон)">
         <Textarea
           rows={8}
           value={data.htmlSnapshot || ""}

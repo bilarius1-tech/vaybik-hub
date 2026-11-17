@@ -37,7 +37,11 @@ const COMMON_ATTRS = [
 ];
 
 const SVG_ATTRS = [
+  // htmlparser2 по умолчанию lowercases → держим оба варианта в allowlist
   "viewBox",
+  "viewbox",
+  "preserveAspectRatio",
+  "preserveaspectratio",
   "xmlns",
   "fill",
   "stroke",
@@ -69,6 +73,11 @@ const SVG_ATTRS = [
   "href",
   "xlink:href",
 ];
+
+/** Не lowercasить имена атрибутов: иначе viewBox → viewbox и выпадает из allowlist. */
+const SVG_PARSER: sanitizeHtml.IOptions["parser"] = {
+  lowerCaseAttributeNames: false,
+};
 
 const BASE_OPTIONS: sanitizeHtml.IOptions = {
   allowedTags: [
@@ -119,6 +128,7 @@ const BASE_OPTIONS: sanitizeHtml.IOptions = {
   allowProtocolRelative: false,
   // style — запрещён (XSS через expression/url)
   disallowedTagsMode: "discard",
+  parser: SVG_PARSER,
 };
 
 const RICH_TAGS: Record<RichTextPreset, string[]> = {
@@ -157,6 +167,7 @@ export function sanitizeSvgIcon(svg: string): string {
   return sanitizeHtml(svg, {
     ...BASE_OPTIONS,
     allowedTags: SVG_TAGS,
+    parser: SVG_PARSER,
   });
 }
 
@@ -169,12 +180,45 @@ export function sanitizeSvgFile(svg: string): string {
   return sanitizeHtml(svg, {
     allowedTags: SVG_TAGS.filter((t) => t !== "foreignObject"),
     allowedAttributes: {
-      "*": ["id", "class", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin", "opacity", "transform", "viewBox", "xmlns", "width", "height", "d", "cx", "cy", "r", "rx", "ry", "x", "y", "x1", "y1", "x2", "y2", "points", "fill-rule", "clip-rule"],
+      "*": [
+        "id",
+        "class",
+        "fill",
+        "stroke",
+        "stroke-width",
+        "stroke-linecap",
+        "stroke-linejoin",
+        "opacity",
+        "transform",
+        "viewBox",
+        "viewbox",
+        "preserveAspectRatio",
+        "preserveaspectratio",
+        "xmlns",
+        "width",
+        "height",
+        "d",
+        "cx",
+        "cy",
+        "r",
+        "rx",
+        "ry",
+        "x",
+        "y",
+        "x1",
+        "y1",
+        "x2",
+        "y2",
+        "points",
+        "fill-rule",
+        "clip-rule",
+      ],
       use: ["href", "xlink:href", "width", "height", "x", "y"],
       a: ["href"],
     },
     allowedSchemes: ["http", "https"],
     allowedSchemesAppliedToAttributes: ["href", "xlink:href"],
+    parser: SVG_PARSER,
     transformTags: {
       use: (tagName, attribs) => {
         const href = attribs.href || attribs["xlink:href"] || "";

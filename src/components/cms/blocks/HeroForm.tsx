@@ -23,12 +23,22 @@ type HeroData = {
 export function HeroForm({
   data,
   onChange,
+  heroFromCalcTemplate,
 }: {
   data: HeroData;
   onChange: (data: HeroData) => void;
+  /** На /kalkulyator/ hero берётся из calcFull.html */
+  heroFromCalcTemplate?: boolean;
 }) {
   return (
     <div className="space-y-3">
+      {heroFromCalcTemplate ? (
+        <p className="rounded-lg border border-bd bg-card2/40 px-3 py-2 text-sm text-mu">
+          На этой странице hero берётся из шаблона калькулятора (calcFull).
+          Блок ниже сохранён в данных, но на сайте и в предпросмотре не
+          рендерится.
+        </p>
+      ) : null}
       <Field label="Вариант">
         <Select
           value={data.variant || "home"}
