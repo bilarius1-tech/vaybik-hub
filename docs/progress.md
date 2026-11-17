@@ -168,8 +168,9 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Traefik labels site-test + site (priority off=1); `scripts/site-cutover.sh` on/off/status
 - [x] `scripts/site-parity.ts`; реестр сервиса; seed robots/assets; template keysy
 - [x] vitest + e2e site-public; lint/typecheck/test/build
-- [ ] Деплой A: тестовый хост (после «задеплой»); cutover B — только после «да»
-- [ ] Роль БД `vaybik_site` (SITE_DATABASE_URL) — только после «да»
+- [x] Деплой A: тестовый хост `site-test.vaybik.ru` (`2dcca18`); vaybik.ru без X-Vaybik-Site
+- [x] Роль БД `vaybik_site` + SITE_DATABASE_URL + Vault
+- [ ] Parity без FAIL (сейчас расхождения main-текста / index.html 301); cutover B — только после «да»
 
 ## Фазы
 - [x] Фаза 0 — каркас

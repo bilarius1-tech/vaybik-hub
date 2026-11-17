@@ -34,7 +34,7 @@
 
 ## 4. Текущее состояние (на 2026-11-17)
 
-- Фазы 0–3 + CMS-2.1 на проде. Прод: **`680e299`**, откат-тег образа `prev-6cdf520` (миграцию soft-delete не откатит). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- Фазы 0–3 + CMS-3 (site-test) на проде. Прод: **`2dcca18`**, откат-тег `prev-3015dba`. Site: `site-test.vaybik.ru` (CMS), vaybik.ru пока nginx. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
 - Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
@@ -87,7 +87,7 @@
 
 ## 8. Следующие шаги
 
-1. **CMS-3** — публичный рендер из БД (`docs/prompts/12-cms-03-public-render.md`): сначала site-test.vaybik.ru, cutover на vaybik.ru — только после «да».
+1. **CMS-3** — добить parity (similarity main) → «да» на cutover (`scripts/site-cutover.sh on`).
 2. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
 3. chat.vaybik.ru — Фаза 1 после «да» по DESIGN (не трогать region/proxy).
 4. Яндекс.Метрика на дашборд (отложено).
