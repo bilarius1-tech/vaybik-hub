@@ -157,25 +157,24 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 
 ## CMS-3 — публичный vaybik.ru из БД (часть 3 из 4)
 
-Промпт: `docs/prompts/12-cms-03-public-render.md`. Публичный vaybik.ru до cutover остаётся nginx-статикой; тестовый хост — `site-test.vaybik.ru`.
+Промпт: `docs/prompts/12-cms-03-public-render.md`. Публичный vaybik.ru = CMS (`SITE_PROD_PRIORITY=50`).
 
 - [x] Общий код: visibility / load / renderSiteDocument(mode public|preview); шаблон keysy
 - [x] Site-сервер `src/site/server.ts` → `dist/site.cjs`; сервис `site` в compose (порт 3100, cache volume)
-- [x] Маршруты: healthz, media, sitemap/robots, redirects, slash/index, CMS-страницы, proxy → vaybik-main
+- [x] Маршруты: healthz, media, sitemap/robots/llms, redirects, slash/index, CMS-страницы, proxy → vaybik-main
 - [x] Паритет разметки с leadweb (head/шапка/подвал/виджеты/медиа picture); 404
 - [x] Кеш HTML+gzip/br + `site.contentVersion` / bumpSiteVersion на мутациях
-- [x] Админка: бейдж неопубликованных изменений, unpublish, «Открыть на сайте» (SITE_PUBLIC_ORIGIN)
-- [x] Traefik labels site-test + site (priority off=1); `scripts/site-cutover.sh` on/off/status
-- [x] `scripts/site-parity.ts`; реестр сервиса; seed robots/assets; template keysy
+- [x] Админка: бейдж неопубликованных изменений, unpublish, «Открыть на сайте» → vaybik.ru
+- [x] Traefik: site на vaybik.ru; роутер site-test снят; `scripts/site-cutover.sh` on/off/status/--force
+- [x] `scripts/site-parity.ts`; реестр сервиса; seed robots/llms/assets; template keysy
 - [x] vitest + e2e site-public; lint/typecheck/test/build
-- [x] Деплой A: тестовый хост `site-test.vaybik.ru` (`2dcca18`); vaybik.ru без X-Vaybik-Site
-- [x] Роль БД `vaybik_site` + SITE_DATABASE_URL + Vault
-- [x] Parity без FAIL на site-test (`a0ae891`, только WARN)
-- [x] Cutover B: vaybik.ru → CMS (`SITE_PROD_PRIORITY=50`, 16:53 МСК); **OFF** снова (`PRIORITY=1`, 17:02) — site-test CMS, vaybik.ru nginx
+- [x] Деплой A: тестовый хост (позже снят); роль БД `vaybik_site`
+- [x] Cutover ON (вечер 17.11): `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`
+- [x] robots.txt / llms.txt только из `/admin/seo`; статика удалена из leadweb и nginx
 
 ## CMS-3a — калькуляторы + DOM-parity (продолжение CMS-3)
 
-Промпт: `docs/prompts/13-cms-03a-calc-form.md`. Деплой — после «задеплой»; cutover — после отдельного «да».
+Промпт: `docs/prompts/13-cms-03a-calc-form.md`.
 
 - [x] calcMini всегда из `widgets/calcMini.html` (+ `showMore` / детект `calc-more`)
 - [x] sanitize: `viewBox` / `preserveAspectRatio` (parser без lowerCaseAttributeNames)
@@ -183,10 +182,9 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] calculator assets: calc.css + data/content/calc/client.js; `afterMain` = lc-bar
 - [x] Двойной hero: skip `hero` при widget calcFull; подсказка в редакторе
 - [x] Header: без дубля «Обсудить проект»; `sub-uslugi`/`sub-auto`; aria-current; mascot picture; FAQ/карточки svg
-- [x] Parity: DOM header/main/footer + #calc-sec + lc-bar + css/js + svg viewBox
+- [x] Parity: DOM header/main/footer + #calc-sec + lc-bar + css/js + svg viewBox (гонка DOM остановлена)
 - [x] lint / typecheck / test / build зелёные
-- [x] Деплой на site-test (`a09220d`, 17:24 МСК)
-- [ ] Cutover vaybik.ru (ждать «да»)
+- [x] Деплой + cutover vaybik.ru (`e613dd7`, вечер 17.11)
 
 ## Фазы
 - [x] Фаза 0 — каркас
@@ -194,7 +192,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-3 на проде; **сейчас CMS-3a**, cutover OFF)
+- [x] Фаза 5 / CMS-3+3a — публичный сайт из БД (cutover ON; источник правды — админка)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)
