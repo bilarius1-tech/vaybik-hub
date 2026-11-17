@@ -42,8 +42,16 @@ case "$cmd" in
     set_env_key SITE_PUBLIC_ORIGIN https://vaybik.ru
     cd "$PROD_DIR"
     dc up -d site
-    sleep 3
-    curl -sI https://vaybik.ru/ | grep -i 'x-vaybik-site: cms' || { echo "Нет X-Vaybik-Site: cms"; exit 1; }
+    # Traefik иногда поднимает labels 5–10 с
+    ok=0
+    for i in 1 2 3 4 5 6 7 8; do
+      sleep 2
+      if curl -sI https://vaybik.ru/ 2>/dev/null | grep -qi 'x-vaybik-site: cms'; then
+        ok=1
+        break
+      fi
+    done
+    [ "$ok" = 1 ] || { echo "Нет X-Vaybik-Site: cms"; exit 1; }
     curl -fsS -m 10 https://vaybik.ru/admin/api/health >/dev/null
     curl -fsS -m 10 -o /dev/null -w '%{http_code}\n' https://vaybik.ru/css/site.css | grep -q 200
     echo "Cutover ON. Откат: scripts/site-cutover.sh off"

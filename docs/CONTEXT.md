@@ -34,7 +34,7 @@
 
 ## 4. Текущее состояние (на 2026-11-17)
 
-- Фазы 0–3 + CMS-3 (site-test) на проде. Прод: **`2dcca18`**, откат-тег `prev-3015dba`. Site: `site-test.vaybik.ru` (CMS), vaybik.ru пока nginx. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- Фазы 0–3 + CMS-3 cutover на проде. Прод: **`a0ae891`**. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`, `X-Vaybik-Site: cms`); `site-test.vaybik.ru` тоже CMS. Статика nginx — запасной путь (priority 17). Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
 - Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
@@ -61,6 +61,7 @@
 - **2026-11-17** — CMS-2.1: soft delete страниц + списки `/admin/site` (сортировка/пагинация/URL/bulk/корзина); purge — OWNER.
 - **2026-11-17** — Уникальность активных `Page.path` — partial index `Page_path_active_key` (`WHERE "deletedAt" IS NULL`). Prisma его не моделирует: в новой миграции, если появится `DROP INDEX "Page_path_active_key"`, **удалить эту строку** и оставить индекс.
 - **2026-11-17** — CMS-3: публичный сайт — лёгкий Node `site.cjs` в том же образе (не второй Next). Тестовый хост `site-test.vaybik.ru`; cutover через `SITE_PROD_PRIORITY` (1=off, 50=on). Контент только из `PageRevision`; DRAFT с `publishedRevisionId` остаётся публичным. Кеш инвалидируется `site.contentVersion` (опрос 5 с). vaybik-main не останавливаем.
+- **2026-11-17** — Cutover ON: `SITE_PROD_PRIORITY=50`, `SITE_PUBLIC_ORIGIN=https://vaybik.ru`. Тексты сайта — только через админку; HTML в leadweb на тексты больше не влияет (css/js/img/kp — по-прежнему). Откат: `scripts/site-cutover.sh off` или `docker compose stop site`.
 
 ## 6. Договорённости
 
@@ -87,9 +88,9 @@
 
 ## 8. Следующие шаги
 
-1. **CMS-3** — добить parity (similarity main) → «да» на cutover (`scripts/site-cutover.sh on`).
-2. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
-3. chat.vaybik.ru — Фаза 1 после «да» по DESIGN (не трогать region/proxy).
-4. Яндекс.Метрика на дашборд (отложено).
-5. Промпт 8 — партнёры и лиды.
+1. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
+2. chat.vaybik.ru — Фаза 1 после «да» по DESIGN (не трогать region/proxy).
+3. Яндекс.Метрика на дашборд (отложено).
+4. Промпт 8 — партнёры и лиды.
+5. Позже: экспорт опубликованных CMS-страниц в статику (страховка вместо устаревающего leadweb HTML).
 6. По желанию: Telegram-бот; 2FA владельцу.

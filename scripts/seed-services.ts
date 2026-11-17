@@ -20,9 +20,9 @@ const DEMO = [
   {
     slug: "vaybik-site-cms",
     name: "Сайт vaybik.ru (CMS)",
-    url: "https://site-test.vaybik.ru",
-    healthUrl: "https://site-test.vaybik.ru/healthz",
-    description: "Публичный рендер из БД (до cutover — site-test)",
+    url: "https://vaybik.ru",
+    healthUrl: "https://vaybik.ru/healthz",
+    description: "Публичный рендер из БД (cutover ON; site-test — зеркало)",
     type: "DOCKER" as const,
     containerNames: ["vaybik-hub-prod-site-1"],
     isPublic: true,

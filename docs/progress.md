@@ -170,7 +170,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] vitest + e2e site-public; lint/typecheck/test/build
 - [x] Деплой A: тестовый хост `site-test.vaybik.ru` (`2dcca18`); vaybik.ru без X-Vaybik-Site
 - [x] Роль БД `vaybik_site` + SITE_DATABASE_URL + Vault
-- [ ] Parity без FAIL (правки feats/dir-link/teaser/cases/team links + re-import); cutover B — только после «да»
+- [x] Parity без FAIL на site-test (`a0ae891`, только WARN)
+- [x] Cutover B: vaybik.ru → CMS (`SITE_PROD_PRIORITY=50`, 16:53 МСК)
 
 ## Фазы
 - [x] Фаза 0 — каркас
