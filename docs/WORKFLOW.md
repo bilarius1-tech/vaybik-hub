@@ -24,7 +24,7 @@
 | Прод-контейнеры                   | проект `vaybik-hub-prod`: `-app-1`, `-worker-1`, `-postgres-1`, `-docker-proxy-1` | образ `vaybik-hub-prod:latest`, откат — `:prev-<sha>`                                         |
 | Прод-адрес                        | https://vaybik.ru/admin, health: `/admin/api/health`                              | Traefik priority 100 поверх заглушки                                                          |
 | Главный сайт                      | `/opt/apps/vaybik-main` (nginx, корень vaybik.ru)                                 | чужой проект — не трогать                                                                     |
-| Другие сервисы                    | `/opt/apps/<имя>` → `<имя>.vaybik.ru`                                             | `region`, `whoami`; свои AGENTS.md                                                            |
+| Другие сервисы                    | `/opt/apps/<имя>` → `<имя>.vaybik.ru`                                             | `region` (**не трогать**), `whoami`; chat: `/opt/vaybik-chat` → chat.vaybik.ru (Фаза 0)        |
 | Traefik                           | `/opt/proxy`                                                                      | **не трогать**; сеть `proxy`, entrypoints `web`/`websecure`, resolver `le`, `to-https@docker` |
 | GitHub                            | `git@github.com:bilarius1-tech/vaybik-hub.git`                                    | push по deploy key пользователя `deploy`                                                      |
 | Память проекта                    | `docs/CONTEXT.md`                                                                 | читать в начале каждого чата                                                                  |
