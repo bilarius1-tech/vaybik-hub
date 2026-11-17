@@ -27,7 +27,7 @@
 | https://vaybik.ru/admin       | админка vaybik-hub                                    | `/opt/apps/vaybik-hub`  | работает (фаза 2)  |
 | https://region.vaybik.ru      | «Регион» (Битрикс, отдельная разработка)              | `/opt/apps/region`      | работает; **не трогать** |
 | http://199.189.250.208/whoami | тест Traefik / Docker-панели (`vaybik.managed=true`)  | `/opt/apps/whoami`      | работает           |
-| https://chat.vaybik.ru        | ИИ-ассистент для сайтов клиентов (виджет → DeepSeek → Telegram/MAX) | `/opt/vaybik-chat` (dev), прод позже `/opt/apps/vaybik-chat` | Фаза 0 docs; репо [vaybik-chat](https://github.com/bilarius1-tech/vaybik-chat); **не развёрнут** |
+| https://chat.vaybik.ru        | ИИ-ассистент (виджет на vaybik.ru + сервис чата) | репо [vaybik-chat](https://github.com/bilarius1-tech/vaybik-chat); виджет с хаба (`site.chatWidget`) | прод виджета на главной vaybik.ru |
 | lead.vaybik.ru                | сбор заявок (лиды → `/admin/api/ingest/lead`, фаза 4) | —                       | план, не развёрнут |
 
 Не относится к Вайбику, не трогать отсюда: сайт стоматологии цауне-дентал.рф (хостинг HandyHost).
@@ -53,6 +53,7 @@
 - **2026-11-16** — Docker фаза 2: вариант A (pull + recreate); stop/update требуют reauth; контейнеры только из реестра + denylist VPN/Traefik; label `vaybik.managed=true` рекомендуется.
 - **2026-11-16** — `region` управляется отдельно (Битрикс); подключать к админке Docker только с согласия Алексея. Тестовый контур Docker — `whoami`.
 - **2026-11-16** — `deploy-prod.sh` перед compose делает `unset DOCKER_HOST POSTGRES_* DATABASE_URL` (иначе shell/dev.env ломает прод).
+- **2026-11-17** — То же для `SITE_PROD_PRIORITY` / `SITE_PUBLIC_ORIGIN`: Cursor/shell может подставить `SITE_PROD_PRIORITY=1` → compose labels priority=1 → cutover молча откатывается на nginx. `deploy-prod.sh` и `site-cutover.sh` unset'ают эти ключи; значения только из прод-`.env`.
 - **2026-11-17** — бэкапы на хосте в `/var/backups/vaybik` (bind-mount, uid 1001); формат `pg_dump -Fc` + AES; restore из UI только в тестовый контейнер; region/чужие БД в реестр не добавляем.
 - **2026-11-17** — Яндекс.Метрику на дашборд переносим; приоритет фазы 3 — бэкапы.
 - **2026-11-17** — `deploy-prod.sh`: хостовый `docker compose` через `env -u DOCKER_HOST` (в прод-.env DOCKER_HOST нужен контейнерам); grep `BACKUPS_HOST_DIR` не валит скрипт.
@@ -67,7 +68,7 @@
 - **2026-11-17** — Cutover ON снова: `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`; site-test router снят; llms.txt в SEO (`site.llms`); «Открыть на сайте» → vaybik.ru. Откат: `scripts/site-cutover.sh off`.
 - **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
 - **2026-11-17** — Источник правды сайта = админка; импортов leadweb нет. `robots.txt`/`llms.txt` только из SEO; статические файлы удалены из leadweb и `vaybik-main/html`.
-- **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget` `{enabled,src,publicId,paths[]}`; экран `/admin/settings/chat-widget`; script перед `</body>`; CSP-RO +`https://chat.vaybik.ru` в script-src/frame-src. После деплоя: сначала `paths=["/"]`, потом пустые paths = весь сайт.
+- **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget` `{enabled,src,publicId,paths[]}`; экран `/admin/settings/chat-widget`; script перед `</body>`; CSP-RO +`https://chat.vaybik.ru` в script-src/frame-src. На проде включён: publicId `xA6FHnneH5CW`, paths `["/"]` (только главная); пустые paths = весь сайт.
 
 ## 6. Договорённости
 

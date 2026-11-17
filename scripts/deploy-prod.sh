@@ -10,7 +10,9 @@
 set -euo pipefail
 
 # Не наследовать DOCKER_HOST/POSTGRES_*/SITE_* из shell или dev-.env —
-# иначе `docker compose` ходит не туда / подставляет чужой пароль / сбрасывает cutover (SITE_PROD_PRIORITY).
+# иначе `docker compose` ходит не туда / подставляет чужой пароль /
+# или сбрасывает cutover: shell SITE_PROD_PRIORITY=1 → label priority=1 → nginx вместо CMS.
+# Значения SITE_* и POSTGRES_* — только из прод-.env (рядом с compose).
 # Важно: `docker compose` подхватывает DOCKER_HOST ещё и из прод-.env —
 # там он нужен контейнерам (socket-proxy), а хостовый CLI должен ходить на локальный сокет.
 unset DOCKER_HOST POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DATABASE_URL \
