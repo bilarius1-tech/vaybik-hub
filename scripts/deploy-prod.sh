@@ -9,15 +9,17 @@
 # Не трогает: Traefik, acme.json, VPN, firewall, .env прода (только читает имя проекта).
 set -euo pipefail
 
-# Не наследовать DOCKER_HOST/POSTGRES_* из shell или dev-.env —
-# иначе `docker compose` ходит не туда / подставляет чужой пароль в DATABASE_URL.
+# Не наследовать DOCKER_HOST/POSTGRES_*/SITE_* из shell или dev-.env —
+# иначе `docker compose` ходит не туда / подставляет чужой пароль / сбрасывает cutover (SITE_PROD_PRIORITY).
 # Важно: `docker compose` подхватывает DOCKER_HOST ещё и из прод-.env —
 # там он нужен контейнерам (socket-proxy), а хостовый CLI должен ходить на локальный сокет.
-unset DOCKER_HOST POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DATABASE_URL || true
+unset DOCKER_HOST POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DATABASE_URL \
+  SITE_PROD_PRIORITY SITE_PUBLIC_ORIGIN || true
 export DOCKER_HOST=
-# Обёртка: compose не должен видеть DOCKER_HOST из .env
+# Обёртка: compose не должен видеть DOCKER_HOST / чужие SITE_* из shell
 dc() {
   env -u DOCKER_HOST -u POSTGRES_USER -u POSTGRES_PASSWORD -u POSTGRES_DB -u DATABASE_URL \
+    -u SITE_PROD_PRIORITY -u SITE_PUBLIC_ORIGIN \
     docker compose "$@"
 }
 
