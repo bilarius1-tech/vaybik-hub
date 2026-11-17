@@ -50,6 +50,8 @@ const SAFE_STYLES: NonNullable<sanitizeHtml.IOptions["allowedStyles"]> = {
     "padding-top": LENGTH,
     "font-size": LENGTH,
     "font-weight": [/^\d{1,4}$/, /^(normal|bold)$/],
+    "border-radius": LENGTH,
+    background: [/^#[0-9a-fA-F]{3,8}$/, /^transparent$/],
     display: [/^(block|inline|inline-block|none|flex)$/],
     opacity: [/^\d+(\.\d+)?$/],
   },

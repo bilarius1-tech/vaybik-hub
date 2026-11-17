@@ -5,7 +5,9 @@ import {
   FAQ_ICON,
   MORE_ARROW,
   PRICE_ICON,
+  FAQ_CHEV,
   fixMissingSvgViewBox,
+  MASCOT_META,
   renderMascotPicture,
 } from "./leadweb-icons";
 import {
@@ -68,24 +70,39 @@ function secClose(): string {
   return "</div></section>";
 }
 
-/** Статичные кейсы /img/case-*.jpg → picture с webp, как в leadweb. */
-function renderStaticCasePicture(
+/** Статичные /img/* → picture с webp (кейсы и маскоты leadweb). */
+function renderStaticImgPicture(
   src: string,
   alt: string,
-  width?: number | null,
-  height?: number | null,
+  opts?: {
+    width?: number | null;
+    height?: number | null;
+    sizes?: string;
+  },
 ): string {
-  const m = src.match(/^(\/img\/.+)\.(jpe?g|png)$/i);
-  const w = width || null;
-  const h = height || null;
+  const w = opts?.width || null;
+  const h = opts?.height || null;
   const wh = (w ? ` width="${w}"` : "") + (h ? ` height="${h}"` : "");
+  const mascot = src.match(/\/img\/vaybik-([a-z0-9-]+)\.(png|webp|jpe?g)$/i);
+  if (mascot) {
+    const key = mascot[1]!;
+    const meta = MASCOT_META[key];
+    const srcset = meta?.srcset || `/img/vaybik-${key}-240.webp 240w, /img/vaybik-${key}-400.webp 400w, /img/vaybik-${key}-640.webp 640w`;
+    const sizes = opts?.sizes || "132px";
+    const mw = w || meta?.width || null;
+    const mh = h || meta?.height || null;
+    const mwh = (mw ? ` width="${mw}"` : "") + (mh ? ` height="${mh}"` : "");
+    return `<picture><source type="image/webp" srcset="${escAttr(srcset)}" sizes="${escAttr(sizes)}"><img src="${escAttr(src)}" alt="${escAttr(alt)}"${mwh} loading="lazy"></picture>`;
+  }
+  const m = src.match(/^(\/img\/.+)\.(jpe?g|png)$/i);
   if (!m) {
     return `<img src="${escAttr(src)}" alt="${escAttr(alt)}"${wh} loading="lazy" decoding="async">`;
   }
   const base = m[1]!;
   const fullW = w || 782;
   const srcset = `${base}-400.webp 400w, ${base}-${fullW}.webp ${fullW}w`;
-  return `<picture><source type="image/webp" srcset="${escAttr(srcset)}" sizes="260px"><img src="${escAttr(src)}" alt="${escAttr(alt)}"${wh} loading="lazy"></picture>`;
+  const sizes = opts?.sizes || "260px";
+  return `<picture><source type="image/webp" srcset="${escAttr(srcset)}" sizes="${escAttr(sizes)}"><img src="${escAttr(src)}" alt="${escAttr(alt)}"${wh} loading="lazy"></picture>`;
 }
 
 function buttonsHtml(
@@ -188,7 +205,13 @@ function renderHero(
     : "";
   // home: подзаголовок как .visually с тире (как в leadweb)
   let h1Inner: string;
-  if (variant === "home" && accentRaw && !avHero) {
+  if (
+    keysyHero &&
+    typeof data.titleHtml === "string" &&
+    data.titleHtml.trim()
+  ) {
+    h1Inner = fixMissingSvgViewBox(sanitizeCmsHtml(data.titleHtml));
+  } else if (variant === "home" && accentRaw && !avHero) {
     const visualText =
       visualRaw ||
       (titleRest
@@ -248,11 +271,12 @@ function renderHero(
         .join("")
     : "";
   const h1Id = anchor === "hero" ? ' id="hero-title"' : "";
+  // leadweb: svc-note между lead и acts
   const copy = `${crumbs}${svcSub}${brand}${
     data.kicker ? `<span class="kicker">${esc(String(data.kicker))}</span>` : ""
   }<h1${h1Id}>${h1Inner}</h1>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
-  }${buttonsHtml(data.buttons as never)}${notes}`;
+  }${notes}${buttonsHtml(data.buttons as never)}`;
 
   const mascotHtml = renderMascotPicture(mascot, { fetchPriority: "high" });
   // home (не av): <div class="w"><div class="svc-hero-layout">…</div>feats</div>
@@ -264,11 +288,20 @@ function renderHero(
 }
 
 function renderAnswer(data: Record<string, unknown>, anchor?: string | null): string {
-  const facts = Array.isArray(data.facts)
-    ? `<div class="facts reveal">${(data.facts as Array<{ value: string; label: string }>)
-        .map((f) => `<div class="fact"><b>${esc(f.value)}</b><span>${esc(f.label)}</span></div>`)
-        .join("")}</div>`
-    : "";
+  const factsList = Array.isArray(data.facts)
+    ? (data.facts as Array<{ value: string; label: string }>).filter(
+        (f) => (f.value || "").trim() || (f.label || "").trim(),
+      )
+    : [];
+  const facts =
+    factsList.length > 0
+      ? `<div style="margin-top:40px"><div class="facts reveal">${factsList
+          .map(
+            (f) =>
+              `<div class="fact"><b>${esc(f.value)}</b><span>${esc(f.label)}</span></div>`,
+          )
+          .join("")}</div></div>`
+      : "";
   let body = richOrMd(data.html, data.text, "basic");
   if (body && !body.includes('class="answer')) {
     if (body.startsWith("<p>")) {
@@ -277,7 +310,7 @@ function renderAnswer(data: Record<string, unknown>, anchor?: string | null): st
       body = `<div class="answer reveal">${body}</div>`;
     }
   }
-  return `${secOpen(anchor)}${secHeader(data.header as Header)}${body}${facts ? `<div style="margin-top:40px">${facts}</div>` : ""}${secClose()}`;
+  return `${secOpen(anchor)}${secHeader(data.header as Header)}${body}${facts}${secClose()}`;
 }
 
 function cardTextHtml(it: Record<string, unknown>): string {
@@ -336,7 +369,9 @@ function renderCardItem(
         String(it.title || ""),
       );
       img = media.src
-        ? `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}" loading="lazy">`
+        ? renderStaticImgPicture(media.src, media.alt || String(it.title || ""), {
+            sizes: "132px",
+          })
         : "";
     }
     return `<a class="card vaybik-teaser reveal" href="${escAttr(linkObj.href)}">${img}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${text}<span class="more">${esc(linkObj.label)}${MORE_ARROW}</span></div></a>`;
@@ -404,7 +439,7 @@ function renderFaq(data: Record<string, unknown>, anchor?: string | null): strin
       const icon = it.icon
         ? fixMissingSvgViewBox(String(it.icon))
         : FAQ_ICON;
-      return `<details><summary>${icon}<span>${esc(it.question)}</span></summary><div>${richOrMd(it.answerHtml, it.answer, "basic")}</div></details>`;
+      return `<details><summary>${icon}<span>${esc(it.question)}</span>${FAQ_CHEV}</summary><div>${richOrMd(it.answerHtml, it.answer, "basic")}</div></details>`;
     })
     .join("");
   return `${secOpen(anchor || "faq", data.background === "alt")}${secHeader(data.header as Header)}<div class="faq reveal">${details}</div>${secClose()}`;
@@ -495,7 +530,11 @@ function renderCases(
       if (!img) {
         const media = resolveMediaSrc(it.image, opts.media ?? null, alt);
         img = media.src
-          ? renderStaticCasePicture(media.src, media.alt || alt, w, h)
+          ? renderStaticImgPicture(media.src, media.alt || alt, {
+              width: w,
+              height: h,
+              sizes: "260px",
+            })
           : "";
       }
 
@@ -603,9 +642,13 @@ function renderOffer(data: Record<string, unknown>, anchor?: string | null): str
   const cards = items
     .map((it) => {
       const hl = it.highlight ? " hl-box" : "";
+      const priceStyle =
+        typeof it.priceStyle === "string" && it.priceStyle.trim()
+          ? ` style="${escAttr(it.priceStyle.trim())}"`
+          : "";
       const price =
         typeof it.price === "string" && it.price.trim()
-          ? `<div class="price">${fixMissingSvgViewBox(sanitizeCmsHtml(it.price))}</div>`
+          ? `<div class="price"${priceStyle}>${fixMissingSvgViewBox(sanitizeCmsHtml(it.price))}</div>`
           : "";
       return `<div class="answer reveal${hl}">${
         it.kicker ? `<span class="kicker">${esc(String(it.kicker))}</span>` : ""

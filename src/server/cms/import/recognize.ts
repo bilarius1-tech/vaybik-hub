@@ -68,6 +68,10 @@ function recognizeHero(
     title = title.replace(titleVisual, "").replace(/^\s+/, "").trim();
   }
   if (!title && accent) title = accent;
+  // keysy: сохраняем <br> и .k-h1-rest как в leadweb
+  const titleHtml = hasClass(section, "keysy-hero")
+    ? sanitizeCmsHtml(h1.html() || "")
+    : null;
   const buttons: Array<{
     label: string;
     href: string;
@@ -139,6 +143,7 @@ function recognizeHero(
     title: title || "Без названия",
     titleAccent: accent || null,
     titleVisual,
+    titleHtml,
     lead: text($s.find(".lead").first()) || null,
     buttons,
     svcSubHtml,
@@ -326,13 +331,16 @@ function recognizeOffer(
   const items: Array<Record<string, unknown>> = [];
   $grid.find("> .answer, > .hl-box, > div.answer").each((_, el) => {
     const $el = $(el);
-    const priceHtml = $el.find(".price").first().html();
+    const $price = $el.find(".price").first();
+    const priceHtml = $price.length ? $price.html() : null;
+    const priceStyle = $price.attr("style") || null;
     const clone = $el.clone();
     clone.find(".kicker, .price").remove();
     items.push({
       kicker: text($el.find(".kicker").first()) || null,
       html: sanitizeCmsHtml(clone.html() || ""),
       price: priceHtml ? sanitizeCmsHtml(priceHtml) : null,
+      priceStyle,
       highlight: ($el.attr("class") || "").includes("hl"),
     });
   });

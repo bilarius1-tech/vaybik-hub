@@ -58,6 +58,12 @@ export const heroBlockSchema = z.object({
   title: z.string().min(1),
   titleAccent: optionalString,
   titleVisual: optionalString,
+  /** keysy: сырой HTML внутри h1 (br + k-h1-rest) */
+  titleHtml: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
   /** svc-sub навигация (1С / Битрикс / keysy) */
@@ -323,6 +329,7 @@ export const offerBlockSchema = z.object({
           .optional()
           .nullable()
           .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
+        priceStyle: optionalString,
         highlight: z.boolean().optional(),
       }),
     )

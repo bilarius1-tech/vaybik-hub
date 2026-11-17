@@ -269,36 +269,52 @@ function renderFooter(
     .filter((i) => i.menu === "FOOTER" && !i.parentId && !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  // leadweb помечает только первое совпадение пути
-  let markedCurrent = false;
-  const cols = roots
-    .map((root) => {
-      const children = items
-        .filter((c) => c.parentId === root.id && !c.isHidden)
-        .sort((a, b) => a.sortOrder - b.sortOrder);
-      // leadweb: на svc/calculator в «Разделы» первой идёт Главная (без aria)
-      const prefix =
-        opts?.includeHomeLink && /разделы/i.test(root.label)
-          ? `<a href="/">Главная</a>`
-          : "";
-      const links = children
-        .map((c) => {
-          const t = c.openInNewTab
-            ? ' target="_blank" rel="noopener"'
-            : "";
-          let cur = "";
-          if (
-            opts?.markCurrent &&
-            !markedCurrent &&
-            isExactCurrent(hrefOf(c), opts.currentPath)
-          ) {
-            cur = ' aria-current="page"';
-            markedCurrent = true;
-          }
-          return `<a href="${escAttr(hrefOf(c))}"${t}${cur}>${esc(c.label)}</a>`;
+  type FootLink = { href: string; label: string; openInNewTab: boolean };
+  const colData = roots.map((root) => ({
+    label: root.label,
+    prefixHome: Boolean(
+      opts?.includeHomeLink && /разделы/i.test(root.label),
+    ),
+    children: items
+      .filter((c) => c.parentId === root.id && !c.isHidden)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map(
+        (c): FootLink => ({
+          href: hrefOf(c),
+          label: c.label,
+          openInNewTab: c.openInNewTab,
+        }),
+      ),
+  }));
+
+  // leadweb: aria-current на последнем совпадении пути (колонка «Разделы»)
+  let lastMatch: { colIdx: number; childIdx: number } | null = null;
+  if (opts?.markCurrent && opts.currentPath) {
+    colData.forEach((col, colIdx) => {
+      col.children.forEach((c, childIdx) => {
+        if (isExactCurrent(c.href, opts.currentPath)) {
+          lastMatch = { colIdx, childIdx };
+        }
+      });
+    });
+  }
+
+  const cols = colData
+    .map((col, colIdx) => {
+      const prefix = col.prefixHome ? `<a href="/">Главная</a>` : "";
+      const links = col.children
+        .map((c, childIdx) => {
+          const t = c.openInNewTab ? ' target="_blank" rel="noopener"' : "";
+          const cur =
+            lastMatch &&
+            lastMatch.colIdx === colIdx &&
+            lastMatch.childIdx === childIdx
+              ? ' aria-current="page"'
+              : "";
+          return `<a href="${escAttr(c.href)}"${t}${cur}>${esc(c.label)}</a>`;
         })
         .join("");
-      return `<div><h3>${esc(root.label)}</h3>${prefix}${links}</div>`;
+      return `<div><h3>${esc(col.label)}</h3>${prefix}${links}</div>`;
     })
     .join("");
 

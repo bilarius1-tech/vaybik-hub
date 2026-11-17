@@ -51,6 +51,7 @@ export const heroClientSchema = z.object({
   title: z.string().min(1, "Нужен заголовок"),
   titleAccent: optionalString,
   titleVisual: optionalString,
+  titleHtml: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
   svcSubHtml: optionalString,
@@ -250,6 +251,7 @@ export const offerClientSchema = z.object({
         kicker: optionalString,
         html: optionalString,
         price: optionalString,
+        priceStyle: optionalString,
         highlight: z.boolean().optional(),
       }),
     )
