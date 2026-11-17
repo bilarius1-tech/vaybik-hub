@@ -28,7 +28,8 @@ services:
         condition: service_healthy
     volumes:
       - uploads:/app/uploads
-      - backups:/app/backups
+      # Канон на VPS: /var/backups/vaybik (chmod 700, uid 1001). Создаётся при деплое.
+      - ${BACKUPS_HOST_DIR:-/var/backups/vaybik}:/app/backups
     networks: [hub, proxy]
     labels:
       - traefik.enable=true
@@ -76,7 +77,7 @@ services:
         condition: service_started
     volumes:
       - uploads:/app/uploads
-      - backups:/app/backups
+      - ${BACKUPS_HOST_DIR:-/var/backups/vaybik}:/app/backups
       - /proc:/host/proc:ro
     networks: [hub]
 
@@ -130,4 +131,3 @@ networks:
 volumes:
   pgdata:
   uploads:
-  backups:

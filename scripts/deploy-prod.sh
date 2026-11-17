@@ -85,6 +85,21 @@ fi
 # Откат = вернуть прежний образ. Код в git остаётся новым: потом исправить и выкатить заново (git revert + деплой).
 ROLLBACK="cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && docker compose up -d --no-build --force-recreate app worker"
 
+# ── Каталог бэкапов на хосте (bind-mount → /app/backups, uid nextjs=1001) ─
+BACKUPS_HOST="${BACKUPS_HOST_DIR:-/var/backups/vaybik}"
+# Подхватить из прод-.env, если задано (без печати значения других ключей)
+if [ -f "$PROD_DIR/.env" ]; then
+  _bh="$(grep -E '^BACKUPS_HOST_DIR=' "$PROD_DIR/.env" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+  [ -n "${_bh:-}" ] && BACKUPS_HOST="$_bh"
+  unset _bh
+fi
+say "Каталог бэкапов: $BACKUPS_HOST"
+if [ ! -d "$BACKUPS_HOST" ]; then
+  sudo mkdir -p "$BACKUPS_HOST"
+fi
+sudo chown 1001:1001 "$BACKUPS_HOST"
+sudo chmod 700 "$BACKUPS_HOST"
+
 # ── Выкатка ────────────────────────────────────────────────────────────
 say "git pull → build → up -d"
 git merge -q --ff-only origin/main
