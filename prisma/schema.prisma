@@ -195,8 +195,118 @@ model SeoPage {
   changefreq    String   @default("weekly")
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
+  page          Page?
 
   @@unique([host, path])
+}
+
+enum PageStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NavMenu {
+  HEADER
+  FOOTER
+}
+
+enum RedirectMatch {
+  EXACT
+  PREFIX
+}
+
+/// Страница публичного сайта (черновик блоков в Block; публикация → PageRevision)
+model Page {
+  id                  String         @id @default(cuid())
+  /// Как на сайте: "/", "/uslugi/landing/"
+  path                String         @unique
+  title               String
+  status              PageStatus     @default(DRAFT)
+  /// home | default | service | calculator
+  template            String         @default("default")
+  sortOrder           Int            @default(0)
+  seoPageId           String?        @unique
+  seoPage             SeoPage?       @relation(fields: [seoPageId], references: [id], onDelete: SetNull)
+  publishedRevisionId String?
+  publishedAt         DateTime?
+  /// sha256 исходного HTML при импорте
+  importHash          String?
+  /// manual | import
+  source              String         @default("manual")
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  updatedById         String?
+  blocks              Block[]
+  revisions           PageRevision[]
+  navItems            NavItem[]
+}
+
+model Block {
+  id        String   @id @default(cuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  type      String
+  sortOrder Int
+  data      Json
+  isHidden  Boolean  @default(false)
+  /// id секции на странице (например "faq")
+  anchor    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([pageId, sortOrder])
+}
+
+model NavItem {
+  id            String    @id @default(cuid())
+  menu          NavMenu
+  parentId      String?
+  parent        NavItem?  @relation("NavTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children      NavItem[] @relation("NavTree")
+  label         String
+  url           String?
+  pageId        String?
+  page          Page?     @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  sortOrder     Int       @default(0)
+  isHidden      Boolean   @default(false)
+  isHighlighted Boolean   @default(false)
+  openInNewTab  Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([menu, sortOrder])
+  @@index([parentId])
+}
+
+model Redirect {
+  id         String        @id @default(cuid())
+  fromPath   String        @unique
+  toPath     String
+  code       Int           @default(301)
+  match      RedirectMatch @default(EXACT)
+  isActive   Boolean       @default(true)
+  hits       Int           @default(0)
+  lastHitAt  DateTime?
+  note       String?
+  /// manual | import
+  source     String        @default("manual")
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  updatedById String?
+}
+
+model PageRevision {
+  id          String   @id @default(cuid())
+  pageId      String
+  page        Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  /// { page, blocks, seo }
+  snapshot    Json
+  note        String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  @@index([pageId, createdAt])
 }
 
 model Secret {
