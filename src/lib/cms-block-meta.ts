@@ -9,6 +9,9 @@ export const BLOCK_TYPES = [
   "cta",
   "text",
   "widget",
+  "iconList",
+  "offer",
+  "beforeAfter",
   "rawHtml",
 ] as const;
 
@@ -57,6 +60,18 @@ export const BLOCK_META: Record<
   widget: {
     label: "Виджет",
     description: "Студия / калькулятор (снимок HTML)",
+  },
+  iconList: {
+    label: "Список с иконками",
+    description: "plist-cards или safe (ibox + текст)",
+  },
+  offer: {
+    label: "Оффер / цена",
+    description: "Сетка answer-карточек с ценой",
+  },
+  beforeAfter: {
+    label: "Было → стало",
+    description: "ba-list сравнения",
   },
   rawHtml: {
     label: "HTML",

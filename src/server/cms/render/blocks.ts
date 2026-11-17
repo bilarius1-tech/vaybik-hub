@@ -160,17 +160,6 @@ function renderCards(data: Record<string, unknown>, anchor?: string | null): str
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g${cols}">${cards}</div>${secClose()}`;
 }
 
-function renderSteps(data: Record<string, unknown>, anchor?: string | null): string {
-  const items = (data.items as Array<{ title: string; text: string; result: string }>) || [];
-  const lis = items
-    .map(
-      (it) =>
-        `<li><b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
-    )
-    .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="steps reveal">${lis}</ol>${secClose()}`;
-}
-
 function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
   const items =
     (data.items as Array<{
@@ -233,7 +222,11 @@ function renderCta(data: Record<string, unknown>, anchor?: string | null): strin
 
 function renderText(data: Record<string, unknown>, anchor?: string | null): string {
   const body = richOrMd(data.html, data.markdown, "full");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="reveal">${body}</div>${secClose()}`;
+  const wrap =
+    data.layout === "two"
+      ? `<div class="grid g2 reveal">${body}</div>`
+      : `<div class="reveal">${body}</div>`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${wrap}${secClose()}`;
 }
 
 function renderWidget(data: Record<string, unknown>, anchor?: string | null): string {
@@ -247,6 +240,93 @@ function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): s
   if (html.trim().startsWith("<section")) return html;
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
   return `<section class="sec"${id}>${html}</section>`;
+}
+
+function renderIconList(data: Record<string, unknown>, anchor?: string | null): string {
+  const variant = String(data.variant || "plist-cards");
+  const items = (data.items as Array<Record<string, unknown>>) || [];
+  if (variant === "safe") {
+    const lis = items
+      .map((it) => {
+        const body = richOrMd(it.textHtml, it.text, "inline");
+        return `<li><span class="ibox">${it.icon || ""}</span><div><h3>${esc(String(it.title || ""))}</h3><p>${body}</p></div></li>`;
+      })
+      .join("");
+    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="safe reveal">${lis}</ul>${secClose()}`;
+  }
+  const lis = items
+    .map((it) => {
+      const body = richOrMd(it.textHtml, it.text, "inline");
+      return `<li><span class="ibox">${it.icon || ""}</span><span>${body || esc(String(it.title || ""))}</span></li>`;
+    })
+    .join("");
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="plist-cards reveal">${lis}</ul>${secClose()}`;
+}
+
+function renderOffer(data: Record<string, unknown>, anchor?: string | null): string {
+  const items = (data.items as Array<Record<string, unknown>>) || [];
+  const cards = items
+    .map((it) => {
+      const hl = it.highlight ? " hl-box" : "";
+      return `<article class="answer reveal${hl}">${
+        it.kicker ? `<span class="kicker">${esc(String(it.kicker))}</span>` : ""
+      }${richOrMd(it.html, null, "basic")}${
+        it.price ? `<div class="price">${esc(String(it.price))}</div>` : ""
+      }</article>`;
+    })
+    .join("");
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g2">${cards}</div>${secClose()}`;
+}
+
+function renderBeforeAfter(
+  data: Record<string, unknown>,
+  anchor?: string | null,
+): string {
+  const items = (data.items as Array<{ before: string; after: string }>) || [];
+  const lis = items
+    .map(
+      (it) =>
+        `<li><span class="ba-before">${esc(it.before)}</span><span class="ba-after">${esc(it.after)}</span></li>`,
+    )
+    .join("");
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="ba-list reveal">${lis}</ul>${secClose()}`;
+}
+
+function renderSteps(data: Record<string, unknown>, anchor?: string | null): string {
+  const variant = String(data.variant || "default");
+  const items =
+    (data.items as Array<{
+      title: string;
+      text: string;
+      result: string;
+      icon?: string;
+    }>) || [];
+  if (variant === "flow5") {
+    const lis = items
+      .map(
+        (it, i) =>
+          `<li><span class="num">${i + 1}</span>${it.icon ? `<span class="ibox">${it.icon}</span>` : ""}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
+      )
+      .join("");
+    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="flow5 reveal">${lis}</ol>${secClose()}`;
+  }
+  if (variant === "av" || variant === "k-steps") {
+    const cls = variant === "av" ? "steps av-steps" : "steps k-steps";
+    const lis = items
+      .map(
+        (it) =>
+          `<li>${it.icon ? `<span class="ibox">${it.icon}</span>` : ""}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
+      )
+      .join("");
+    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="${cls} reveal">${lis}</ol>${secClose()}`;
+  }
+  const lis = items
+    .map(
+      (it) =>
+        `<li><b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
+    )
+    .join("");
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="steps reveal">${lis}</ol>${secClose()}`;
 }
 
 export function renderBlock(block: RenderBlock): string {
@@ -273,6 +353,12 @@ export function renderBlock(block: RenderBlock): string {
       return renderText(data, block.anchor);
     case "widget":
       return renderWidget(data, block.anchor);
+    case "iconList":
+      return renderIconList(data, block.anchor);
+    case "offer":
+      return renderOffer(data, block.anchor);
+    case "beforeAfter":
+      return renderBeforeAfter(data, block.anchor);
     case "rawHtml":
       return renderRawHtml(data, block.anchor);
     default:

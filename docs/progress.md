@@ -141,7 +141,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Медиа: вкладка «Медиа» + MediaPicker
 - [x] Tiptap RichText + sanitizeRichText + миграция полей
 - [x] Формы блоков вместо JSON + live preview iframe
-- [ ] rawHtml → новые типы + `cms-convert-rawhtml`
+- [x] rawHtml → типы iconList/offer/beforeAfter + `cms-convert-rawhtml` (dry-run: 3/12; keysy остаётся)
+- [x] Бэкап uploads v2 (потоковое AES, magic VBK2; decrypt понимает v1 и v2)
 - [ ] Бэкап uploads v2 (потоковое шифрование) + soft-limit
 - [ ] Тесты / e2e / build; деплой — только после «задеплой»
 - [ ] CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop, клик-для-правки в предпросмотре

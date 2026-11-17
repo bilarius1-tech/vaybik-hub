@@ -235,6 +235,50 @@ export const rawHtmlBlockSchema = z.object({
     .transform((v) => sanitizeCmsHtml(v)),
 });
 
+export const iconListBlockSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  variant: z.enum(["plist-cards", "safe"]).default("plist-cards"),
+  items: z
+    .array(
+      z.object({
+        icon: iconField,
+        title: optionalString,
+        textHtml: richHtml("inline"),
+        text: optionalString,
+      }),
+    )
+    .default([]),
+});
+
+export const offerBlockSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  items: z
+    .array(
+      z.object({
+        kicker: optionalString,
+        html: richHtml("basic"),
+        price: optionalString,
+        highlight: z.boolean().optional(),
+      }),
+    )
+    .default([]),
+});
+
+export const beforeAfterBlockSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  items: z
+    .array(
+      z.object({
+        before: z.string().default(""),
+        after: z.string().default(""),
+      }),
+    )
+    .default([]),
+});
+
 export const blockDataSchemas = {
   hero: heroBlockSchema,
   answer: answerBlockSchema,
@@ -246,6 +290,9 @@ export const blockDataSchemas = {
   cta: ctaBlockSchema,
   text: textBlockSchema,
   widget: widgetBlockSchema,
+  iconList: iconListBlockSchema,
+  offer: offerBlockSchema,
+  beforeAfter: beforeAfterBlockSchema,
   rawHtml: rawHtmlBlockSchema,
 } as const;
 

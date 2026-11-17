@@ -3,7 +3,7 @@
  * Только читает --src; пишет в БД админки (если не --dry-run).
  *
  * Usage:
- *   npx tsx scripts/cms-import-leadweb.ts [--src /opt/vaybik-site-src] [--dry-run] [--force] [--only=/path/]
+ *   npx tsx scripts/cms-import-leadweb.ts [--src /opt/vaybik-site-src] [--dry-run] [--force] [--reset-nav] [--only=/path/]
  */
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, existsSync } from "node:fs";
@@ -110,6 +110,7 @@ async function main() {
   const src = arg("src", "/opt/vaybik-site-src")!;
   const dryRun = arg("dry-run") === "true";
   const force = arg("force") === "true";
+  const resetNav = arg("reset-nav") === "true";
   const only = arg("only");
 
   if (!existsSync(src)) {
@@ -394,10 +395,10 @@ async function main() {
 
     if (!dryRun) {
       // идемпотентно: очищаем только import-меню? Проще upsert по (menu,parent,label)
-      // Для первой версии: если меню пустое — создать; если --force — пересоздать HEADER/FOOTER
+      // Меню: пустое → создать; пересоздать только с --reset-nav (не с --force)
       const count = await prisma.navItem.count();
-      if (count === 0 || force) {
-        if (force) await prisma.navItem.deleteMany();
+      if (count === 0 || resetNav) {
+        if (resetNav) await prisma.navItem.deleteMany();
         const parentIds = new Map<string, string>();
         for (const item of navItems.filter((n) => !n.parentLabel)) {
           const pageId = await resolvePageId(item.url);

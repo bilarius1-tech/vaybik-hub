@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { createReadStream, createWriteStream, existsSync } from "node:fs";
+import { createReadStream, existsSync } from "node:fs";
 import {
   mkdir,
   readdir,
@@ -11,10 +11,13 @@ import {
 } from "node:fs/promises";
 import path from "node:path";
 import { Readable } from "node:stream";
-import { pipeline } from "node:stream/promises";
 import { promisify } from "node:util";
 import { createGzip, createGunzip } from "node:zlib";
-import { encryptBuffer, decryptBuffer } from "@/server/backup/crypto";
+import {
+  encryptBuffer,
+  encryptStreamToFile,
+  decryptBuffer,
+} from "@/server/backup/crypto";
 import {
   parseDatabaseUrl,
   pgEnvFromUrl,
@@ -140,20 +143,31 @@ async function dumpDatabase(outEnc: string): Promise<void> {
 async function archiveUploads(outEnc: string): Promise<void> {
   const root = uploadsRoot();
   await mkdir(root, { recursive: true });
+  // оценка места: размер uploads × 2 + запас
+  let uploadsBytes = 0;
+  async function walkSize(dir: string): Promise<void> {
+    for (const name of await readdir(dir)) {
+      const full = path.join(dir, name);
+      const st = await stat(full);
+      if (st.isDirectory()) await walkSize(full);
+      else uploadsBytes += st.size;
+    }
+  }
+  try {
+    await walkSize(root);
+  } catch {
+    uploadsBytes = 0;
+  }
+  await assertEnoughDiskForDump(path.dirname(outEnc), uploadsBytes);
+
   const tarPath = `${outEnc}.tar`;
   await execFileAsync("tar", ["-cf", tarPath, "-C", root, "."], {
     maxBuffer: 64 * 1024 * 1024,
   });
-  const tmpGz = `${outEnc}.tmp.gz`;
-  await pipeline(
-    createReadStream(tarPath),
-    createGzip(),
-    createWriteStream(tmpGz),
-  );
+  // потоковый gzip → encrypt v2 (без удержания всего архива в RAM)
+  const gzStream = createReadStream(tarPath).pipe(createGzip());
+  await encryptStreamToFile(gzStream, outEnc);
   await unlink(tarPath);
-  const compressed = await readFile(tmpGz);
-  await unlink(tmpGz);
-  await writeFile(outEnc, encryptBuffer(compressed));
 }
 
 export async function pruneOldBackups(

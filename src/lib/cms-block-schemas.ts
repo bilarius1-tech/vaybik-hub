@@ -197,6 +197,50 @@ export const rawHtmlClientSchema = z.object({
   html: z.string().default(""),
 });
 
+export const iconListClientSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  variant: z.enum(["plist-cards", "safe"]).default("plist-cards"),
+  items: z
+    .array(
+      z.object({
+        icon: optionalString,
+        title: optionalString,
+        textHtml: optionalString,
+        text: optionalString,
+      }),
+    )
+    .default([]),
+});
+
+export const offerClientSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  items: z
+    .array(
+      z.object({
+        kicker: optionalString,
+        html: optionalString,
+        price: optionalString,
+        highlight: z.boolean().optional(),
+      }),
+    )
+    .default([]),
+});
+
+export const beforeAfterClientSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  items: z
+    .array(
+      z.object({
+        before: z.string().default(""),
+        after: z.string().default(""),
+      }),
+    )
+    .default([]),
+});
+
 export const CLIENT_BLOCK_SCHEMAS = {
   hero: heroClientSchema,
   answer: answerClientSchema,
@@ -208,5 +252,8 @@ export const CLIENT_BLOCK_SCHEMAS = {
   cta: ctaClientSchema,
   text: textClientSchema,
   widget: widgetClientSchema,
+  iconList: iconListClientSchema,
+  offer: offerClientSchema,
+  beforeAfter: beforeAfterClientSchema,
   rawHtml: rawHtmlClientSchema,
 } as const;
