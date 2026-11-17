@@ -1,5 +1,12 @@
 import { z } from "zod";
+import {
+  BLOCK_META,
+  BLOCK_TYPES,
+  type BlockType,
+} from "@/lib/cms-block-meta";
 import { sanitizeCmsHtml, sanitizeSvgIcon } from "./sanitize";
+
+export { BLOCK_META, BLOCK_TYPES, type BlockType };
 
 const optionalString = z.string().optional().nullable();
 
@@ -25,72 +32,6 @@ const iconField = z
   .optional()
   .nullable()
   .transform((v) => (v ? sanitizeSvgIcon(v) : v));
-
-export const BLOCK_TYPES = [
-  "hero",
-  "answer",
-  "cards",
-  "steps",
-  "faq",
-  "team",
-  "cases",
-  "cta",
-  "text",
-  "widget",
-  "rawHtml",
-] as const;
-
-export type BlockType = (typeof BLOCK_TYPES)[number];
-
-export const BLOCK_META: Record<
-  BlockType,
-  { label: string; description: string }
-> = {
-  hero: {
-    label: "Hero",
-    description: "Шапка страницы: заголовок, кнопки, маскот",
-  },
-  answer: {
-    label: "Короткий ответ",
-    description: "AEO-блок под hero + факты",
-  },
-  cards: {
-    label: "Карточки",
-    description: "Сетка карточек 2–4 колонки",
-  },
-  steps: {
-    label: "Шаги",
-    description: "Нумерованный список шагов",
-  },
-  faq: {
-    label: "FAQ",
-    description: "Вопросы и ответы (details/summary)",
-  },
-  team: {
-    label: "Команда",
-    description: "Люди студии",
-  },
-  cases: {
-    label: "Кейсы",
-    description: "Карточки портфолио",
-  },
-  cta: {
-    label: "CTA",
-    description: "Призыв к действию / контакты",
-  },
-  text: {
-    label: "Текст",
-    description: "Заголовок + markdown",
-  },
-  widget: {
-    label: "Виджет",
-    description: "Студия / калькулятор (снимок HTML)",
-  },
-  rawHtml: {
-    label: "HTML",
-    description: "Сырой HTML (запасной вариант импорта)",
-  },
-};
 
 export const heroBlockSchema = z.object({
   variant: z.enum(["home", "sub", "service"]).default("home"),

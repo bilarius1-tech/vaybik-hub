@@ -1,0 +1,65 @@
+export const BLOCK_TYPES = [
+  "hero",
+  "answer",
+  "cards",
+  "steps",
+  "faq",
+  "team",
+  "cases",
+  "cta",
+  "text",
+  "widget",
+  "rawHtml",
+] as const;
+
+export type BlockType = (typeof BLOCK_TYPES)[number];
+
+export const BLOCK_META: Record<
+  BlockType,
+  { label: string; description: string }
+> = {
+  hero: {
+    label: "Hero",
+    description: "Шапка страницы: заголовок, кнопки, маскот",
+  },
+  answer: {
+    label: "Короткий ответ",
+    description: "AEO-блок под hero + факты",
+  },
+  cards: {
+    label: "Карточки",
+    description: "Сетка карточек 2–4 колонки",
+  },
+  steps: {
+    label: "Шаги",
+    description: "Нумерованный список шагов",
+  },
+  faq: {
+    label: "FAQ",
+    description: "Вопросы и ответы (details/summary)",
+  },
+  team: {
+    label: "Команда",
+    description: "Люди студии",
+  },
+  cases: {
+    label: "Кейсы",
+    description: "Карточки портфолио",
+  },
+  cta: {
+    label: "CTA",
+    description: "Призыв к действию / контакты",
+  },
+  text: {
+    label: "Текст",
+    description: "Заголовок + markdown",
+  },
+  widget: {
+    label: "Виджет",
+    description: "Студия / калькулятор (снимок HTML)",
+  },
+  rawHtml: {
+    label: "HTML",
+    description: "Сырой HTML (запасной вариант импорта)",
+  },
+};
