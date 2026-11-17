@@ -11,7 +11,15 @@ set -euo pipefail
 
 # Не наследовать DOCKER_HOST/POSTGRES_* из shell или dev-.env —
 # иначе `docker compose` ходит не туда / подставляет чужой пароль в DATABASE_URL.
+# Важно: `docker compose` подхватывает DOCKER_HOST ещё и из прод-.env —
+# там он нужен контейнерам (socket-proxy), а хостовый CLI должен ходить на локальный сокет.
 unset DOCKER_HOST POSTGRES_USER POSTGRES_PASSWORD POSTGRES_DB DATABASE_URL || true
+export DOCKER_HOST=
+# Обёртка: compose не должен видеть DOCKER_HOST из .env
+dc() {
+  env -u DOCKER_HOST -u POSTGRES_USER -u POSTGRES_PASSWORD -u POSTGRES_DB -u DATABASE_URL \
+    docker compose "$@"
+}
 
 PROD_DIR="${PROD_DIR:-/opt/apps/vaybik-hub}"
 DEV_DIR="${DEV_DIR:-/opt/vaybik-hub}"
@@ -83,7 +91,7 @@ else
   echo "Образа $IMAGE:latest нет — первый деплой, откатываться некуда."
 fi
 # Откат = вернуть прежний образ. Код в git остаётся новым: потом исправить и выкатить заново (git revert + деплой).
-ROLLBACK="cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && docker compose up -d --no-build --force-recreate app worker"
+ROLLBACK="cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && env -u DOCKER_HOST docker compose up -d --no-build --force-recreate app worker"
 
 # ── Каталог бэкапов на хосте (bind-mount → /app/backups, uid nextjs=1001) ─
 BACKUPS_HOST="${BACKUPS_HOST_DIR:-/var/backups/vaybik}"
@@ -103,8 +111,8 @@ sudo chmod 700 "$BACKUPS_HOST"
 # ── Выкатка ────────────────────────────────────────────────────────────
 say "git pull → build → up -d"
 git merge -q --ff-only origin/main
-docker compose build app
-docker compose up -d app worker
+dc build app
+dc up -d app worker
 
 # ── Проверка здоровья ──────────────────────────────────────────────────
 say "Жду healthy (до 3 минут)"
@@ -115,10 +123,10 @@ for _ in $(seq 1 36); do
   if [ "$s_app" = healthy ] && [ "$s_wrk" = healthy ] && curl -fsS -m 10 "$HEALTH_URL" >/dev/null 2>&1; then ok=1; break; fi
   sleep 5
 done
-docker compose ps
+dc ps
 
 if [ "$ok" != 1 ]; then
-  docker compose logs --tail 60 app || true
+  dc logs --tail 60 app || true
   printf '\n\033[1;31m✖ Прод не стал здоровым (app=%s worker=%s).\033[0m\nОткат одной командой:\n  %s\n' "$s_app" "$s_wrk" "$ROLLBACK" >&2
   exit 1
 fi
