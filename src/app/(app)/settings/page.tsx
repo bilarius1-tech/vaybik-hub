@@ -46,6 +46,14 @@ export default async function SettingsPage() {
             />
           </Card>
         </Link>
+        <Link href="/settings/chat-widget">
+          <Card className="transition hover:border-ac">
+            <CardHeader
+              title="ИИ-консультант"
+              subtitle="виджет chat.vaybik.ru на публичном сайте"
+            />
+          </Card>
+        </Link>
       </div>
 
       <BrandSettingsPanel

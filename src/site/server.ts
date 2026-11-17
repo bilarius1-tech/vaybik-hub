@@ -13,6 +13,11 @@ import {
 } from "@/server/cms/render/document";
 import { assertSafeMediaPath } from "@/server/cms/media/url";
 import { mediaVersionDir } from "@/server/cms/media/store";
+import {
+  CHAT_WIDGET_SETTING_KEY,
+  parseChatWidget,
+  type ChatWidgetConfig,
+} from "@/server/cms/chat-widget";
 import { getSiteContentVersion } from "@/server/cms/site-version";
 import { ensureAdminDisallow } from "@/server/seo/robots-normalize";
 import { buildPublicCmsSitemapXml } from "@/server/seo/sitemap";
@@ -25,6 +30,7 @@ import {
   setCacheDir,
   type CachedPage,
 } from "./cache";
+import { SITE_CSP_REPORT_ONLY } from "./csp";
 import { sitePrisma } from "./db";
 import {
   flushRedirectHits,
@@ -59,14 +65,14 @@ let dbOk = true;
 let redirects: RedirectRule[] = [];
 let robotsText = "";
 let llmsText = "";
+let chatWidget: ChatWidgetConfig = parseChatWidget({});
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "strict-origin-when-cross-origin",
   "X-Frame-Options": "SAMEORIGIN",
   "X-Vaybik-Site": "cms",
-  "Content-Security-Policy-Report-Only":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' https://mc.yandex.ru https://mc.yandex.com https://yastatic.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://mc.yandex.ru https://mc.yandex.com; frame-src https://mc.yandex.ru; report-uri /csp-report",
+  "Content-Security-Policy-Report-Only": SITE_CSP_REPORT_ONLY,
 };
 
 function isTestHost(host: string | undefined): boolean {
@@ -119,11 +125,12 @@ function sendCached(
 
 async function refreshMeta(): Promise<void> {
   try {
-    const [ver, rules, robotsRow, llmsRow] = await Promise.all([
+    const [ver, rules, robotsRow, llmsRow, chatRow] = await Promise.all([
       getSiteContentVersion(sitePrisma),
       loadRedirects(sitePrisma),
       sitePrisma.setting.findUnique({ where: { key: "site.robots" } }),
       sitePrisma.setting.findUnique({ where: { key: "site.llms" } }),
+      sitePrisma.setting.findUnique({ where: { key: CHAT_WIDGET_SETTING_KEY } }),
     ]);
     if (ver !== contentVersion) {
       contentVersion = ver;
@@ -133,6 +140,7 @@ async function refreshMeta(): Promise<void> {
     redirects = rules;
     robotsText = ensureAdminDisallow(settingText(robotsRow?.value));
     llmsText = settingText(llmsRow?.value);
+    chatWidget = parseChatWidget(chatRow?.value);
     dbOk = true;
   } catch (err) {
     dbOk = false;
@@ -328,6 +336,7 @@ async function servePage(
       assetVersions: loaded.assetVersions,
       media: loaded.media,
       noindexHost: test,
+      chatWidget,
     });
     const entry = putCached(pathname, contentVersion, html, 200);
     sendCached(req, res, entry, extra);

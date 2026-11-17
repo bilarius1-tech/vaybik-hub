@@ -51,4 +51,39 @@ describe("renderSiteDocument head", () => {
     expect(html).not.toContain("main.js");
     expect(html).toContain("cms-preview-banner");
   });
+
+  it("chatWidget только на подходящем пути в public", () => {
+    const cfg = {
+      enabled: true,
+      src: "https://chat.vaybik.ru/widget.js",
+      publicId: "xA6FHnneH5CW",
+      paths: ["/"],
+    };
+    const home = renderSiteDocument({
+      mode: "public",
+      title: "Главная",
+      path: "/",
+      template: "home",
+      blocks: [],
+      nav: [],
+      assetsOrigin: "https://vaybik.ru",
+      siteOrigin: "https://vaybik.ru",
+      chatWidget: cfg,
+    });
+    expect(home).toContain(
+      'src="https://chat.vaybik.ru/widget.js" data-id="xA6FHnneH5CW" async',
+    );
+    const other = renderSiteDocument({
+      mode: "public",
+      title: "Услуги",
+      path: "/uslugi/",
+      template: "default",
+      blocks: [],
+      nav: [],
+      assetsOrigin: "https://vaybik.ru",
+      siteOrigin: "https://vaybik.ru",
+      chatWidget: cfg,
+    });
+    expect(other).not.toContain("chat.vaybik.ru/widget.js");
+  });
 });

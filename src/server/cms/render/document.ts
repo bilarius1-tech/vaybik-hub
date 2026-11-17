@@ -1,4 +1,9 @@
 import {
+  chatWidgetApplies,
+  renderChatWidgetScript,
+  type ChatWidgetConfig,
+} from "@/server/cms/chat-widget";
+import {
   assetsForTemplate,
   mergeAssetVersions,
   type SiteAssetVersions,
@@ -409,6 +414,8 @@ export type SiteDocumentOpts = {
   banner?: string;
   noindexHost?: boolean;
   year?: number;
+  /** ИИ-консультант; только mode=public */
+  chatWidget?: ChatWidgetConfig | null;
 };
 
 export function renderSiteDocument(opts: SiteDocumentOpts): string {
@@ -453,7 +460,7 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
   });
 
   const origin = opts.assetsOrigin.replace(/\/$/, "");
-  const scripts =
+  const siteScripts =
     opts.mode === "public"
       ? assets.js
           .map(
@@ -462,6 +469,13 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
           )
           .join("")
       : "";
+  const chatScript =
+    opts.mode === "public" &&
+    opts.chatWidget &&
+    chatWidgetApplies(opts.chatWidget, opts.path)
+      ? renderChatWidgetScript(opts.chatWidget)
+      : "";
+  const scripts = [siteScripts, chatScript].filter(Boolean).join("\n");
 
   const previewStyle =
     opts.mode === "preview"

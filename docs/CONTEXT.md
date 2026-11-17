@@ -67,6 +67,7 @@
 - **2026-11-17** — Cutover ON снова: `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`; site-test router снят; llms.txt в SEO (`site.llms`); «Открыть на сайте» → vaybik.ru. Откат: `scripts/site-cutover.sh off`.
 - **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
 - **2026-11-17** — Источник правды сайта = админка; импортов leadweb нет. `robots.txt`/`llms.txt` только из SEO; статические файлы удалены из leadweb и `vaybik-main/html`.
+- **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget` `{enabled,src,publicId,paths[]}`; экран `/admin/settings/chat-widget`; script перед `</body>`; CSP-RO +`https://chat.vaybik.ru` в script-src/frame-src. После деплоя: сначала `paths=["/"]`, потом пустые paths = весь сайт.
 
 ## 6. Договорённости
 
