@@ -7,6 +7,7 @@ import {
   FAQ_ICON,
   KEYSY_FILTERS_HTML,
   MORE_ARROW,
+  MSG_ICON,
   PHONE_ICON,
   PRICE_ICON,
   fixMissingSvgViewBox,
@@ -43,6 +44,8 @@ export type RenderOptions = {
   pageTitle?: string;
   template?: string;
   nav?: Array<{ label: string; url?: string | null; pagePath?: string | null }>;
+  /** дедуп teaser по странице (один href — один teaser) */
+  teaserSeen?: Set<string>;
 };
 
 /** leadweb: на body.svc у sec-h/card нет класса reveal */
@@ -157,10 +160,17 @@ function buttonsHtml(
       if (!icon && !isSecondary && /^tel:/i.test(b.href)) {
         icon = PHONE_ICON;
       }
+      if (!icon && isSecondary && /max\.ru/i.test(b.href)) {
+        icon = MSG_ICON;
+      }
+      const blank =
+        /^https?:\/\//i.test(b.href) && !/vaybik\.ru/i.test(b.href)
+          ? ' target="_blank" rel="noopener"'
+          : "";
       const inner = isSecondary
         ? `${icon}${esc(b.label)}`
         : `<span class="bt-sl">${icon}${esc(b.label)}</span>`;
-      return `<a class="${cls}" href="${escAttr(b.href)}">${inner}</a>`;
+      return `<a class="${cls}" href="${escAttr(b.href)}"${blank}>${inner}</a>`;
     })
     .join("")}</div>`;
 }
@@ -438,17 +448,19 @@ function renderCardItem(
     ? `<a class="more" href="${escAttr(linkObj.href)}"${moreAria}>${esc(linkObj.label)}${MORE_ARROW}</a>`
     : "";
   const reveal = wantsReveal(opts) ? " reveal" : "";
+  const scenario =
+    String(it.kicker || "").trim() === "Сценарий" ? " scenario" : "";
   const idAttr =
     typeof it.domId === "string" && it.domId.trim()
       ? ` id="${escAttr(it.domId.trim())}"`
       : "";
   if (kicker && it.highlight) {
-    return `<article class="card${reveal}${hl}"${idAttr}>${icon}<div>${kicker}<h3>${esc(titleText)}</h3>${price}${text}${chk}${link}</div></article>`;
+    return `<article class="card${reveal}${scenario}${hl}"${idAttr}>${icon}<div>${kicker}<h3>${esc(titleText)}</h3>${price}${text}${chk}${link}</div></article>`;
   }
   const head = kicker
     ? `${kicker}<h3>${esc(titleText)}</h3>`
     : `<h3>${esc(titleText)}</h3>`;
-  return `<article class="card${reveal}${hl}"${idAttr}>${num}${icon}${head}${price}${text}${chk}${link}</article>`;
+  return `<article class="card${reveal}${scenario}${hl}"${idAttr}>${num}${icon}${head}${price}${text}${chk}${link}</article>`;
 }
 
 function renderCards(
@@ -459,7 +471,7 @@ function renderCards(
   const cols = Number(data.columns) || 3;
   const items = (data.items as Array<Record<string, unknown>>) || [];
   const gridItems = items.filter((it) => String(it.cardStyle || "default") !== "teaser");
-  const teaserSeen = new Set<string>();
+  const teaserSeen = opts.teaserSeen || new Set<string>();
   const teasers = items.filter((it) => {
     if (String(it.cardStyle || "default") !== "teaser") return false;
     const href =
@@ -661,16 +673,35 @@ function renderCases(
   const gridCls = variant === "portfolio" ? "grid" : "grid g3";
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<div class="${gridCls}">${cards}</div>${secClose()}`;
 }
+const CTA_FALLBACK_NOTES: Record<string, string[]> = {
+  "/avtomatizaciya-1c/": [
+    "Объём, сроки и стоимость фиксируем до начала работ. Порядок шагов — в разделе выше.",
+  ],
+  "/bitrix/": [
+    "Объём, сроки и стоимость фиксируем до начала работ. Порядок шагов — в разделе выше.",
+  ],
+};
+
 function renderCta(
   data: Record<string, unknown>,
-  anchor?: string | null,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
 ): string {
   const rings = data.rings
     ? `<div class="sec-rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
     : "";
+  let notes = Array.isArray(data.notes)
+    ? (data.notes as string[]).map((n) => String(n).trim()).filter(Boolean)
+    : [];
+  if (!notes.length && opts.path && CTA_FALLBACK_NOTES[opts.path]) {
+    notes = CTA_FALLBACK_NOTES[opts.path]!;
+  }
+  const notesHtml = notes
+    .map((n) => `<p class="svc-note">${esc(n)}</p>`)
+    .join("");
   return `${secOpen(anchor, data.background === "alt")}<div class="cta reveal">${rings}<div class="w2"><h2>${esc(String(data.title || ""))}</h2>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
-  }${buttonsHtml(data.buttons as never)}</div></div>${secClose()}`;
+  }${notesHtml}${buttonsHtml(data.buttons as never)}</div></div>${secClose()}`;
 }
 
 function renderText(
@@ -704,9 +735,19 @@ function restoreKeysyFilters(html: string): string {
   );
 }
 
+/** sanitize срезал <button class="k-more">, остался текст */
+function restoreKeysyMoreButtons(html: string): string {
+  return html.replace(
+    /(<article class="k-case"[^>]*\bid="([^"]+)"[^>]*>[\s\S]*?<div class="k-foot">)\s*Подробнее об этапах\s*(<p class="k-want">)/g,
+    (_m, before: string, id: string, want: string) =>
+      `${before}<button class="bt-btn k-more" type="button" data-open-case="${id}" aria-haspopup="dialog" aria-controls="dlg-${id}">Подробнее об этапах</button>\n${want}`,
+  );
+}
+
 function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): string {
   let html = fixMissingSvgViewBox(sanitizeCmsHtml(String(data.html || "")));
   html = restoreKeysyFilters(html);
+  html = restoreKeysyMoreButtons(html);
   if (html.trim().startsWith("<section")) return html;
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
   return `<section class="sec"${id}>${html}</section>`;
@@ -810,16 +851,21 @@ function renderSteps(
         const ic = it.icon
           ? `<span class="ibox">${fixMissingSvgViewBox(String(it.icon))}</span>`
           : "";
-        return `<li>${ic}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`;
+        const em = (it.result || "").trim()
+          ? `<em>${esc(it.result)}</em>`
+          : "";
+        return `<li>${ic}<b>${esc(it.title)}</b><span>${esc(it.text)}</span>${em}</li>`;
       })
       .join("");
     return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ol class="${cls} reveal">${lis}</ol>${secClose()}`;
   }
   const lis = items
-    .map(
-      (it) =>
-        `<li><b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
-    )
+    .map((it) => {
+      const em = (it.result || "").trim()
+        ? `<em>${esc(it.result)}</em>`
+        : "";
+      return `<li><b>${esc(it.title)}</b><span>${esc(it.text)}</span>${em}</li>`;
+    })
     .join("");
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ol class="steps reveal">${lis}</ol>${secClose()}`;
 }
@@ -846,7 +892,7 @@ export function renderBlock(
     case "cases":
       return renderCases(data, block.anchor, opts);
     case "cta":
-      return renderCta(data, block.anchor);
+      return renderCta(data, block.anchor, opts);
     case "text":
       return renderText(data, block.anchor, opts);
     case "widget":
@@ -878,9 +924,13 @@ export function renderBlocks(
 ): string {
   // calcFull.html уже содержит section.hero.lc-hero — не дублировать блок hero
   const skipHero = pageHasCalcFull(blocks);
+  const withSeen: RenderOptions = {
+    ...opts,
+    teaserSeen: opts.teaserSeen || new Set<string>(),
+  };
   const html = blocks
     .filter((b) => !(skipHero && b.type === "hero"))
-    .map((b) => renderBlock(b, opts))
+    .map((b) => renderBlock(b, withSeen))
     .join("\n");
   return fixMissingSvgViewBox(html);
 }
