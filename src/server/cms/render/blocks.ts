@@ -26,6 +26,9 @@ function richOrMd(
 export type RenderOptions = {
   mode?: "public" | "preview";
   media?: MediaRenderContext | null;
+  path?: string;
+  pageTitle?: string;
+  nav?: Array<{ label: string; url?: string | null; pagePath?: string | null }>;
 };
 
 export type RenderBlock = {
@@ -73,13 +76,52 @@ function buttonsHtml(
     .join("")}</div>`;
 }
 
-function renderHero(data: Record<string, unknown>, anchor?: string | null): string {
+function renderCrumbs(opts: RenderOptions): string {
+  const path = opts.path || "/";
+  if (path === "/") return "";
+  const segs = path.split("/").filter(Boolean);
+  if (!segs.length) return "";
+  const nav = opts.nav || [];
+  const labelFor = (p: string, fallback: string, isLast: boolean) => {
+    const hit = nav.find(
+      (n) => (n.pagePath || n.url || "") === p || (n.pagePath || n.url || "") === p.replace(/\/$/, ""),
+    );
+    if (hit?.label) return hit.label;
+    if (isLast && opts.pageTitle) {
+      return opts.pageTitle.split("|")[0]!.trim() || fallback;
+    }
+    return fallback;
+  };
+  const parts: string[] = [
+    `<a href="/">Главная</a>`,
+  ];
+  let acc = "";
+  for (let i = 0; i < segs.length; i++) {
+    acc += `/${segs[i]}`;
+    const p = `${acc}/`;
+    const isLast = i === segs.length - 1;
+    const label = labelFor(p, segs[i]!, isLast);
+    if (isLast) {
+      parts.push(`<span aria-current="page">${esc(label)}</span>`);
+    } else {
+      parts.push(`<a href="${escAttr(p)}">${esc(label)}</a>`);
+    }
+  }
+  return `<nav class="crumbs" aria-label="Хлебные крошки">${parts.join(" / ")}</nav>`;
+}
+
+function renderHero(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const variant = String(data.variant || "home");
+  const av = data.avHero ? " av-hero" : "";
   const heroClass =
     variant === "service"
-      ? "hero svc-hero"
+      ? `hero${av} svc-hero hero-mascot`
       : variant === "sub"
-        ? "hero sub"
+        ? "hero sub hero-mascot"
         : "hero hero-mascot";
   const id = anchor ? ` id="${escAttr(anchor)}"` : "";
   const accentRaw = data.titleAccent != null ? String(data.titleAccent).trim() : "";
@@ -109,12 +151,13 @@ function renderHero(data: Record<string, unknown>, anchor?: string | null): stri
       : "";
     h1Inner = `${titleAccent}${titleVisual}`;
   } else {
+    // service/sub: visual — отдельная строка без принудительного тире
     const titleVisual = visualRaw
-      ? `<span class="visually" style="display:block;font-size:.42em;font-weight:600;margin-top:.4em">${esc(visualRaw)}</span>`
+      ? `<span class="visually" style="display:block;font-size:.5em;font-weight:600;margin-top:.35em">${esc(visualRaw)}</span>`
       : "";
-    h1Inner = [titleAccent, titleRest ? esc(titleRest) : "", titleVisual]
-      .filter(Boolean)
-      .join(titleAccent && titleRest ? " " : "");
+    const rest =
+      titleRest && titleRest !== visualRaw ? esc(titleRest) : "";
+    h1Inner = [titleAccent, rest, titleVisual].filter(Boolean).join(rest ? " " : "");
   }
   const rings = data.rings
     ? `<div class="rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
@@ -134,14 +177,16 @@ function renderHero(data: Record<string, unknown>, anchor?: string | null): stri
         })
         .join("")}</div>`
     : "";
-
-  return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${
+  const crumbs = variant === "home" ? "" : renderCrumbs(opts);
+  const copy = `${crumbs}${
     data.kicker ? `<span class="kicker">${esc(String(data.kicker))}</span>` : ""
   }<h1>${h1Inner}</h1>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
-  }${buttonsHtml(data.buttons as never)}</div><figure class="mascot"><img src="/img/vaybik-${escAttr(mascot)}.png" alt="" width="400" height="539"></figure></div>${feats}</div></section>`;
-}
+  }${buttonsHtml(data.buttons as never)}`;
 
+  // service/av: layout с маскотом; обычный sub тоже с маскотом как на статике
+  return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${copy}</div><figure class="mascot"><img src="/img/vaybik-${escAttr(mascot)}.png" alt="" width="400" height="539"></figure></div>${feats}</div></section>`;
+}
 const MORE_ARROW =
   '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></svg>';
 
@@ -163,8 +208,15 @@ function renderAnswer(data: Record<string, unknown>, anchor?: string | null): st
 }
 
 function cardTextHtml(it: Record<string, unknown>): string {
-  const textHtml = richOrMd(it.textHtml, null, "inline");
-  if (textHtml) return `<p>${textHtml}</p>`;
+  if (typeof it.textHtml === "string" && it.textHtml.trim()) {
+    const raw = it.textHtml.trim();
+    // уже с <p> (несколько абзацев, deliver) — basic; иначе inline в одном <p>
+    if (/<p[\s>]/i.test(raw)) {
+      return richOrMd(raw, null, "basic");
+    }
+    const inline = richOrMd(raw, null, "inline");
+    return inline ? `<p>${inline}</p>` : "";
+  }
   if (it.text) return `<p>${esc(String(it.text))}</p>`;
   return "";
 }
@@ -515,7 +567,7 @@ export function renderBlock(
   const data = (block.data || {}) as Record<string, unknown>;
   switch (block.type) {
     case "hero":
-      return renderHero(data, block.anchor);
+      return renderHero(data, block.anchor, opts);
     case "answer":
       return renderAnswer(data, block.anchor);
     case "cards":

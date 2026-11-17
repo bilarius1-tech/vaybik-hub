@@ -43,9 +43,11 @@ export const buttonSchema = z.object({
 
 export const heroClientSchema = z.object({
   variant: z.enum(["home", "sub", "service"]).default("home"),
+  avHero: z.boolean().optional().default(false),
   kicker: optionalString,
   title: z.string().min(1, "Нужен заголовок"),
   titleAccent: optionalString,
+  titleVisual: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
   mascot: z.string().default("privet"),

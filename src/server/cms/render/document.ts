@@ -279,6 +279,9 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
   const body = renderBlocks(opts.blocks, {
     mode: opts.mode,
     media: opts.media,
+    path: opts.path,
+    pageTitle: opts.title,
+    nav: opts.nav,
   });
   const headerNav = renderHeaderNav(opts.nav, opts.path);
   const contacts = opts.contacts || {};

@@ -49,9 +49,11 @@ const iconField = z
 
 export const heroBlockSchema = z.object({
   variant: z.enum(["home", "sub", "service"]).default("home"),
+  avHero: z.boolean().optional().default(false),
   kicker: optionalString,
   title: z.string().min(1),
   titleAccent: optionalString,
+  titleVisual: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
   mascot: z.string().default("privet"),
@@ -106,7 +108,7 @@ export const cardsBlockSchema = z.object({
         kicker: optionalString,
         title: z.string().min(1),
         text: optionalString,
-        textHtml: richHtml("inline"),
+        textHtml: richHtml("basic"),
         price: optionalString,
         checklist: z.array(z.string()).optional(),
         link: z

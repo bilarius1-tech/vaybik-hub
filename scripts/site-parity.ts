@@ -78,8 +78,19 @@ async function comparePage(path: string): Promise<Row> {
       notes: notes.length ? notes : [`http ${ua.status}/${ub.status}`],
     };
   }
+  // оба редиректят (например /uslugi → /uslugi/) — контент не сравниваем
+  if (
+    (ua.status === 301 || ua.status === 302) &&
+    (ub.status === 301 || ub.status === 302)
+  ) {
+    notes.push("оба 3xx — контент пропущен");
+    if (status === "OK") status = "WARN";
+    return { url: path, status, notes };
+  }
+  const followedIndexHtml = path.endsWith("/index.html") && status === "WARN";
   const $a = cheerio.load(ua.text);
-  const $b = cheerio.load(ub.text);  const checks: Array<[string, string, string]> = [
+  const $b = cheerio.load(ub.text);
+  const checks: Array<[string, string, string]> = [
     ["title", $a("title").text().trim(), $b("title").text().trim()],
     [
       "description",
@@ -97,7 +108,8 @@ async function comparePage(path: string): Promise<Row> {
   const sim = similarity($a("main").text(), $b("main").text());
   if (sim < 0.97) {
     notes.push(`main text similarity ${sim.toFixed(3)} < 0.97`);
-    status = "FAIL";
+    // /path/index.html → канон уже сравнивается отдельно как /path/
+    status = followedIndexHtml ? "WARN" : "FAIL";
   } else if (sim < 0.995) {
     notes.push(`main text similarity ${sim.toFixed(3)}`);
     if (status === "OK") status = "WARN";
@@ -106,8 +118,7 @@ async function comparePage(path: string): Promise<Row> {
   if (marker !== "cms") {
     notes.push(`X-Vaybik-Site=${marker || "missing"}`);
     status = "FAIL";
-  }
-  return { url: path, status, notes };
+  }  return { url: path, status, notes };
 }
 
 async function main() {

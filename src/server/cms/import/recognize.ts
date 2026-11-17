@@ -39,17 +39,35 @@ function recognizeHero(
 ): RecognizedBlock | null {
   if (!hasClass(section, "hero")) return null;
   const $s = $(section);
-  const variant = hasClass(section, "svc-hero")
-    ? "service"
-    : hasClass(section, "sub")
-      ? "sub"
-      : "home";
+  const variant =
+    hasClass(section, "svc-hero") || hasClass(section, "av-hero")
+      ? "service"
+      : hasClass(section, "sub")
+        ? "sub"
+        : "home";
   const h1 = $s.find("h1").first();
   const accent = text(h1.find(".grad").first());
+  // подзаголовок блоком (class=visually или display:block)
+  const $visual = h1
+    .find("span")
+    .filter((_, el) => {
+      const $el = $(el);
+      if ($el.hasClass("grad")) return false;
+      if ($el.hasClass("visually")) return true;
+      const style = ($el.attr("style") || "").replace(/\s+/g, "");
+      return /display:block/i.test(style);
+    })
+    .first();
+  const titleVisual = $visual.length ? text($visual) : null;
   const titleFull = text(h1);
-  const title = accent
+  let title = accent
     ? titleFull.replace(accent, "").replace(/^[\s—–-]+/, "").trim() || titleFull
     : titleFull;
+  if (titleVisual) {
+    // не дублировать visual в title
+    title = title.replace(titleVisual, "").replace(/^[\s—–-]+/, "").trim();
+  }
+  if (!title && accent) title = accent;
   const buttons: Array<{ label: string; href: string; style: "primary" | "secondary" }> =
     [];
   $s.find(".acts a").each((_, a) => {
@@ -65,12 +83,12 @@ function recognizeHero(
   $s.find(".feat").each((_, f) => {
     const $f = $(f);
     const icon = $f.find("svg").first().toString() || undefined;
-    const title = text($f.find("b").first());
+    const featTitle = text($f.find("b").first());
     const desc = text($f.find("span").first());
-    if (title && desc) {
-      feats.push({ icon, title, text: desc });
+    if (featTitle && desc) {
+      feats.push({ icon, title: featTitle, text: desc });
     } else {
-      feats.push({ icon, text: title || desc || text($f) });
+      feats.push({ icon, text: featTitle || desc || text($f) });
     }
   });
   let rings: unknown = null;
@@ -84,9 +102,11 @@ function recognizeHero(
   }
   const data = parseBlockData("hero", {
     variant,
+    avHero: hasClass(section, "av-hero"),
     kicker: text($s.find(".kicker").first()) || null,
     title: title || "Без названия",
     titleAccent: accent || null,
+    titleVisual,
     lead: text($s.find(".lead").first()) || null,
     buttons,
     mascot: "privet",
@@ -272,8 +292,8 @@ function recognizeCases(
   section: Element,
 ): RecognizedBlock | null {
   const $cases = $(section).find(".card.case");
-  if ($cases.length < 2) return null;
-  // не путать с обычными карточками услуг
+  if (!$cases.length) return null;
+  // не путать с обычными карточками услуг: нужен dl/картинка кейса
   if (!$cases.find("dl, picture, img[src*='case-']").length) return null;
   const items: Array<Record<string, unknown>> = [];
   $cases.each((_, c) => {
@@ -327,8 +347,10 @@ function recognizeCards(
 ): RecognizedBlock | null {
   const $grid = $(section).find(".grid").first();
   if (!$grid.length || !$grid.find(".card").length) return null;
-  // кейсы портфолио — отдельный тип
-  if ($grid.find(".card.case").length >= 2) return null;
+  // кейсы — отдельный тип (даже один)
+  if ($grid.find(".card.case").length >= 1 && $grid.find(".card.case dl, .card.case picture").length) {
+    return null;
+  }
   const cls = $grid.attr("class") || "";
   const columns = cls.includes("g4") ? 4 : cls.includes("g2") ? 2 : 3;
   const items: Array<Record<string, unknown>> = [];
@@ -354,12 +376,24 @@ function recognizeCards(
       : cardCls.includes("vaybik-teaser")
         ? "teaser"
         : "default";
+    const $ps = $c.find("p");
+    const firstText = text($ps.first()) || null;
+    let textHtml: string | null = null;
+    if ($ps.length > 1 || $c.find("p.deliver").length) {
+      const parts: string[] = [];
+      $ps.each((_, p) => {
+        const html = $(p).html() || "";
+        if (html.trim()) parts.push(`<p>${html}</p>`);
+      });
+      textHtml = parts.length ? sanitizeCmsHtml(parts.join("")) : null;
+    }
     items.push({
       num: text($c.find(".num").first()) || null,
       icon: $c.find(".ibox").html() || null,
       kicker: text($c.find(".kicker").first()) || null,
       title: text($c.find("h3").first()),
-      text: text($c.find("p").first()) || null,
+      text: firstText,
+      textHtml,
       price: text($c.find(".price").first()) || null,
       checklist: checklist.length ? checklist : undefined,
       link:
@@ -369,8 +403,7 @@ function recognizeCards(
       highlight: cardCls.includes("hl-card"),
       cardStyle,
       image: $c.find("img").first().attr("src") || null,
-    });
-  });
+    });  });
   // teaser часто после grid
   $(section)
     .find("> .w > a.card.vaybik-teaser, > a.card.vaybik-teaser")
