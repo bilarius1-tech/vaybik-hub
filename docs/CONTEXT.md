@@ -1,7 +1,7 @@
 # CONTEXT — память проекта Вайбик
 
 > Читать в начале **каждого** чата и при «открой день». Обновлять при «закрой день» и сразу после любого важного решения.
-> Здесь только факты и решения, без секретов. Последнее обновление: 2026-11-17 (cutover ON; источник правды сайта — админка).
+> Здесь только факты и решения, без секретов. Последнее обновление: 2026-11-17 вечер (виджет на всём сайте; deploy unset SITE_*).
 
 ## 1. Что такое Вайбик
 
@@ -34,8 +34,9 @@
 
 ## 4. Текущее состояние (на 2026-11-17)
 
-- Фазы 0–3 + CMS-3a на проде. Прод: **`e613dd7`** (+ docs). Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`, `X-Vaybik-Site: cms`); роутер `site-test.vaybik.ru` снят. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- **Источник правды для сайта — админка** (`/admin/site`, `/admin/seo`). Импортов из leadweb больше нет. `robots.txt` / `llms.txt` — только Setting `site.robots` / `site.llms` (статика удалена из leadweb и nginx). leadweb/`vaybik-main` — css/js/fonts/img/kp.
+- Фазы 0–3 + CMS-3a на проде. Образ **`110d409`** (+ docs/`1a3dbfb`). Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`); роутер site-test снят. `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- **Источник правды — админка.** `robots`/`llms` — SEO; виджет чата — `site.chatWidget` (включён на **всём сайте**, publicId `xA6FHnneH5CW`, paths `[]`). leadweb/`vaybik-main` — css/js/fonts/img/kp.
+- Деплой/cutover: всегда unset `POSTGRES_*` и `SITE_PROD_PRIORITY`/`SITE_PUBLIC_ORIGIN` из shell (`deploy-prod.sh`, `site-cutover.sh`).
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
 - Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
@@ -68,7 +69,7 @@
 - **2026-11-17** — Cutover ON снова: `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`; site-test router снят; llms.txt в SEO (`site.llms`); «Открыть на сайте» → vaybik.ru. Откат: `scripts/site-cutover.sh off`.
 - **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
 - **2026-11-17** — Источник правды сайта = админка; импортов leadweb нет. `robots.txt`/`llms.txt` только из SEO; статические файлы удалены из leadweb и `vaybik-main/html`.
-- **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget` `{enabled,src,publicId,paths[]}`; экран `/admin/settings/chat-widget`; script перед `</body>`; CSP-RO +`https://chat.vaybik.ru` в script-src/frame-src. На проде включён: publicId `xA6FHnneH5CW`, paths `["/"]` (только главная); пустые paths = весь сайт.
+- **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget`; экран `/admin/settings/chat-widget`; CSP-RO +`chat.vaybik.ru`. На проде: enabled, publicId `xA6FHnneH5CW`, **paths `[]` = весь сайт** (сначала был только `/`).
 
 ## 6. Договорённости
 

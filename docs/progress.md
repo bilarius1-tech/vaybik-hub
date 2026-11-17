@@ -171,6 +171,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Деплой A: тестовый хост (позже снят); роль БД `vaybik_site`
 - [x] Cutover ON (вечер 17.11): `SITE_PROD_PRIORITY=50`, origin `https://vaybik.ru`
 - [x] robots.txt / llms.txt только из `/admin/seo`; статика удалена из leadweb и nginx
+- [x] Виджет ИИ-консультанта (`site.chatWidget`); CSP-RO + chat.vaybik.ru; на всём сайте
+- [x] `deploy-prod.sh` / `site-cutover.sh`: unset `SITE_*` (не сбрасывать cutover)
 
 ## CMS-3a — калькуляторы + DOM-parity (продолжение CMS-3)
 
