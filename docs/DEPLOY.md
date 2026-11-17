@@ -158,49 +158,84 @@ scripts/deploy-prod.sh             # выкатка + health + команда о
 
 ## 8. Бэкапы
 
-Worker ежедневно в **03:00 Europe/Moscow** пишет в volume `backups`:
+### Где лежат файлы
 
-- `db-<stamp>.sql.gz.enc` — `pg_dump` + gzip + AES-256-GCM (`BACKUP_ENCRYPTION_KEY`)
-- `uploads-<stamp>.tar.gz.enc` — архив uploads
+На VPS канонический каталог хоста: **`/var/backups/vaybik`** (`chmod 700`, владелец uid **1001** / пользователь `nextjs` в образе).  
+В compose app и worker монтируют его как bind-mount → `/app/backups` (переменная `BACKUPS_HOST_DIR`, по умолчанию `/var/backups/vaybik`). Named volume `backups` больше не используется.
 
-Хранение **14 дней** (старые `.enc` удаляются).
+Каталог создаётся автоматически скриптом `scripts/deploy-prod.sh` при «задеплой» (`mkdir` + `chown 1001:1001` + `chmod 700`). Не кладите бэкапы в git и не в `/opt/apps`.
+
+Структура файлов:
+
+- `/var/backups/vaybik/admin/db-<stamp>.dump.enc` — `pg_dump -Fc` + AES-256-GCM (`BACKUP_ENCRYPTION_KEY`)
+- `/var/backups/vaybik/admin/uploads-<stamp>.tar.gz.enc` — архив uploads
+- `/var/backups/vaybik/<slug>/<stamp>.dump.enc` (+ `.sha256`) — дампы зарегистрированных подключений
+
+Старый формат `db-*.sql.gz.enc` (plain + gzip) ещё понимает `scripts/restore-backup.ts`, новые дампы — только `-Fc`.
+
+Worker ежедневно в **03:00 Europe/Moscow** бэкапит админку (+ uploads). Дополнительные Postgres — по `DbConnection.backupSchedule` (cron, Europe/Moscow). Ретенция: 14 дней у админки; у подключений — поле `retention`. Перед дампом проверяется свободное место (≥ 2× размер БД + запас).
+
+Клиент `pg_dump`/`pg_restore` в образе — **PostgreSQL 16** (как сервер). URI с `?schema=public` в argv не передаётся (только `PG*` env).
 
 ### Ручной бэкап
 
 ```bash
 docker compose exec worker npx tsx scripts/backup-now.ts
+# или из UI: /admin/databases → карточка → «Сделать бэкап»
 ```
 
 ### Список файлов
 
 ```bash
-docker compose exec worker ls -la /app/backups
+# на хосте:
+sudo ls -la /var/backups/vaybik/admin
+# или в контейнере:
+docker compose exec worker ls -la /app/backups/admin
 ```
 
-### Скачать бэкап на хост
+### Скачать бэкап
+
+Через админку (ADMIN+, после reauth) — только файл `.enc`.  
+Либо с хоста: скопировать из `/var/backups/vaybik/...` (нужны права).
+
+### Проверка целостности дампа
 
 ```bash
-docker compose cp worker:/app/backups ./backups-host
+docker compose exec worker npx tsx -e "
+  const { verifyCustomDumpEnc } = require('./src/server/backup/connection-dump.ts');
+" 
+# проще: кнопка/API POST /admin/api/backups/:id/verify
+# или вручную: расшифровать → pg_restore -l dump
 ```
 
-### Восстановление БД (осторожно — перезапишет данные)
+### Тестовый restore (не в прод!)
 
-1. Остановить app и worker: `docker compose stop app worker`
-2. Убедиться, что `BACKUP_ENCRYPTION_KEY` в `.env` совпадает с ключом бэкапа
-3. Восстановить:
+В UI кнопка «Тест restore» (только OWNER + reauth + точное имя БД) поднимает одноразовый контейнер `postgres:16-alpine` в сети `hub`, заливает дамп, проверяет таблицы и удаляет контейнер. **Восстановить в прод-БД админки из UI нельзя.**
+
+Скрипт на хосте (dev или после явного «да» на проде):
 
 ```bash
-# скопировать .enc в контейнер postgres-доступный путь или выполнить из app:
+BACKUP_ENCRYPTION_KEY=... npx tsx scripts/backup-restore-test.ts /var/backups/vaybik/admin/db-XXXX.dump.enc
+```
+
+### Восстановление в рабочую БД (осторожно — перезапишет данные)
+
+Только вручную, по отдельному заданию владельца. Не делайте `docker compose down -v`.
+
+1. Свежий бэкап источника.
+2. Остановить app и worker: `docker compose stop app worker`
+3. Убедиться, что `BACKUP_ENCRYPTION_KEY` совпадает с ключом файла
+4. Восстановить:
+
+```bash
 docker compose start postgres
-docker compose run --rm -e RUN_MIGRATIONS=0 app \
-  npx tsx scripts/restore-backup.ts /app/backups/db-XXXX.sql.gz.enc
+docker compose run --rm -e RUN_MIGRATIONS=0 worker \
+  npx tsx scripts/restore-backup.ts /app/backups/admin/db-XXXX.dump.enc
 ```
 
-Либо расшифровать на хосте с тем же скриптом, указав `DATABASE_URL` на порт postgres (если пробросите локально только для restore — **не** публикуйте 5432 в постоянном compose).
+5. Запустить снова: `docker compose up -d`
 
-4. Запустить снова: `docker compose up -d`
-
-Восстановление uploads: расшифровать `uploads-*.tar.gz.enc` (скрипт `decryptAndGunzip` / отдельный шаг) и распаковать tar в volume `uploads`.
+Восстановление uploads: расшифровать `uploads-*.tar.gz.enc` и распаковать tar в volume `uploads`.
 
 ## 9. Откат образа
 

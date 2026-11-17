@@ -103,11 +103,24 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] **Region не подключать** (Битрикс, другой агент) — только с согласия Алексея
 - [x] `vaybik-main` в прод-реестре (STATIC, container `vaybik-main`, health https://vaybik.ru); compose не меняли
 
+## Фаза 3 — БД и бэкапы
+- [x] Фикс admin-backup: URL без `schema`, `pg_dump -Fc`, клиент Postgres 16, без секретов в логах
+- [x] Хранение `/var/backups/vaybik` (bind-mount), mkdir/chown в deploy-prod.sh
+- [x] Модели `DbConnection`, `DbSizeSnapshot`, `Backup` + миграция
+- [x] Реестр подключений (авто «Админка Вайбик»), размеры, график роста
+- [x] Read-only браузер таблиц (timeout 5 с, лимит 500)
+- [x] SELECT-консоль OWNER + запрет мутаций (тесты)
+- [x] Расписание / ручной бэкап / sha256 / verify / скачивание .enc + reauth
+- [x] Тестовый restore (API + `scripts/backup-restore-test.ts`); в прод из UI нельзя
+- [x] DEPLOY.md §8, RBAC-тесты, политика region/prod
+- [ ] Яндекс.Метрика на дашборд — перенос (не хватило приоритета; бэкапы важнее)
+- [ ] Деплой фазы 3 — ждать команду «задеплой»
+
 ## Фазы
 - [x] Фаза 0 — каркас
 - [x] Фаза 1 — MVP (auth, сервисы, vault, SEO, настройки, деплой-пакет)
 - [x] Фаза 2 — Docker
-- [ ] Фаза 3 — БД и бэкапы (расширенные; ежедневный бэкап админки уже в фазе 1)
+- [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
 - [ ] Фаза 5 — публичный хаб (опц.)
 
