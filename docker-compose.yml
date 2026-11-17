@@ -121,13 +121,6 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks: [hub]
 
-networks:
-  hub:
-    driver: bridge
-  proxy:
-    external: true
-    name: ${TRAEFIK_NETWORK:-proxy}
-
   # Публичный рендер CMS (site-test / cutover). Тот же образ, без миграций.
   site:
     image: vaybik-hub:latest
@@ -183,6 +176,13 @@ networks:
       - traefik.http.routers.vaybik-site.priority=${SITE_PROD_PRIORITY:-1}
       - traefik.http.routers.vaybik-site.service=vaybik-site
       - traefik.http.services.vaybik-site.loadbalancer.server.port=3100
+
+networks:
+  hub:
+    driver: bridge
+  proxy:
+    external: true
+    name: ${TRAEFIK_NETWORK:-proxy}
 
 volumes:
   pgdata:
