@@ -240,6 +240,7 @@ model Page {
   blocks              Block[]
   revisions           PageRevision[]
   navItems            NavItem[]
+  mediaUsages         MediaUsage[]
 }
 
 model Block {
@@ -254,6 +255,7 @@ model Block {
   anchor    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  mediaUsages MediaUsage[]
 
   @@index([pageId, sortOrder])
 }
@@ -305,8 +307,77 @@ model PageRevision {
   note        String?
   createdById String?
   createdAt   DateTime @default(now())
+  mediaUsages MediaUsage[]
 
   @@index([pageId, createdAt])
+}
+
+enum MediaKind {
+  IMAGE
+  SVG
+  GIF
+}
+
+model MediaFolder {
+  id        String       @id @default(cuid())
+  name      String
+  parentId  String?
+  parent    MediaFolder? @relation("MediaFolderTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  MediaFolder[] @relation("MediaFolderTree")
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  assets    MediaAsset[]
+
+  @@index([parentId])
+}
+
+model MediaAsset {
+  id           String        @id @default(cuid())
+  kind         MediaKind
+  folderId     String?
+  folder       MediaFolder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  tags         String[]
+  originalName String
+  title        String?
+  alt          String?
+  caption      String?
+  mime         String
+  ext          String
+  size         Int
+  width        Int?
+  height       Int?
+  sha256       String        @unique
+  version      Int           @default(1)
+  /// [{ name, w, h, file, size, mime }]
+  variants     Json
+  uploadedById String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  deletedAt    DateTime?
+  usages       MediaUsage[]
+
+  @@index([folderId])
+  @@index([kind])
+  @@index([deletedAt])
+}
+
+model MediaUsage {
+  id         String        @id @default(cuid())
+  mediaId    String
+  media      MediaAsset    @relation(fields: [mediaId], references: [id], onDelete: Restrict)
+  pageId     String
+  page       Page          @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  blockId    String?
+  block      Block?        @relation(fields: [blockId], references: [id], onDelete: Cascade)
+  revisionId String?
+  revision   PageRevision? @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  /// Путь поля: "people.1.photo" или "html"
+  field      String
+
+  @@index([mediaId])
+  @@index([blockId])
+  @@index([pageId])
+  @@index([revisionId])
 }
 
 model Secret {
