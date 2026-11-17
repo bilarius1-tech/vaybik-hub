@@ -53,13 +53,9 @@ function templateFor(path: string): string {
   if (path === "/") return "home";
   if (path.startsWith("/kalkulyator")) return "calculator";
   if (path.startsWith("/keysy-ii")) return "keysy";
-  // /avtomatizaciya/ — default (av-hero), не svc; /avtomatizaciya-1c/ — service
-  if (
-    path.startsWith("/uslugi/") ||
-    path.startsWith("/avtomatizaciya-") ||
-    path.startsWith("/bitrix") ||
-    path.startsWith("/sayt-za-0")
-  ) {
+  // body.svc + service-pages.css только у 1С / Битрикс (leadweb);
+  // /uslugi/*, /avtomatizaciya/, /sayt-za-0/ — default
+  if (path.startsWith("/avtomatizaciya-") || path.startsWith("/bitrix")) {
     return "service";
   }
   return "default";
