@@ -31,7 +31,12 @@ type ReportPage = {
 function arg(name: string, fallback?: string): string | undefined {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   if (hit) return hit.slice(name.length + 3);
-  if (process.argv.includes(`--${name}`)) return "true";
+  const idx = process.argv.indexOf(`--${name}`);
+  if (idx >= 0) {
+    const next = process.argv[idx + 1];
+    if (next && !next.startsWith("--")) return next;
+    return "true";
+  }
   return fallback;
 }
 
