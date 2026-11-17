@@ -44,7 +44,7 @@ export type RenderOptions = {
 };
 
 /** leadweb: на body.svc у sec-h/card нет класса reveal */
-function useReveal(opts: RenderOptions): boolean {
+function wantsReveal(opts: RenderOptions): boolean {
   const t = opts.template || "";
   return t !== "service" && t !== "keysy";
 }
@@ -60,7 +60,7 @@ type Header = { kicker?: string | null; title?: string | null; subtitle?: string
 
 function secHeader(h?: Header | null, opts: RenderOptions = {}): string {
   if (!h) return "";
-  const cls = useReveal(opts) ? "sec-h reveal" : "sec-h";
+  const cls = wantsReveal(opts) ? "sec-h reveal" : "sec-h";
   const parts: string[] = [`<div class="${cls}">`];
   if (h.kicker) parts.push(`<span class="kicker">${esc(h.kicker)}</span>`);
   if (h.title) parts.push(`<h2>${esc(h.title)}</h2>`);
@@ -402,7 +402,7 @@ function renderCardItem(
   const link = linkObj
     ? `<a class="more" href="${escAttr(linkObj.href)}"${moreAria}>${esc(linkObj.label)}${MORE_ARROW}</a>`
     : "";
-  const reveal = useReveal(opts) ? " reveal" : "";
+  const reveal = wantsReveal(opts) ? " reveal" : "";
   const idAttr =
     typeof it.domId === "string" && it.domId.trim()
       ? ` id="${escAttr(it.domId.trim())}"`
@@ -593,7 +593,7 @@ function renderCases(
               external ? ' target="_blank" rel="noopener"' : ""
             }>${esc(moreLabel)}${external ? EXT_MORE_ICON : ""}</a>`
           : "";
-      const caseReveal = useReveal(opts) ? " reveal" : "";
+      const caseReveal = wantsReveal(opts) ? " reveal" : "";
 
       if (variant === "portfolio" || img || hasDl) {
         const inner = `${img}<div>${kicker}<h3>${title}</h3>${body}${more}</div>`;
@@ -613,8 +613,7 @@ function renderCases(
 }
 function renderCta(
   data: Record<string, unknown>,
-  anchor: string | null | undefined,
-  opts: RenderOptions = {},
+  anchor?: string | null,
 ): string {
   const rings = data.rings
     ? `<div class="sec-rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
@@ -786,7 +785,7 @@ export function renderBlock(
     case "cases":
       return renderCases(data, block.anchor, opts);
     case "cta":
-      return renderCta(data, block.anchor, opts);
+      return renderCta(data, block.anchor);
     case "text":
       return renderText(data, block.anchor, opts);
     case "widget":
