@@ -97,10 +97,12 @@ ROLLBACK="cd $PROD_DIR && docker tag $IMAGE:prev-$CUR $IMAGE:latest && env -u DO
 BACKUPS_HOST="${BACKUPS_HOST_DIR:-/var/backups/vaybik}"
 # Подхватить из прод-.env, если задано (без печати значения других ключей)
 if [ -f "$PROD_DIR/.env" ]; then
-  _bh="$(grep -E '^BACKUPS_HOST_DIR=' "$PROD_DIR/.env" | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'")"
+  # grep=1 если ключа нет — не валим скрипт (set -e / pipefail)
+  _bh="$(grep -E '^BACKUPS_HOST_DIR=' "$PROD_DIR/.env" 2>/dev/null | head -1 | cut -d= -f2- | tr -d '"' | tr -d "'" || true)"
   [ -n "${_bh:-}" ] && BACKUPS_HOST="$_bh"
   unset _bh
 fi
+# Опционально добавить в прод-.env пустой ключ не требуется — дефолт /var/backups/vaybik
 say "Каталог бэкапов: $BACKUPS_HOST"
 if [ ! -d "$BACKUPS_HOST" ]; then
   sudo mkdir -p "$BACKUPS_HOST"
