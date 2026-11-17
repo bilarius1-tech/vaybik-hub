@@ -15,6 +15,10 @@ export const MORE_ARROW =
 export const FAQ_CHEV =
   '<svg class="ic chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>';
 
+/** Внешняя ссылка «Открыть …» в кейсах leadweb */
+export const EXT_MORE_ICON =
+  '<svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10" /><path d="M7 17 17 7" /></svg>';
+
 /** Подпись/размеры/srcset маскотов leadweb. */
 export const MASCOT_META: Record<
   string,

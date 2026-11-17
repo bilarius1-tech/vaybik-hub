@@ -419,6 +419,7 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
     media: opts.media,
     path: opts.path,
     pageTitle: opts.title,
+    template: opts.template,
     nav: opts.nav,
   });
   const headerNav = renderHeaderNav(opts.nav, opts.path);

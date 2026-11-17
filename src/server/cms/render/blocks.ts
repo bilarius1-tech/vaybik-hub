@@ -2,10 +2,11 @@ import { sanitizeCmsHtml, sanitizeRichText } from "../sanitize";
 import { esc, escAttr, escJsonAttr, simpleMarkdown } from "./escape";
 import {
   CHECK_ICON,
+  EXT_MORE_ICON,
+  FAQ_CHEV,
   FAQ_ICON,
   MORE_ARROW,
   PRICE_ICON,
-  FAQ_CHEV,
   fixMissingSvgViewBox,
   MASCOT_META,
   renderMascotPicture,
@@ -38,8 +39,15 @@ export type RenderOptions = {
   media?: MediaRenderContext | null;
   path?: string;
   pageTitle?: string;
+  template?: string;
   nav?: Array<{ label: string; url?: string | null; pagePath?: string | null }>;
 };
+
+/** leadweb: на body.svc у sec-h/card нет класса reveal */
+function useReveal(opts: RenderOptions): boolean {
+  const t = opts.template || "";
+  return t !== "service" && t !== "keysy";
+}
 
 export type RenderBlock = {
   type: string;
@@ -50,9 +58,10 @@ export type RenderBlock = {
 
 type Header = { kicker?: string | null; title?: string | null; subtitle?: string | null };
 
-function secHeader(h?: Header | null): string {
+function secHeader(h?: Header | null, opts: RenderOptions = {}): string {
   if (!h) return "";
-  const parts: string[] = ['<div class="sec-h reveal">'];
+  const cls = useReveal(opts) ? "sec-h reveal" : "sec-h";
+  const parts: string[] = [`<div class="${cls}">`];
   if (h.kicker) parts.push(`<span class="kicker">${esc(h.kicker)}</span>`);
   if (h.title) parts.push(`<h2>${esc(h.title)}</h2>`);
   if (h.subtitle) parts.push(`<p class="muted">${esc(h.subtitle)}</p>`);
@@ -122,6 +131,10 @@ function buttonsHtml(
       const extras = String(b.className || "")
         .split(/\s+/)
         .filter((c) => c && c !== base && c !== "bt-btn" && c !== "bt-btn2");
+      // leadweb: tel: → bt-call (даже без className в данных)
+      if (!isSecondary && /^tel:/i.test(b.href) && !extras.includes("bt-call")) {
+        extras.push("bt-call");
+      }
       // leadweb: «bt-btn bt-call » с хвостовым пробелом
       const cls = extras.length ? `${base} ${extras.join(" ")} ` : base;
       const icon = b.icon ? fixMissingSvgViewBox(String(b.icon)) : "";
@@ -287,7 +300,11 @@ function renderHero(
   return `<section class="${heroClass}"${idAttr}${labelled}>${blinds}${rings}<div class="w svc-hero-layout"><div class="svc-hero-copy">${copy}</div>${mascotHtml}</div>${feats}</section>`;
 }
 
-function renderAnswer(data: Record<string, unknown>, anchor?: string | null): string {
+function renderAnswer(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const factsList = Array.isArray(data.facts)
     ? (data.facts as Array<{ value: string; label: string }>).filter(
         (f) => (f.value || "").trim() || (f.label || "").trim(),
@@ -310,7 +327,7 @@ function renderAnswer(data: Record<string, unknown>, anchor?: string | null): st
       body = `<div class="answer reveal">${body}</div>`;
     }
   }
-  return `${secOpen(anchor)}${secHeader(data.header as Header)}${body}${facts}${secClose()}`;
+  return `${secOpen(anchor)}${secHeader(data.header as Header, opts)}${body}${facts}${secClose()}`;
 }
 
 function cardTextHtml(it: Record<string, unknown>): string {
@@ -355,24 +372,20 @@ function renderCardItem(
       : null;
 
   if (style === "teaser" && linkObj) {
+    const alt = String(it.title || "");
+    const media = resolveMediaSrc(it.image, opts.media ?? null, alt);
     let img = "";
-    if (opts.media) {
+    if (media.src.startsWith("/img/")) {
+      img = renderStaticImgPicture(media.src, media.alt || alt, {
+        sizes: "132px",
+      });
+    } else if (opts.media) {
       img = renderMediaPicture(it.image, opts.media, {
-        fallbackAlt: String(it.title || ""),
+        fallbackAlt: alt,
         lazy: true,
       });
-    }
-    if (!img) {
-      const media = resolveMediaSrc(
-        it.image,
-        opts.media ?? null,
-        String(it.title || ""),
-      );
-      img = media.src
-        ? renderStaticImgPicture(media.src, media.alt || String(it.title || ""), {
-            sizes: "132px",
-          })
-        : "";
+    } else if (media.src) {
+      img = `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}" loading="lazy">`;
     }
     return `<a class="card vaybik-teaser reveal" href="${escAttr(linkObj.href)}">${img}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${text}<span class="more">${esc(linkObj.label)}${MORE_ARROW}</span></div></a>`;
   }
@@ -389,13 +402,18 @@ function renderCardItem(
   const link = linkObj
     ? `<a class="more" href="${escAttr(linkObj.href)}"${moreAria}>${esc(linkObj.label)}${MORE_ARROW}</a>`
     : "";
+  const reveal = useReveal(opts) ? " reveal" : "";
+  const idAttr =
+    typeof it.domId === "string" && it.domId.trim()
+      ? ` id="${escAttr(it.domId.trim())}"`
+      : "";
   if (kicker && it.highlight) {
-    return `<article class="card reveal${hl}">${icon}<div>${kicker}<h3>${esc(titleText)}</h3>${price}${text}${chk}${link}</div></article>`;
+    return `<article class="card${reveal}${hl}"${idAttr}>${icon}<div>${kicker}<h3>${esc(titleText)}</h3>${price}${text}${chk}${link}</div></article>`;
   }
   const head = kicker
     ? `${kicker}<h3>${esc(titleText)}</h3>`
     : `<h3>${esc(titleText)}</h3>`;
-  return `<article class="card reveal${hl}">${num}${icon}${head}${price}${text}${chk}${link}</article>`;
+  return `<article class="card${reveal}${hl}"${idAttr}>${num}${icon}${head}${price}${text}${chk}${link}</article>`;
 }
 
 function renderCards(
@@ -424,9 +442,13 @@ function renderCards(
       'class="lead reveal" style="margin-top:28px"',
     );
   }
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${before}<div class="grid g${cols}">${cards}</div>${teaserHtml}${after}${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}${before}<div class="grid g${cols}">${cards}</div>${teaserHtml}${after}${secClose()}`;
 }
-function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
+function renderFaq(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const items =
     (data.items as Array<{
       question: string;
@@ -442,7 +464,7 @@ function renderFaq(data: Record<string, unknown>, anchor?: string | null): strin
       return `<details><summary>${icon}<span>${esc(it.question)}</span>${FAQ_CHEV}</summary><div>${richOrMd(it.answerHtml, it.answer, "basic")}</div></details>`;
     })
     .join("");
-  return `${secOpen(anchor || "faq", data.background === "alt")}${secHeader(data.header as Header)}<div class="faq reveal">${details}</div>${secClose()}`;
+  return `${secOpen(anchor || "faq", data.background === "alt")}${secHeader(data.header as Header, opts)}<div class="faq reveal">${details}</div>${secClose()}`;
 }
 
 function renderTeam(
@@ -495,7 +517,7 @@ function renderTeam(
       return `<article class="person reveal">${img}<div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p>${links}</div></article>`;
     })
     .join("");
-  return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header)}<div class="team">${html}</div>${secClose()}`;
+  return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header, opts)}<div class="team">${html}</div>${secClose()}`;
 }
 
 function renderCases(
@@ -518,24 +540,27 @@ function renderCases(
       const alt = String(it.imageAlt || it.title || "");
       const w = typeof it.imageWidth === "number" ? it.imageWidth : null;
       const h = typeof it.imageHeight === "number" ? it.imageHeight : null;
+      const media = resolveMediaSrc(it.image, opts.media ?? null, alt);
       let img = "";
-      if (opts.media) {
+      if (media.src.startsWith("/img/")) {
+        img = renderStaticImgPicture(media.src, media.alt || alt, {
+          width: w,
+          height: h,
+          sizes: "260px",
+        });
+      } else if (opts.media) {
         img = renderMediaPicture(it.image, opts.media, {
           fallbackAlt: alt,
           lazy: true,
           width: w,
           height: h,
         });
-      }
-      if (!img) {
-        const media = resolveMediaSrc(it.image, opts.media ?? null, alt);
-        img = media.src
-          ? renderStaticImgPicture(media.src, media.alt || alt, {
-              width: w,
-              height: h,
-              sizes: "260px",
-            })
-          : "";
+      } else if (media.src) {
+        img = renderStaticImgPicture(media.src, media.alt || alt, {
+          width: w,
+          height: h,
+          sizes: "260px",
+        });
       }
 
       let body: string;
@@ -560,28 +585,37 @@ function renderCases(
 
       const moreLabel = String(it.more || "").trim();
       const href = it.href ? String(it.href) : "";
+      const external =
+        /^https?:\/\//i.test(href) && !/vaybik\.ru/i.test(href);
       const more =
         href && moreLabel
-          ? `<a class="more" href="${escAttr(href)}">${esc(moreLabel)}</a>`
+          ? `<a class="more" href="${escAttr(href)}"${
+              external ? ' target="_blank" rel="noopener"' : ""
+            }>${esc(moreLabel)}${external ? EXT_MORE_ICON : ""}</a>`
           : "";
+      const caseReveal = useReveal(opts) ? " reveal" : "";
 
       if (variant === "portfolio" || img || hasDl) {
         const inner = `${img}<div>${kicker}<h3>${title}</h3>${body}${more}</div>`;
-        return `<article class="card case reveal">${inner}</article>`;
+        return `<article class="card case${caseReveal}">${inner}</article>`;
       }
 
       const inner = `${kicker}<h3>${title}</h3>${body}`;
       if (href) {
-        return `<a class="card case reveal" href="${escAttr(href)}">${inner}</a>`;
+        return `<a class="card case${caseReveal}" href="${escAttr(href)}">${inner}</a>`;
       }
-      return `<article class="card case reveal">${inner}</article>`;
+      return `<article class="card case${caseReveal}">${inner}</article>`;
     })
     .join("");
   // leadweb portfolio: class="grid" без g3
   const gridCls = variant === "portfolio" ? "grid" : "grid g3";
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="${gridCls}">${cards}</div>${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<div class="${gridCls}">${cards}</div>${secClose()}`;
 }
-function renderCta(data: Record<string, unknown>, anchor?: string | null): string {
+function renderCta(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const rings = data.rings
     ? `<div class="sec-rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
     : "";
@@ -590,13 +624,17 @@ function renderCta(data: Record<string, unknown>, anchor?: string | null): strin
   }${buttonsHtml(data.buttons as never)}</div></div>${secClose()}`;
 }
 
-function renderText(data: Record<string, unknown>, anchor?: string | null): string {
+function renderText(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const body = richOrMd(data.html, data.markdown, "full");
   const wrap =
     data.layout === "two"
       ? `<div class="grid g2 reveal">${body}</div>`
       : `<div class="reveal">${body}</div>`;
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${wrap}${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}${wrap}${secClose()}`;
 }
 
 function renderWidget(
@@ -614,7 +652,11 @@ function renderRawHtml(data: Record<string, unknown>, anchor?: string | null): s
   return `<section class="sec"${id}>${html}</section>`;
 }
 
-function renderIconList(data: Record<string, unknown>, anchor?: string | null): string {
+function renderIconList(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const variant = String(data.variant || "plist-cards");
   const items = (data.items as Array<Record<string, unknown>>) || [];
   if (variant === "safe") {
@@ -625,7 +667,7 @@ function renderIconList(data: Record<string, unknown>, anchor?: string | null): 
         return `<li><span class="ibox">${ic}</span><div><h3>${esc(String(it.title || ""))}</h3><p>${body}</p></div></li>`;
       })
       .join("");
-    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="safe reveal">${lis}</ul>${secClose()}`;
+    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ul class="safe reveal">${lis}</ul>${secClose()}`;
   }
   const lis = items
     .map((it) => {
@@ -634,10 +676,14 @@ function renderIconList(data: Record<string, unknown>, anchor?: string | null): 
       return `<li><span class="ibox">${ic}</span><span>${body || esc(String(it.title || ""))}</span></li>`;
     })
     .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="plist-cards reveal">${lis}</ul>${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ul class="plist-cards reveal">${lis}</ul>${secClose()}`;
 }
 
-function renderOffer(data: Record<string, unknown>, anchor?: string | null): string {
+function renderOffer(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const items = (data.items as Array<Record<string, unknown>>) || [];
   const cards = items
     .map((it) => {
@@ -655,12 +701,13 @@ function renderOffer(data: Record<string, unknown>, anchor?: string | null): str
       }${price}${richOrMd(it.html, null, "basic")}</div>`;
     })
     .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g2">${cards}</div>${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<div class="grid g2">${cards}</div>${secClose()}`;
 }
 
 function renderBeforeAfter(
   data: Record<string, unknown>,
-  anchor?: string | null,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
 ): string {
   const items = (data.items as Array<{ before: string; after: string }>) || [];
   const lis = items
@@ -669,10 +716,14 @@ function renderBeforeAfter(
         `<li><span class="ba-before">${esc(it.before)}</span><span class="ba-after">${esc(it.after)}</span></li>`,
     )
     .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ul class="ba-list reveal">${lis}</ul>${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ul class="ba-list reveal">${lis}</ul>${secClose()}`;
 }
 
-function renderSteps(data: Record<string, unknown>, anchor?: string | null): string {
+function renderSteps(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
   const variant = String(data.variant || "default");
   const items =
     (data.items as Array<{
@@ -690,7 +741,7 @@ function renderSteps(data: Record<string, unknown>, anchor?: string | null): str
         return `<li><span class="num">${i + 1}</span>${ic}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`;
       })
       .join("");
-    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="flow5 reveal">${lis}</ol>${secClose()}`;
+    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ol class="flow5 reveal">${lis}</ol>${secClose()}`;
   }
   if (variant === "av" || variant === "k-steps") {
     const cls = variant === "av" ? "steps av-steps" : "steps k-steps";
@@ -702,7 +753,7 @@ function renderSteps(data: Record<string, unknown>, anchor?: string | null): str
         return `<li>${ic}<b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`;
       })
       .join("");
-    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="${cls} reveal">${lis}</ol>${secClose()}`;
+    return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ol class="${cls} reveal">${lis}</ol>${secClose()}`;
   }
   const lis = items
     .map(
@@ -710,7 +761,7 @@ function renderSteps(data: Record<string, unknown>, anchor?: string | null): str
         `<li><b>${esc(it.title)}</b><span>${esc(it.text)}</span><em>${esc(it.result)}</em></li>`,
     )
     .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<ol class="steps reveal">${lis}</ol>${secClose()}`;
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}<ol class="steps reveal">${lis}</ol>${secClose()}`;
 }
 
 export function renderBlock(
@@ -723,29 +774,29 @@ export function renderBlock(
     case "hero":
       return renderHero(data, block.anchor, opts);
     case "answer":
-      return renderAnswer(data, block.anchor);
+      return renderAnswer(data, block.anchor, opts);
     case "cards":
       return renderCards(data, block.anchor, opts);
     case "steps":
-      return renderSteps(data, block.anchor);
+      return renderSteps(data, block.anchor, opts);
     case "faq":
-      return renderFaq(data, block.anchor);
+      return renderFaq(data, block.anchor, opts);
     case "team":
       return renderTeam(data, block.anchor, opts);
     case "cases":
       return renderCases(data, block.anchor, opts);
     case "cta":
-      return renderCta(data, block.anchor);
+      return renderCta(data, block.anchor, opts);
     case "text":
-      return renderText(data, block.anchor);
+      return renderText(data, block.anchor, opts);
     case "widget":
       return renderWidget(data, block.anchor, opts);
     case "iconList":
-      return renderIconList(data, block.anchor);
+      return renderIconList(data, block.anchor, opts);
     case "offer":
-      return renderOffer(data, block.anchor);
+      return renderOffer(data, block.anchor, opts);
     case "beforeAfter":
-      return renderBeforeAfter(data, block.anchor);
+      return renderBeforeAfter(data, block.anchor, opts);
     case "rawHtml":
       return renderRawHtml(data, block.anchor);
     default:
