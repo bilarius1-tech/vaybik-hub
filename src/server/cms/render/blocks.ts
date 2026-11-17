@@ -290,8 +290,17 @@ function renderCards(
   const teasers = items.filter((it) => String(it.cardStyle || "default") === "teaser");
   const cards = gridItems.map((it) => renderCardItem(it, opts)).join("");
   const teaserHtml = teasers.map((it) => renderCardItem(it, opts)).join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g${cols}">${cards}</div>${teaserHtml}${secClose()}`;
-}function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
+  const before =
+    typeof data.beforeHtml === "string" && data.beforeHtml.trim()
+      ? sanitizeCmsHtml(data.beforeHtml)
+      : "";
+  const after =
+    typeof data.afterHtml === "string" && data.afterHtml.trim()
+      ? sanitizeCmsHtml(data.afterHtml)
+      : "";
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${before}<div class="grid g${cols}">${cards}</div>${teaserHtml}${after}${secClose()}`;
+}
+function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
   const items =
     (data.items as Array<{
       question: string;

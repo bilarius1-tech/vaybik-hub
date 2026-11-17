@@ -230,10 +230,14 @@ export function sanitizeRichText(
     allowedAttributes: {
       a: ["href", "target", "rel"],
       img: ["src", "alt", "width", "height", "loading", "data-media-id"],
+      p: ["class"],
     },
     allowedSchemes: ["http", "https", "mailto", "tel"],
     allowProtocolRelative: false,
     transformTags: {
+      // leadweb использует <b>/<i> — сохраняем как strong/em, иначе слова склеиваются
+      b: "strong",
+      i: "em",
       a: transformRichLink,
       img: (tagName, attribs) => {
         const mediaId = attribs["data-media-id"];

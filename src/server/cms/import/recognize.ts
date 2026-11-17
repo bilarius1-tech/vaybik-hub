@@ -61,11 +61,11 @@ function recognizeHero(
   const titleVisual = $visual.length ? text($visual) : null;
   const titleFull = text(h1);
   let title = accent
-    ? titleFull.replace(accent, "").replace(/^[\s—–-]+/, "").trim() || titleFull
+    ? titleFull.replace(accent, "").replace(/^\s+/, "").trim() || titleFull
     : titleFull;
   if (titleVisual) {
-    // не дублировать visual в title
-    title = title.replace(titleVisual, "").replace(/^[\s—–-]+/, "").trim();
+    // не дублировать visual в title (тире/дефис в начале title оставляем — это часть текста)
+    title = title.replace(titleVisual, "").replace(/^\s+/, "").trim();
   }
   if (!title && accent) title = accent;
   const buttons: Array<{ label: string; href: string; style: "primary" | "secondary" }> =
@@ -428,6 +428,39 @@ function recognizeCards(
       });
     });
   if (!items.length) return null;
+  // HTML между sec-h и сеткой + хвост после сетки — не терять
+  const $w = $(section).find("> .w").first().length
+    ? $(section).find("> .w").first()
+    : $(section);
+  const beforeParts: string[] = [];
+  const afterParts: string[] = [];
+  let seenHeader = false;
+  let afterGrid = false;
+  $w.contents().each((_, node) => {
+    if (node.type !== "tag") return;
+    const cls = (node as Element).attribs?.class || "";
+    if (/\bsec-h\b/.test(cls)) {
+      seenHeader = true;
+      return;
+    }
+    if (/\bgrid\b/.test(cls)) {
+      afterGrid = true;
+      return;
+    }
+    if (afterGrid) {
+      afterParts.push($.html(node) || "");
+      return;
+    }
+    if (seenHeader) {
+      beforeParts.push($.html(node) || "");
+    }
+  });
+  const beforeHtml = beforeParts.join("").trim()
+    ? sanitizeCmsHtml(beforeParts.join(""))
+    : null;
+  const afterHtml = afterParts.join("").trim()
+    ? sanitizeCmsHtml(afterParts.join(""))
+    : null;
   return {
     type: "cards",
     data: parseBlockData("cards", {
@@ -435,6 +468,8 @@ function recognizeCards(
       background: hasClass(section, "alt") ? "alt" : "default",
       columns,
       items,
+      beforeHtml,
+      afterHtml,
     }),
     anchor: section.attribs?.id || null,
   };

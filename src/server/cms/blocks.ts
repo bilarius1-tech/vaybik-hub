@@ -124,6 +124,18 @@ export const cardsBlockSchema = z.object({
       }),
     )
     .default([]),
+  /** HTML между заголовком и сеткой (demo-note и т.п.) */
+  beforeHtml: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
+  /** HTML после сетки карточек (схемы, пояснения) */
+  afterHtml: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
 });
 export const stepsBlockSchema = z.object({
   header: headerSchema,
