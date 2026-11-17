@@ -34,7 +34,7 @@
 
 ## 4. Текущее состояние (на 2026-11-17)
 
-- Фазы 0–3 + CMS-3 на проде. Прод: **`a09220d`** (CMS-3a). Публичный **vaybik.ru = nginx-статика** (`SITE_PROD_PRIORITY=1`); CMS на `site-test.vaybik.ru`. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- Фазы 0–3 + CMS-3a на проде. Прод: **`e613dd7`** (+ docs `52dd27d`). Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`, `X-Vaybik-Site: cms`); роутер `site-test.vaybik.ru` снят. Роль БД `vaybik_site` (read-only). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`. llms.txt правится в `/admin/seo`.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
 - Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
