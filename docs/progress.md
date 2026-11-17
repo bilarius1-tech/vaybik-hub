@@ -152,7 +152,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-1 на проде; CMS-2 в работе)
+- [ ] Фаза 5 — публичный хаб / CMS (CMS-2 на проде `6cdf520`; richtext/convert — ждать «да»)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)
