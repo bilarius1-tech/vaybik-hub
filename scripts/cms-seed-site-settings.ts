@@ -11,55 +11,62 @@ import { bumpSiteVersion } from "../src/server/cms/site-version";
 
 const dry = process.argv.includes("--dry-run");
 
-async function main() {
-  const robotsPath =
-    process.env.SITE_ROBOTS_SRC || "/opt/vaybik-site-src/robots.txt";
-  let robots = "";
-  try {
-    robots = readFileSync(robotsPath, "utf8");
-  } catch {
-    // В контейнере leadweb нет — полный текст с хоста (как в leadweb robots.txt)
-    robots = `User-agent: GPTBot
+/** Disallow /admin/ в каждом блоке Allow — иначе боты со своим User-agent игнорят общий * */
+export const DEFAULT_SITE_ROBOTS = `User-agent: GPTBot
 Allow: /
+Disallow: /admin/
 
 User-agent: OAI-SearchBot
 Allow: /
+Disallow: /admin/
 
 User-agent: ChatGPT-User
 Allow: /
+Disallow: /admin/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /admin/
 
 User-agent: Claude-Web
 Allow: /
+Disallow: /admin/
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /admin/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /admin/
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /admin/
 
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin/
 
 User-agent: YandexBot
 Allow: /
+Disallow: /admin/
 
 User-agent: YandexAdditional
 Allow: /
+Disallow: /admin/
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /admin/
 
 User-agent: CCBot
 Allow: /
+Disallow: /admin/
 
 User-agent: *
 Allow: /
@@ -67,6 +74,15 @@ Disallow: /admin/
 
 Sitemap: https://vaybik.ru/sitemap.xml
 `;
+
+async function main() {
+  const robotsPath =
+    process.env.SITE_ROBOTS_SRC || "/opt/vaybik-site-src/robots.txt";
+  let robots = "";
+  try {
+    robots = readFileSync(robotsPath, "utf8");
+  } catch {
+    robots = DEFAULT_SITE_ROBOTS;
   }
 
   console.log(dry ? "[dry-run]" : "[write]");
@@ -100,12 +116,20 @@ Sitemap: https://vaybik.ru/sitemap.xml
     });
   }
   await bumpSiteVersion(prisma, "cms.seed-site-settings");
-  console.log("done");
+  console.log("ok");
 }
 
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());
+const isDirect =
+  process.argv[1]?.includes("cms-seed-site-settings") ||
+  process.argv[1]?.endsWith("cms-seed-site-settings.ts");
+
+if (isDirect) {
+  main()
+    .catch((e) => {
+      console.error(e);
+      process.exit(1);
+    })
+    .finally(async () => {
+      await prisma.$disconnect();
+    });
+}
