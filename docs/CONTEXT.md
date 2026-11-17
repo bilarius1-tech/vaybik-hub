@@ -56,7 +56,8 @@
 - **2026-11-17** — Яндекс.Метрику на дашборд переносим; приоритет фазы 3 — бэкапы.
 - **2026-11-17** — `deploy-prod.sh`: хостовый `docker compose` через `env -u DOCKER_HOST` (в прод-.env DOCKER_HOST нужен контейнерам); grep `BACKUPS_HOST_DIR` не валит скрипт.
 - **2026-11-17** — сервис **chat.vaybik.ru**: отдельный репо `bilarius1-tech/vaybik-chat`, рабочая копия `/opt/vaybik-chat`; Фаза 0 (проектирование) в docs; код/прод не поднимали.
-- **2026-11-17** — главный сайт vaybik.ru: статика из `bilarius1-tech/leadweb` (`/opt/vaybik-site-src`), выкладка `scripts/deploy-site.sh` в `/opt/apps/vaybik-main` (nginx reload). `/admin` остаётся хабом (Traefik priority 100). CMS в хабе — позже. URL: `/automation.html`→`/avtomatizaciya-1c/`, `/bitrix.html`→`/bitrix/` (301).
+- **2026-11-17** — главный сайт vaybik.ru: статика из `bilarius1-tech/leadweb` (`/opt/vaybik-site-src`), выкладка `scripts/deploy-site.sh` в `/opt/apps/vaybik-main` (nginx reload). `/admin` остаётся хабом (Traefik priority 100). URL: `/automation.html`→`/avtomatizaciya-1c/`, `/bitrix.html`→`/bitrix/` (301).
+- **2026-11-17** — CMS-1 в хабе: Page/Block/NavItem/Redirect/PageRevision, `/admin/site`, предпросмотр, импорт leadweb. Публичный рендер из БД — позже (часть 3). Новый env: `SITE_ASSETS_ORIGIN`.
 
 ## 6. Договорённости
 
@@ -73,11 +74,19 @@
 - chat.vaybik.ru: ТЗ v0.3 в репо vaybik-chat, Фаза 0 спроектирована (ждём «да» на Фазу 1). lead.vaybik.ru — ТЗ ещё нет.
 - 2FA для владельца: включить позже, когда будет удобно.
 
+## 8а. Сайт / CMS (часть 1, 2026-11-17)
+
+- Модели: `Page`, `Block`, `NavItem`, `Redirect`, `PageRevision`; SEO через связь `Page.seoPageId` → `SeoPage` (поля SEO не дублируются).
+- Админка: `/admin/site`, редактор `/admin/site/pages/[id]`, предпросмотр `/admin/site-preview/[id]` (noindex, CSS с `SITE_ASSETS_ORIGIN`).
+- Импорт: `npm run cms:import -- --src /opt/vaybik-site-src` (`--dry-run`, `--force`, `--only=/path/`). На проде — через временную папку в worker (см. промпт CMS-1 §9).
+- Публичный vaybik.ru пока статика leadweb; рендер из БД — часть 3.
+- Санитайзер: `sanitize-html` в `src/server/cms/sanitize.ts`.
+
 ## 8. Следующие шаги
 
-1. Переезд leadweb → vaybik.ru: deploy key в GitHub, затем «задеплой»; Pages-заглушки — только после «да».
-2. chat.vaybik.ru — Фаза 1 после «да» по DESIGN (не трогать region/proxy).
-3. Яндекс.Метрика на дашборд (отложено); ID Метрики для публичного сайта — отдельно в `js/metrika.js`.
-4. Промпт 8 — партнёры и лиды.
-5. Промпт 9 — позже: CMS в хабе + публичный Next; сейчас сайт статический из leadweb.
+1. CMS-1: «задеплой» хаба (миграция + `SITE_ASSETS_ORIGIN`) → бэкап → импорт на прод после «да».
+2. CMS-2: Tiptap + медиагалерея (вместо JSON-редактора блоков).
+3. chat.vaybik.ru — Фаза 1 после «да» по DESIGN (не трогать region/proxy).
+4. Яндекс.Метрика на дашборд (отложено).
+5. Промпт 8 — партнёры и лиды.
 6. По желанию: Telegram-бот; 2FA владельцу.

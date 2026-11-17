@@ -120,17 +120,17 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 
 Промпт: `docs/prompts/10-cms-01-pages.md`. Публичный vaybik.ru остаётся статикой leadweb.
 
-- [ ] refactor: `NavItem` (сайдбар) → `SidebarItem`
-- [ ] RBAC Action `content.manage` (OWNER+ADMIN) + тесты
-- [ ] Prisma: Page, Block, NavItem, Redirect, PageRevision + enums; связь Page↔SeoPage
-- [ ] Миграция `cms_pages_blocks_nav` (только добавление)
-- [ ] Схемы блоков + санитайзер + unit-тесты XSS
-- [ ] API: pages / blocks / publish / revisions / nav / redirects
-- [ ] Админка `/admin/site` + редактор `/site/pages/[id]`
-- [ ] Предпросмотр `/admin/site-preview/[id]` (noindex, без JS сайта)
-- [ ] Импортёр `scripts/cms-import-leadweb.ts` + `npm run cms:import`
-- [ ] e2e `site.spec.ts`; повторный импорт = 0 изменений
-- [ ] Документация CONTEXT/progress; деплой — только после «задеплой»
+- [x] refactor: `NavItem` (сайдбар) → `SidebarItem`
+- [x] RBAC Action `content.manage` (OWNER+ADMIN) + тесты
+- [x] Prisma: Page, Block, NavItem, Redirect, PageRevision + enums; связь Page↔SeoPage
+- [x] Миграция `cms_pages_blocks_nav` (только добавление)
+- [x] Схемы блоков + санитайзер + unit-тесты XSS
+- [x] API: pages / blocks / publish / revisions / nav / redirects
+- [x] Админка `/admin/site` + редактор `/site/pages/[id]`
+- [x] Предпросмотр `/admin/site-preview/[id]` (noindex, без JS сайта)
+- [x] Импортёр `scripts/cms-import-leadweb.ts` + `npm run cms:import`
+- [x] e2e `site.spec.ts`; повторный импорт = 0 изменений (dev)
+- [ ] Документация CONTEXT; деплой — только после «задеплой»
 
 ## Фазы
 - [x] Фаза 0 — каркас
