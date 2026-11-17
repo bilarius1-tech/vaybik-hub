@@ -4,6 +4,7 @@ import {
   BLOCK_TYPES,
   type BlockType,
 } from "@/lib/cms-block-meta";
+import { mediaRefSchema } from "@/lib/cms-block-schemas";
 import {
   sanitizeCmsHtml,
   sanitizeRichText,
@@ -20,6 +21,8 @@ const richHtml = (preset: "full" | "basic" | "inline") =>
     .optional()
     .nullable()
     .transform((v) => (v ? sanitizeRichText(v, preset) : v));
+
+const mediaRefField = mediaRefSchema.optional().nullable();
 
 const headerSchema = z
   .object({
@@ -61,6 +64,7 @@ export const heroBlockSchema = z.object({
     )
     .default([]),
   rings: z.unknown().optional().nullable(),
+  image: mediaRefField,
 });
 
 export const answerBlockSchema = z
@@ -114,12 +118,17 @@ export const cardsBlockSchema = z.object({
 export const stepsBlockSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
+  variant: z
+    .enum(["default", "av", "flow5", "k-steps"])
+    .optional()
+    .default("default"),
   items: z
     .array(
       z.object({
         title: z.string().min(1),
         text: z.string().default(""),
         result: z.string().default(""),
+        icon: iconField,
       }),
     )
     .default([]),
@@ -161,10 +170,13 @@ export const teamBlockSchema = z.object({
         quote: z.string().default(""),
         text: z.string().default(""),
         textHtml: richHtml("inline"),
-        photo: z.string().default(""),
+        photo: z.union([z.string(), mediaRefSchema]).optional().nullable(),
         photoAlt: z.string().default(""),
         width: z.number().int().positive().optional(),
         height: z.number().int().positive().optional(),
+        links: z
+          .array(z.object({ label: z.string(), href: z.string() }))
+          .optional(),
       }),
     )
     .default([]),
@@ -173,6 +185,7 @@ export const teamBlockSchema = z.object({
 export const casesBlockSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
+  variant: z.enum(["default", "portfolio"]).optional().default("default"),
   items: z
     .array(
       z.object({
@@ -181,8 +194,10 @@ export const casesBlockSchema = z.object({
         text: z.string().default(""),
         textHtml: richHtml("inline"),
         result: optionalString,
-        image: optionalString,
+        image: z.union([z.string(), mediaRefSchema]).optional().nullable(),
         href: optionalString,
+        kicker: optionalString,
+        more: optionalString,
       }),
     )
     .default([]),
@@ -199,6 +214,7 @@ export const ctaBlockSchema = z.object({
 export const textBlockSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
+  layout: z.enum(["one", "two"]).optional().default("one"),
   /** @deprecated — используйте html */
   markdown: z.string().default(""),
   html: richHtml("full"),

@@ -1,3 +1,4 @@
+import { mediaPublicBase } from "../media/url";
 import { sanitizeCmsHtml, sanitizeRichText } from "../sanitize";
 import { esc, escAttr, simpleMarkdown } from "./escape";
 
@@ -13,6 +14,32 @@ function richOrMd(
     return simpleMarkdown(legacy);
   }
   return "";
+}
+
+function resolveMediaSrc(
+  photo: unknown,
+  fallbackAlt?: string,
+): { src: string; alt: string } {
+  if (typeof photo === "string") {
+    return { src: photo, alt: fallbackAlt || "" };
+  }
+  if (photo && typeof photo === "object") {
+    const p = photo as {
+      mediaId?: string | null;
+      src?: string | null;
+      alt?: string | null;
+      version?: number;
+    };
+    if (p.mediaId) {
+      const ver = p.version || 1;
+      return {
+        src: `${mediaPublicBase()}/${p.mediaId}/v${ver}/orig`,
+        alt: p.alt || fallbackAlt || "",
+      };
+    }
+    return { src: p.src || "", alt: p.alt || fallbackAlt || "" };
+  }
+  return { src: "", alt: fallbackAlt || "" };
 }
 
 export type RenderBlock = {
@@ -161,16 +188,17 @@ function renderFaq(data: Record<string, unknown>, anchor?: string | null): strin
 }
 
 function renderTeam(data: Record<string, unknown>, anchor?: string | null): string {
-  const people = (data.people as Array<Record<string, string | number>>) || [];
+  const people = (data.people as Array<Record<string, unknown>>) || [];
   const html = people
     .map((p) => {
       const w = p.width ? ` width="${p.width}"` : "";
       const h = p.height ? ` height="${p.height}"` : "";
+      const media = resolveMediaSrc(p.photo, String(p.photoAlt || p.name || ""));
       const bio =
         typeof p.textHtml === "string" && p.textHtml
           ? richOrMd(p.textHtml, null, "inline")
           : esc(String(p.text || ""));
-      return `<article class="person reveal"><img src="${escAttr(String(p.photo || ""))}" alt="${escAttr(String(p.photoAlt || p.name || ""))}"${w}${h} loading="lazy"><div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p></div></article>`;
+      return `<article class="person reveal"><img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}"${w}${h} loading="lazy"><div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p></div></article>`;
     })
     .join("");
   return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header)}<div class="team">${html}</div>${secClose()}`;

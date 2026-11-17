@@ -24,6 +24,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
 
   const { id } = await ctx.params;
   const revId = req.nextUrl.searchParams.get("rev");
+  const embed = req.nextUrl.searchParams.get("embed") === "1";
 
   const page = await prisma.page.findUnique({
     where: { id },
@@ -62,7 +63,9 @@ export async function GET(req: NextRequest, ctx: Ctx) {
     const when = rev.createdAt.toLocaleString("ru-RU", {
       timeZone: "Europe/Moscow",
     });
-    banner = `Предпросмотр · версия от ${when}${rev.note ? ` · ${rev.note}` : ""}`;
+    banner = embed
+      ? ""
+      : `Предпросмотр · версия от ${when}${rev.note ? ` · ${rev.note}` : ""}`;
   } else {
     blocks = page.blocks.map((b) => ({
       type: b.type,
@@ -70,7 +73,7 @@ export async function GET(req: NextRequest, ctx: Ctx) {
       isHidden: b.isHidden,
       anchor: b.anchor,
     }));
-    banner = "Предпросмотр · черновик";
+    banner = embed ? "" : "Предпросмотр · черновик";
   }
 
   const navRows = await prisma.navItem.findMany({

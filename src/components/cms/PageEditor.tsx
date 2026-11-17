@@ -1,5 +1,6 @@
 "use client";
 
+import { BlockForm } from "@/components/cms/blocks/BlockForm";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -7,11 +8,12 @@ import { Field, Input, Select, Textarea } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
 import { api } from "@/lib/api-client";
+import { CLIENT_BLOCK_SCHEMAS } from "@/lib/cms-block-schemas";
 import { formatDateTime } from "@/lib/format";
 import { BLOCK_META, BLOCK_TYPES, type BlockType } from "@/lib/cms-block-meta";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 type BlockRow = {
   id: string;
@@ -20,6 +22,7 @@ type BlockRow = {
   data: Record<string, unknown>;
   isHidden: boolean;
   anchor: string | null;
+  updatedAt?: string;
 };
 
 type RevisionRow = {
@@ -61,9 +64,11 @@ function blockTitle(b: BlockRow): string {
 export function PageEditor({
   initialPage,
   seoPages,
+  isOwner = false,
 }: {
   initialPage: PageData;
   seoPages: SeoOption[];
+  isOwner?: boolean;
 }) {
   const router = useRouter();
   const [page, setPage] = useState(initialPage);
@@ -79,6 +84,12 @@ export function PageEditor({
   const [addType, setAddType] = useState<BlockType>("faq");
   const [deleteBlockId, setDeleteBlockId] = useState<string | null>(null);
   const [restoreId, setRestoreId] = useState<string | null>(null);
+  const [jsonOpen, setJsonOpen] = useState(false);
+  const [formValid, setFormValid] = useState(true);
+  const [previewKey, setPreviewKey] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAuditAt = useRef(0);
 
   const [title, setTitle] = useState(page.title);
   const [path, setPath] = useState(page.path);
@@ -92,6 +103,9 @@ export function PageEditor({
   );
 
   const selected = page.blocks.find((b) => b.id === selectedId) || null;
+  const [draftData, setDraftData] = useState<Record<string, unknown>>(
+    selected?.data || {},
+  );
   const [dataJson, setDataJson] = useState(
     selected ? JSON.stringify(selected.data, null, 2) : "{}",
   );
@@ -102,9 +116,31 @@ export function PageEditor({
     const b = page.blocks.find((x) => x.id === id) || null;
     startTransition(() => {
       setSelectedId(id);
+      setDraftData(b?.data || {});
       setDataJson(b ? JSON.stringify(b.data, null, 2) : "{}");
       setAnchor(b?.anchor || "");
+      setDirty(false);
+      setFormValid(true);
     });
+  }
+
+  function validateDraft(type: string, data: Record<string, unknown>): boolean {
+    const schema =
+      CLIENT_BLOCK_SCHEMAS[type as keyof typeof CLIENT_BLOCK_SCHEMAS];
+    if (!schema) return true;
+    const r = schema.safeParse(data);
+    return r.success;
+  }
+
+  function onDraftChange(next: Record<string, unknown>) {
+    setDraftData(next);
+    setDataJson(JSON.stringify(next, null, 2));
+    setDirty(true);
+    setFormValid(selected ? validateDraft(selected.type, next) : true);
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = setTimeout(() => {
+      void saveBlock(true, next);
+    }, 1500);
   }
 
   useEffect(() => {
@@ -191,51 +227,108 @@ export function PageEditor({
     await refreshPage();
   }
 
-  async function saveBlock() {
+  async function saveBlock(
+    auto = false,
+    dataOverride?: Record<string, unknown>,
+  ) {
     if (!selected) return;
     setErr(null);
-    let data: unknown;
-    try {
-      data = JSON.parse(dataJson);
-    } catch {
-      setErr("data: невалидный JSON");
+    let data: unknown = dataOverride ?? draftData;
+    if (jsonOpen && !dataOverride) {
+      try {
+        data = JSON.parse(dataJson);
+      } catch {
+        setErr("data: невалидный JSON");
+        return;
+      }
+    }
+    if (!validateDraft(selected.type, data as Record<string, unknown>)) {
+      if (!auto) {
+        setErr("Форма содержит ошибки");
+      }
+      setFormValid(false);
       return;
     }
-    const res = await api(`/api/cms/pages/${page.id}/blocks`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        blockId: selected.id,
-        type: selected.type,
-        data,
-        anchor: anchor || null,
-      }),
-    });
+    const res = await api<{ block: BlockRow }>(
+      `/api/cms/pages/${page.id}/blocks`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          blockId: selected.id,
+          type: selected.type,
+          data,
+          anchor: anchor || null,
+          updatedAt: selected.updatedAt,
+        }),
+      },
+    );
     if (res.error) {
-      setErr(res.error.message);
+      if (res.status === 409) {
+        setErr("Изменено другим пользователем, обновить");
+      } else {
+        setErr(res.error.message);
+      }
       return;
     }
-    setMsg("Блок сохранён");
+    if (!auto) {
+      setMsg("Блок сохранён");
+      lastAuditAt.current = Date.now();
+    } else if (Date.now() - lastAuditAt.current > 5 * 60 * 1000) {
+      lastAuditAt.current = Date.now();
+    }
     setDirty(false);
-    await refreshPage();
+    if (res.data?.block) {
+      setPage((p) => ({
+        ...p,
+        blocks: p.blocks.map((b) =>
+          b.id === res.data!.block.id
+            ? { ...b, ...res.data!.block, data: res.data!.block.data }
+            : b,
+        ),
+      }));
+      setDraftData(res.data.block.data);
+    }
+    // обновить iframe, сохранив scroll
+    const iframe = iframeRef.current;
+    const scrollY =
+      iframe?.contentWindow?.scrollY ??
+      iframe?.contentDocument?.documentElement.scrollTop ??
+      0;
+    setPreviewKey((k) => k + 1);
+    setTimeout(() => {
+      try {
+        iframeRef.current?.contentWindow?.scrollTo(0, scrollY);
+        const anchorId = selected.anchor;
+        if (anchorId) {
+          iframeRef.current?.contentDocument
+            ?.getElementById(anchorId)
+            ?.scrollIntoView({ block: "nearest" });
+        }
+      } catch {
+        /* sandbox */
+      }
+    }, 400);
   }
 
   async function addBlock() {
     setErr(null);
     const defaults: Record<string, unknown> = {
       hero: { title: "Заголовок", buttons: [] },
-      answer: { text: "Короткий ответ", facts: [] },
+      answer: { html: "<p>Короткий ответ</p>", facts: [] },
       cards: { header: { title: "Карточки" }, columns: 3, items: [] },
       steps: { header: { title: "Шаги" }, items: [] },
       faq: {
         header: { title: "FAQ" },
-        items: [{ question: "Вопрос?", answer: "Ответ" }],
+        items: [{ question: "Вопрос?", answerHtml: "<p>Ответ</p>" }],
       },
       team: { header: { title: "Команда" }, people: [] },
       cases: { header: { title: "Кейсы" }, items: [] },
       cta: { title: "Связаться", buttons: [] },
-      text: { header: { title: "Текст" }, markdown: "" },
+      text: { header: { title: "Текст" }, html: "" },
       widget: { key: "studio", htmlSnapshot: "" },
-      rawHtml: { html: "<section class=\"sec\"><div class=\"w\"><p>HTML</p></div></section>" },
+      rawHtml: {
+        html: '<section class="sec"><div class="w"><p>HTML</p></div></section>',
+      },
     };
     const res = await api<{ block: BlockRow }>(
       `/api/cms/pages/${page.id}/blocks`,
@@ -320,6 +413,7 @@ export function PageEditor({
     }
     if (selectedId === deleteBlockId) {
       setSelectedId(null);
+      setDraftData({});
       setDataJson("{}");
       setAnchor("");
     }
@@ -394,7 +488,11 @@ export function PageEditor({
           >
             Предпросмотр
           </Button>
-          <Button variant="ghost" onClick={() => void saveBlock()} disabled={!selected}>
+          <Button
+            variant="ghost"
+            onClick={() => void saveBlock(false)}
+            disabled={!selected || !formValid}
+          >
             Сохранить черновик
           </Button>
           <Button onClick={() => void publish()}>Опубликовать</Button>
@@ -418,7 +516,7 @@ export function PageEditor({
       />
 
       {tab === "blocks" && (
-        <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+        <div className="grid gap-4 xl:grid-cols-[240px_minmax(0,1fr)_minmax(280px,0.9fr)]">
           <Card>
             <CardHeader title="Блоки" />
             <ul className="space-y-2">
@@ -522,19 +620,63 @@ export function PageEditor({
                     placeholder="faq"
                   />
                 </Field>
-                <Field label="Данные (JSON)">
-                  <Textarea
-                    className="min-h-[320px] font-mono text-[12.5px]"
-                    value={dataJson}
-                    onChange={(e) => {
-                      setDataJson(e.target.value);
-                      setDirty(true);
-                    }}
-                  />
-                </Field>
-                <Button onClick={() => void saveBlock()}>Сохранить блок</Button>
+                <BlockForm
+                  type={selected.type}
+                  data={draftData}
+                  onChange={onDraftChange}
+                />
+                <Button
+                  onClick={() => void saveBlock(false)}
+                  disabled={!formValid}
+                >
+                  Сохранить блок
+                </Button>
+                {isOwner ? (
+                  <details
+                    open={jsonOpen}
+                    onToggle={(e) =>
+                      setJsonOpen((e.target as HTMLDetailsElement).open)
+                    }
+                  >
+                    <summary className="cursor-pointer text-[12.5px] font-semibold text-mu">
+                      JSON (для владельца)
+                    </summary>
+                    <Textarea
+                      className="mt-2 min-h-[200px] font-mono text-[12.5px]"
+                      value={dataJson}
+                      onChange={(e) => {
+                        setDataJson(e.target.value);
+                        setDirty(true);
+                        try {
+                          const parsed = JSON.parse(e.target.value) as Record<
+                            string,
+                            unknown
+                          >;
+                          setDraftData(parsed);
+                          setFormValid(
+                            validateDraft(selected.type, parsed),
+                          );
+                        } catch {
+                          setFormValid(false);
+                        }
+                      }}
+                    />
+                  </details>
+                ) : null}
               </div>
             )}
+          </Card>
+
+          <Card className="overflow-hidden p-2">
+            <CardHeader title="Предпросмотр" />
+            <iframe
+              key={previewKey}
+              ref={iframeRef}
+              title="Предпросмотр страницы"
+              src={`/admin/site-preview/${page.id}?embed=1${selected?.anchor ? `#${selected.anchor}` : ""}`}
+              className="h-[70vh] w-full rounded-xl border border-bd bg-bg"
+              sandbox="allow-same-origin"
+            />
           </Card>
         </div>
       )}

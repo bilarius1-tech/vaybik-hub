@@ -139,8 +139,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Медиа: MediaFolder / MediaAsset / MediaUsage + миграция `cms_media`
 - [x] Медиа: sharp, варианты, public URL, API upload/list/replace/delete
 - [x] Медиа: вкладка «Медиа» + MediaPicker
-- [ ] Tiptap RichText + sanitizeRichText + миграция полей
-- [ ] Формы блоков вместо JSON + live preview iframe
+- [x] Tiptap RichText + sanitizeRichText + миграция полей
+- [x] Формы блоков вместо JSON + live preview iframe
 - [ ] rawHtml → новые типы + `cms-convert-rawhtml`
 - [ ] Бэкап uploads v2 (потоковое шифрование) + soft-limit
 - [ ] Тесты / e2e / build; деплой — только после «задеплой»

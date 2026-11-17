@@ -108,7 +108,7 @@ ${extraCss}${keysy}
 </style>
 </head>
 <body>
-<div class="cms-preview-banner">${esc(opts.banner)}</div>
+${opts.banner ? `<div class="cms-preview-banner">${esc(opts.banner)}</div>` : ""}
 <a class="skip" href="#main">К содержанию</a>
 <header class="hdr"><div class="w">
 <a class="logo" href="/">vaybik<b>.</b>ru</a>

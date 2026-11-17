@@ -7,8 +7,9 @@ import { notFound, redirect } from "next/navigation";
 type Props = { params: Promise<{ id: string }> };
 
 export default async function SitePageEditorPage({ params }: Props) {
+  let ctx;
   try {
-    await requireCan("content.manage");
+    ctx = await requireCan("content.manage");
   } catch {
     redirect("/");
   }
@@ -27,6 +28,7 @@ export default async function SitePageEditorPage({ params }: Props) {
     <PageEditor
       initialPage={JSON.parse(JSON.stringify(page))}
       seoPages={JSON.parse(JSON.stringify(seoPages))}
+      isOwner={ctx.user.role === "OWNER"}
     />
   );
 }
