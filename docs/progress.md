@@ -136,9 +136,9 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 
 Промпт: `docs/prompts/11-cms-02-editor-media.md`. Публичный vaybik.ru остаётся статикой.
 
-- [ ] Медиа: MediaFolder / MediaAsset / MediaUsage + миграция `cms_media`
-- [ ] Медиа: sharp, варианты, public URL, API upload/list/replace/delete
-- [ ] Медиа: вкладка «Медиа» + MediaPicker
+- [x] Медиа: MediaFolder / MediaAsset / MediaUsage + миграция `cms_media`
+- [x] Медиа: sharp, варианты, public URL, API upload/list/replace/delete
+- [x] Медиа: вкладка «Медиа» + MediaPicker
 - [ ] Tiptap RichText + sanitizeRichText + миграция полей
 - [ ] Формы блоков вместо JSON + live preview iframe
 - [ ] rawHtml → новые типы + `cms-convert-rawhtml`

@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
+import { MediaLibrary } from "@/components/cms/MediaLibrary";
 import { api } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
 import Link from "next/link";
@@ -62,13 +63,17 @@ export function SitePanel({
   initialPages,
   initialNav,
   initialRedirects,
+  isOwner = false,
 }: {
   initialPages: PageRow[];
   initialNav: NavRow[];
   initialRedirects: RedirectRow[];
+  isOwner?: boolean;
 }) {
   const router = useRouter();
-  const [tab, setTab] = useState<"pages" | "nav" | "redirects">("pages");
+  const [tab, setTab] = useState<"pages" | "nav" | "redirects" | "media">(
+    "pages",
+  );
   const [pages, setPages] = useState(initialPages);
   const [nav, setNav] = useState(initialNav);
   const [redirects, setRedirects] = useState(initialRedirects);
@@ -336,7 +341,8 @@ export function SitePanel({
         <div>
           <h1 className="text-[22px] font-extrabold tracking-tight">Сайт</h1>
           <p className="mt-1 text-sm text-mu">
-            Страницы, меню и редиректы vaybik.ru (публичный сайт пока статикой)
+            Страницы, медиа, меню и редиректы vaybik.ru (публичный сайт пока
+            статикой)
           </p>
         </div>
         <Segmented
@@ -345,6 +351,7 @@ export function SitePanel({
           onChange={setTab}
           options={[
             { value: "pages", label: "Страницы" },
+            { value: "media", label: "Медиа" },
             { value: "nav", label: "Меню" },
             { value: "redirects", label: "Редиректы" },
           ]}
@@ -626,6 +633,8 @@ export function SitePanel({
           </Card>
         </div>
       )}
+
+      {tab === "media" && <MediaLibrary isOwner={isOwner} />}
 
       <ConfirmDialog
         open={Boolean(deleteId)}

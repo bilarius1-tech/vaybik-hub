@@ -4,8 +4,9 @@ import { prisma } from "@/server/db";
 import { redirect } from "next/navigation";
 
 export default async function SitePage() {
+  let ctx;
   try {
-    await requireCan("content.manage");
+    ctx = await requireCan("content.manage");
   } catch {
     redirect("/");
   }
@@ -27,6 +28,7 @@ export default async function SitePage() {
       initialPages={JSON.parse(JSON.stringify(pages))}
       initialNav={JSON.parse(JSON.stringify(navItems))}
       initialRedirects={JSON.parse(JSON.stringify(redirects))}
+      isOwner={ctx.user.role === "OWNER"}
     />
   );
 }
