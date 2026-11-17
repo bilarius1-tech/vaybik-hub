@@ -45,16 +45,19 @@ export function renderWidgetHtml(
   anchor?: string | null,
 ): string {
   const key = String(data.key || "studio");
+  const snap = sanitizeCmsHtml(String(data.htmlSnapshot || ""));
+  // снимок со страницы важнее общего шаблона (на /uslugi/ нет calc-more, на главной — есть)
+  if (snap.trim()) {
+    if (snap.trim().startsWith("<section")) return snap;
+    const id = anchor || (key === "studio" ? "studio" : "calc-sec");
+    return `<section class="sec" id="${escAttr(id)}"><div class="w"><div class="widget widget-${escAttr(key)}">${snap}</div></div></section>`;
+  }
   if (mode === "public") {
     const partial = loadWidgetPartial(key);
     if (partial?.trim()) {
       return partial.trim();
     }
   }
-  const snap = sanitizeCmsHtml(String(data.htmlSnapshot || ""));
   const id = anchor || (key === "studio" ? "studio" : "calc-sec");
-  if (snap.trim().startsWith("<section")) return snap;
-  return `<section class="sec" id="${escAttr(id)}"><div class="w"><div class="widget widget-${escAttr(key)}">${
-    snap || `<p class="muted">Виджет «${esc(key)}» (снимок пуст)</p>`
-  }</div></div></section>`;
+  return `<section class="sec" id="${escAttr(id)}"><div class="w"><div class="widget widget-${escAttr(key)}"><p class="muted">Виджет «${esc(key)}» (снимок пуст)</p></div></div></section>`;
 }

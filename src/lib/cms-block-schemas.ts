@@ -50,6 +50,8 @@ export const heroClientSchema = z.object({
   titleVisual: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
+  brandHtml: optionalString,
+  notes: z.array(z.string()).optional().default([]),
   mascot: z.string().default("privet"),
   feats: z
     .array(

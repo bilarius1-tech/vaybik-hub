@@ -100,6 +100,15 @@ function recognizeHero(
       rings = null;
     }
   }
+  const $brand = $s.find(".brand-lockup").first();
+  const brandHtml = $brand.length
+    ? sanitizeCmsHtml($.html($brand) || "")
+    : null;
+  const notes: string[] = [];
+  $s.find(".svc-note").each((_, n) => {
+    const t = text($(n));
+    if (t) notes.push(t);
+  });
   const data = parseBlockData("hero", {
     variant,
     avHero: hasClass(section, "av-hero"),
@@ -109,6 +118,8 @@ function recognizeHero(
     titleVisual,
     lead: text($s.find(".lead").first()) || null,
     buttons,
+    brandHtml,
+    notes,
     mascot: "privet",
     feats,
     rings,
@@ -255,11 +266,49 @@ function recognizeCta(
   };
 }
 
+function recognizeOffer(
+  $: cheerio.CheerioAPI,
+  section: Element,
+): RecognizedBlock | null {
+  const $grid = $(section).find(".grid.g2").first();
+  if (!$grid.length) return null;
+  if (!$grid.find("> .answer, > .hl-box, > .answer.hl-box").length) return null;
+  // обычные карточки услуг — не offer
+  if ($grid.find("> .card").length) return null;
+  const items: Array<Record<string, unknown>> = [];
+  $grid.find("> .answer, > .hl-box, > div.answer").each((_, el) => {
+    const $el = $(el);
+    const priceHtml = $el.find(".price").first().html();
+    const clone = $el.clone();
+    clone.find(".kicker, .price").remove();
+    items.push({
+      kicker: text($el.find(".kicker").first()) || null,
+      html: sanitizeCmsHtml(clone.html() || ""),
+      price: priceHtml ? sanitizeCmsHtml(priceHtml) : null,
+      highlight: ($el.attr("class") || "").includes("hl"),
+    });
+  });
+  if (items.length < 1) return null;
+  return {
+    type: "offer",
+    data: parseBlockData("offer", {
+      header: headerFrom($, section),
+      background: hasClass(section, "alt") ? "alt" : "default",
+      items,
+    }),
+    anchor: section.attribs?.id || null,
+  };
+}
+
 function recognizeAnswer(
   $: cheerio.CheerioAPI,
   section: Element,
 ): RecognizedBlock | null {
   if (!$(section).find(".answer").length) return null;
+  // offer g2 — отдельный тип
+  if ($(section).find(".grid.g2 > .answer, .grid.g2 > .hl-box").length >= 1) {
+    return null;
+  }
   // cards/grid рядом — не answer-only
   if ($(section).find(".grid .card").length > 2) return null;
   const answerHtml = $(section).find(".answer").html() || "";
@@ -531,10 +580,12 @@ export function recognizeSection(
     recognizeSteps,
     recognizeTeam,
     recognizeCta,
+    recognizeOffer,
     recognizeAnswer,
     recognizeCases,
     recognizeCards,
-  ];  for (const fn of tryFns) {
+  ];
+  for (const fn of tryFns) {
     try {
       const r = fn($, section);
       if (r) return r;

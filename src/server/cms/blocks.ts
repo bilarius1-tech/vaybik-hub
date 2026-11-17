@@ -56,6 +56,14 @@ export const heroBlockSchema = z.object({
   titleVisual: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
+  /** brand-lockup (1С / Битрикс) */
+  brandHtml: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
+  /** svc-note под лидом */
+  notes: z.array(z.string()).optional().default([]),
   mascot: z.string().default("privet"),
   feats: z
     .array(
@@ -293,7 +301,12 @@ export const offerBlockSchema = z.object({
       z.object({
         kicker: optionalString,
         html: richHtml("basic"),
-        price: optionalString,
+        /** цена/заголовок-цена — может содержать SVG */
+        price: z
+          .string()
+          .optional()
+          .nullable()
+          .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
         highlight: z.boolean().optional(),
       }),
     )

@@ -178,11 +178,20 @@ function renderHero(
         .join("")}</div>`
     : "";
   const crumbs = variant === "home" ? "" : renderCrumbs(opts);
-  const copy = `${crumbs}${
+  const brand =
+    typeof data.brandHtml === "string" && data.brandHtml.trim()
+      ? sanitizeCmsHtml(data.brandHtml)
+      : "";
+  const notes = Array.isArray(data.notes)
+    ? (data.notes as string[])
+        .map((n) => `<p class="svc-note">${esc(String(n))}</p>`)
+        .join("")
+    : "";
+  const copy = `${crumbs}${brand}${
     data.kicker ? `<span class="kicker">${esc(String(data.kicker))}</span>` : ""
   }<h1>${h1Inner}</h1>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
-  }${buttonsHtml(data.buttons as never)}`;
+  }${buttonsHtml(data.buttons as never)}${notes}`;
 
   // service/av: layout с маскотом; обычный sub тоже с маскотом как на статике
   return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${copy}</div><figure class="mascot"><img src="/img/vaybik-${escAttr(mascot)}.png" alt="" width="400" height="539"></figure></div>${feats}</div></section>`;
@@ -507,11 +516,13 @@ function renderOffer(data: Record<string, unknown>, anchor?: string | null): str
   const cards = items
     .map((it) => {
       const hl = it.highlight ? " hl-box" : "";
-      return `<article class="answer reveal${hl}">${
+      const price =
+        typeof it.price === "string" && it.price.trim()
+          ? `<div class="price">${sanitizeCmsHtml(it.price)}</div>`
+          : "";
+      return `<div class="answer reveal${hl}">${
         it.kicker ? `<span class="kicker">${esc(String(it.kicker))}</span>` : ""
-      }${richOrMd(it.html, null, "basic")}${
-        it.price ? `<div class="price">${esc(String(it.price))}</div>` : ""
-      }</article>`;
+      }${price}${richOrMd(it.html, null, "basic")}</div>`;
     })
     .join("");
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g2">${cards}</div>${secClose()}`;
