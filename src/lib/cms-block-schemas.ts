@@ -40,6 +40,7 @@ export const buttonSchema = z.object({
   href: z.string().min(1, "Укажите ссылку"),
   style: z.enum(["primary", "secondary"]).default("primary"),
   icon: optionalString,
+  className: optionalString,
 });
 
 export const heroClientSchema = z.object({
@@ -52,6 +53,7 @@ export const heroClientSchema = z.object({
   titleVisual: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
+  svcSubHtml: optionalString,
   brandHtml: optionalString,
   notes: z.array(z.string()).optional().default([]),
   mascot: z.string().default("privet"),

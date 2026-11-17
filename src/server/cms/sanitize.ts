@@ -31,10 +31,29 @@ const COMMON_ATTRS = [
   "aria-hidden",
   "aria-label",
   "aria-labelledby",
+  "aria-current",
   "tabindex",
   "title",
   "data-*",
+  // безопасные инлайны leadweb (margin-top на .lead.reveal и т.п.)
+  "style",
 ];
+
+/** Только безопасные CSS-свойства — без url()/expression/behavior. */
+const LENGTH = [/^\d*\.?\d+(px|em|rem|%)$/];
+const SAFE_STYLES: NonNullable<sanitizeHtml.IOptions["allowedStyles"]> = {
+  "*": {
+    "margin-top": LENGTH,
+    "margin-left": LENGTH,
+    "margin-right": LENGTH,
+    "margin-bottom": LENGTH,
+    "padding-top": LENGTH,
+    "font-size": LENGTH,
+    "font-weight": [/^\d{1,4}$/, /^(normal|bold)$/],
+    display: [/^(block|inline|inline-block|none|flex)$/],
+    opacity: [/^\d+(\.\d+)?$/],
+  },
+};
 
 const SVG_ATTRS = [
   // htmlparser2 по умолчанию lowercases → держим оба варианта в allowlist
@@ -126,7 +145,8 @@ const BASE_OPTIONS: sanitizeHtml.IOptions = {
   allowedSchemes: ["http", "https", "mailto", "tel"],
   allowedSchemesAppliedToAttributes: ["href", "src", "cite", "xlink:href"],
   allowProtocolRelative: false,
-  // style — запрещён (XSS через expression/url)
+  // style — только SAFE_STYLES (без url()/expression)
+  allowedStyles: SAFE_STYLES,
   disallowedTagsMode: "discard",
   parser: SVG_PARSER,
 };
@@ -154,7 +174,8 @@ const RICH_TAGS: Record<RichTextPreset, string[]> = {
 
 /**
  * Санитизация HTML для rawHtml / widget snapshot / SVG-иконок.
- * Убирает script/iframe/on*-атрибуты/javascript:-ссылки и style.
+ * Убирает script/iframe/on*-атрибуты/javascript:-ссылки;
+ * style — только безопасные свойства (margin/font/display/opacity).
  */
 export function sanitizeCmsHtml(html: string): string {
   if (!html) return "";

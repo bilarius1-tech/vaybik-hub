@@ -57,6 +57,45 @@ describe("renderBlock", () => {
     expect(html).not.toContain("заявкипуть");
   });
 
+  it("hero: пустой feats не рендерит .feats; icon внутри bt-sl", () => {
+    const empty = renderBlock({
+      type: "hero",
+      data: {
+        title: "Услуги",
+        variant: "sub",
+        buttons: [
+          {
+            label: "Звонок",
+            href: "tel:+7999",
+            className: "bt-call",
+            icon: '<svg class="ic" viewBox="0 0 24 24"></svg>',
+          },
+        ],
+        feats: [],
+      },
+    });
+    expect(empty).not.toContain('class="feats"');
+    expect(empty).toContain('class="bt-btn bt-call "');
+    expect(empty).toMatch(/<span class="bt-sl"><svg/);
+  });
+
+  it("hero: svc-sub перед brand", () => {
+    const html = renderBlock({
+      type: "hero",
+      data: {
+        title: "1С",
+        variant: "service",
+        svcSubHtml: '<ul class="svc-sub"><li><a href="/">Главная</a></li></ul>',
+        brandHtml: '<div class="brand-lockup">b</div>',
+        buttons: [],
+      },
+    });
+    const sub = html.indexOf('class="svc-sub"');
+    const brand = html.indexOf('class="brand-lockup"');
+    expect(sub).toBeGreaterThan(-1);
+    expect(brand).toBeGreaterThan(sub);
+  });
+
   it("cards dir-link и teaser", () => {
     const html = renderBlock({
       type: "cards",
@@ -98,6 +137,8 @@ describe("renderBlock", () => {
             didHtml: "<ul><li>редизайн</li></ul>",
             result: "Заявки выросли",
             image: "/img/case-dnk.jpg",
+            imageWidth: 782,
+            imageHeight: 1588,
             href: "https://dnk-med.ru/",
             more: "Открыть dnk-med.ru",
           },
@@ -106,6 +147,28 @@ describe("renderBlock", () => {
     });
     expect(html).toContain("<dt>Было</dt>");
     expect(html).toContain("<dt>Сделали</dt>");
-    expect(html).toContain("редизайн");    expect(html).toContain('class="card case reveal"');
+    expect(html).toContain("редизайн");
+    expect(html).toContain('class="card case reveal"');
+    expect(html).toContain('class="grid"');
+    expect(html).not.toContain('class="grid g3"');
+    expect(html).toContain("<picture>");
+    expect(html).toContain("case-dnk-400.webp");
+  });
+
+  it("cards more с aria-label по title", () => {
+    const html = renderBlock({
+      type: "cards",
+      data: {
+        columns: 3,
+        items: [
+          {
+            title: "Landing Page",
+            text: "Лендинг",
+            link: { href: "/uslugi/landing/", label: "Подробнее" },
+          },
+        ],
+      },
+    });
+    expect(html).toContain('aria-label="Подробнее: Landing Page"');
   });
 });

@@ -46,6 +46,8 @@ const buttonSchema = z.object({
   href: z.string().min(1),
   style: z.enum(["primary", "secondary"]).default("primary"),
   icon: iconField,
+  /** доп. классы leadweb (bt-call и т.п.) */
+  className: optionalString,
 });
 
 export const heroBlockSchema = z.object({
@@ -58,6 +60,12 @@ export const heroBlockSchema = z.object({
   titleVisual: optionalString,
   lead: optionalString,
   buttons: z.array(buttonSchema).default([]),
+  /** svc-sub навигация (1С / Битрикс / keysy) */
+  svcSubHtml: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
   /** brand-lockup (1С / Битрикс) */
   brandHtml: z
     .string()

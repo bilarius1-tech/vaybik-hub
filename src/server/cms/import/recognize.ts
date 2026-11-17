@@ -73,6 +73,7 @@ function recognizeHero(
     href: string;
     style: "primary" | "secondary";
     icon?: string;
+    className?: string;
   }> = [];
   $s.find(".acts a").each((_, a) => {
     const $a = $(a);
@@ -80,11 +81,16 @@ function recognizeHero(
     const icon = $a.find("svg").first().toString() || undefined;
     const clone = $a.clone();
     clone.find("svg").remove();
+    const extras = cls
+      .split(/\s+/)
+      .filter((c) => c && c !== "bt-btn" && c !== "bt-btn2")
+      .join(" ");
     buttons.push({
       label: text(clone) || text($a),
       href: $a.attr("href") || "#",
       style: cls.includes("bt-btn2") ? "secondary" : "primary",
       icon,
+      className: extras || undefined,
     });
   });
   const feats: Array<{ icon?: string; title?: string; text: string }> = [];
@@ -106,6 +112,10 @@ function recognizeHero(
     .find("[data-gradient-blinds]")
     .attr("data-gradient-blinds");
   const gradientBlinds = blindsAttr?.trim() || null;
+  const $svcSub = $s.find("ul.svc-sub").first();
+  const svcSubHtml = $svcSub.length
+    ? sanitizeCmsHtml($.html($svcSub) || "")
+    : null;
   const $brand = $s.find(".brand-lockup").first();
   const brandHtml = $brand.length
     ? sanitizeCmsHtml($.html($brand) || "")
@@ -131,6 +141,7 @@ function recognizeHero(
     titleVisual,
     lead: text($s.find(".lead").first()) || null,
     buttons,
+    svcSubHtml,
     brandHtml,
     notes,
     mascot,

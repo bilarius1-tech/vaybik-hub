@@ -31,10 +31,14 @@ describe("sanitizeCmsHtml", () => {
     expect(out).not.toMatch(/javascript:/i);
   });
 
-  it("убирает style-атрибуты", () => {
-    const out = sanitizeCmsHtml('<p style="color:red" class="ok">t</p>');
-    expect(out).not.toMatch(/style=/i);
-    expect(out).toContain('class="ok"');
+  it("убирает опасный style, сохраняет безопасный", () => {
+    const bad = sanitizeCmsHtml('<p style="color:red" class="ok">t</p>');
+    expect(bad).not.toMatch(/style=/i);
+    expect(bad).toContain('class="ok"');
+    const ok = sanitizeCmsHtml(
+      '<p class="lead reveal" style="margin-top:28px">t</p>',
+    );
+    expect(ok).toMatch(/style="margin-top:\s*28px"/);
   });
 
   it("сохраняет data-* и классы", () => {

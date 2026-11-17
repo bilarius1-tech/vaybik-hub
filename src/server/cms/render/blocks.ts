@@ -68,23 +68,49 @@ function secClose(): string {
   return "</div></section>";
 }
 
+/** Статичные кейсы /img/case-*.jpg → picture с webp, как в leadweb. */
+function renderStaticCasePicture(
+  src: string,
+  alt: string,
+  width?: number | null,
+  height?: number | null,
+): string {
+  const m = src.match(/^(\/img\/.+)\.(jpe?g|png)$/i);
+  const w = width || null;
+  const h = height || null;
+  const wh = (w ? ` width="${w}"` : "") + (h ? ` height="${h}"` : "");
+  if (!m) {
+    return `<img src="${escAttr(src)}" alt="${escAttr(alt)}"${wh} loading="lazy" decoding="async">`;
+  }
+  const base = m[1]!;
+  const fullW = w || 782;
+  const srcset = `${base}-400.webp 400w, ${base}-${fullW}.webp ${fullW}w`;
+  return `<picture><source type="image/webp" srcset="${escAttr(srcset)}" sizes="260px"><img src="${escAttr(src)}" alt="${escAttr(alt)}"${wh} loading="lazy"></picture>`;
+}
+
 function buttonsHtml(
   buttons: Array<{
     label: string;
     href: string;
     style?: string;
     icon?: string | null;
+    className?: string | null;
   }> = [],
 ): string {
   if (!buttons.length) return "";
   return `<div class="acts">${buttons
     .map((b) => {
-      const cls = b.style === "secondary" ? "bt-btn2" : "bt-btn";
+      const isSecondary = b.style === "secondary";
+      const base = isSecondary ? "bt-btn2" : "bt-btn";
+      const extras = String(b.className || "")
+        .split(/\s+/)
+        .filter((c) => c && c !== base && c !== "bt-btn" && c !== "bt-btn2");
+      // leadweb: «bt-btn bt-call » с хвостовым пробелом
+      const cls = extras.length ? `${base} ${extras.join(" ")} ` : base;
       const icon = b.icon ? fixMissingSvgViewBox(String(b.icon)) : "";
-      const inner =
-        b.style === "secondary"
-          ? `${icon}${esc(b.label)}`
-          : `${icon}<span class="bt-sl">${esc(b.label)}</span>`;
+      const inner = isSecondary
+        ? `${icon}${esc(b.label)}`
+        : `<span class="bt-sl">${icon}${esc(b.label)}</span>`;
       return `<a class="${cls}" href="${escAttr(b.href)}">${inner}</a>`;
     })
     .join("")}</div>`;
@@ -175,9 +201,9 @@ function renderHero(
       : "";
     h1Inner = `${titleAccent}${titleVisual}`;
   } else {
-    // service/sub/av: visual — отдельная строка без принудительного тире
+    // service/sub/av: visual — отдельная строка без class=visually (как в leadweb)
     const titleVisual = visualRaw
-      ? `<span class="visually" style="display:block;font-size:.5em;font-weight:600;margin-top:.35em">${esc(visualRaw)}</span>`
+      ? `<span style="display:block;font-size:.5em;font-weight:600;margin-top:.35em">${esc(visualRaw)}</span>`
       : "";
     const rest =
       titleRest && titleRest !== visualRaw ? esc(titleRest) : "";
@@ -190,22 +216,28 @@ function renderHero(
     ? `<div class="av-bg" aria-hidden="true" data-gradient-blinds='${escJsonAttr(data.gradientBlinds)}'></div><div class="av-veil" aria-hidden="true"></div>`
     : "";
   const mascot = String(data.mascot || "privet");
-  const feats = Array.isArray(data.feats)
-    ? `<div class="feats">${(
-        data.feats as Array<{ icon?: string; title?: string | null; text: string }>
-      )
-        .map((f) => {
-          const title = (f.title || "").trim();
-          const body = (f.text || "").trim();
-          const bold = esc(title || body);
-          const span =
-            title && body ? `<span>${esc(body)}</span>` : "";
-          const ic = f.icon ? fixMissingSvgViewBox(String(f.icon)) : "";
-          return `<div class="feat">${ic}<b>${bold}</b>${span}</div>`;
-        })
-        .join("")}</div>`
-    : "";
+  const featsList = Array.isArray(data.feats)
+    ? (data.feats as Array<{ icon?: string; title?: string | null; text: string }>)
+    : [];
+  const feats =
+    featsList.length > 0
+      ? `<div class="feats">${featsList
+          .map((f) => {
+            const title = (f.title || "").trim();
+            const body = (f.text || "").trim();
+            const bold = esc(title || body);
+            const span =
+              title && body ? `<span>${esc(body)}</span>` : "";
+            const ic = f.icon ? fixMissingSvgViewBox(String(f.icon)) : "";
+            return `<div class="feat">${ic}<b>${bold}</b>${span}</div>`;
+          })
+          .join("")}</div>`
+      : "";
   const crumbs = variant === "home" && !avHero ? "" : renderCrumbs(opts);
+  const svcSub =
+    typeof data.svcSubHtml === "string" && data.svcSubHtml.trim()
+      ? fixMissingSvgViewBox(sanitizeCmsHtml(data.svcSubHtml))
+      : "";
   const brand =
     typeof data.brandHtml === "string" && data.brandHtml.trim()
       ? fixMissingSvgViewBox(sanitizeCmsHtml(data.brandHtml))
@@ -216,7 +248,7 @@ function renderHero(
         .join("")
     : "";
   const h1Id = anchor === "hero" ? ' id="hero-title"' : "";
-  const copy = `${crumbs}${brand}${
+  const copy = `${crumbs}${svcSub}${brand}${
     data.kicker ? `<span class="kicker">${esc(String(data.kicker))}</span>` : ""
   }<h1${h1Id}>${h1Inner}</h1>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
@@ -314,15 +346,20 @@ function renderCardItem(
     return `<a class="card dir-link reveal" href="${escAttr(linkObj.href)}">${icon}<h3>${esc(String(it.title || ""))}</h3>${text}<span class="more">${esc(linkObj.label)}${MORE_ARROW}</span></a>`;
   }
 
+  const titleText = String(it.title || "");
+  const moreAria =
+    linkObj && linkObj.label
+      ? ` aria-label="${escAttr(`Подробнее: ${titleText}`)}"`
+      : "";
   const link = linkObj
-    ? `<a class="more" href="${escAttr(linkObj.href)}">${esc(linkObj.label)}${MORE_ARROW}</a>`
+    ? `<a class="more" href="${escAttr(linkObj.href)}"${moreAria}>${esc(linkObj.label)}${MORE_ARROW}</a>`
     : "";
   if (kicker && it.highlight) {
-    return `<article class="card reveal${hl}">${icon}<div>${kicker}<h3>${esc(String(it.title || ""))}</h3>${price}${text}${chk}${link}</div></article>`;
+    return `<article class="card reveal${hl}">${icon}<div>${kicker}<h3>${esc(titleText)}</h3>${price}${text}${chk}${link}</div></article>`;
   }
   const head = kicker
-    ? `${kicker}<h3>${esc(String(it.title || ""))}</h3>`
-    : `<h3>${esc(String(it.title || ""))}</h3>`;
+    ? `${kicker}<h3>${esc(titleText)}</h3>`
+    : `<h3>${esc(titleText)}</h3>`;
   return `<article class="card reveal${hl}">${num}${icon}${head}${price}${text}${chk}${link}</article>`;
 }
 
@@ -341,10 +378,17 @@ function renderCards(
     typeof data.beforeHtml === "string" && data.beforeHtml.trim()
       ? fixMissingSvgViewBox(sanitizeCmsHtml(data.beforeHtml))
       : "";
-  const after =
+  let after =
     typeof data.afterHtml === "string" && data.afterHtml.trim()
       ? fixMissingSvgViewBox(sanitizeCmsHtml(data.afterHtml))
       : "";
+  // leadweb: пояснение после проблем на главной
+  if (after && /class="lead reveal"/.test(after) && !/style=/.test(after)) {
+    after = after.replace(
+      /class="lead reveal"/,
+      'class="lead reveal" style="margin-top:28px"',
+    );
+  }
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}${before}<div class="grid g${cols}">${cards}</div>${teaserHtml}${after}${secClose()}`;
 }
 function renderFaq(data: Record<string, unknown>, anchor?: string | null): string {
@@ -436,26 +480,22 @@ function renderCases(
       const result = it.result != null ? String(it.result).trim() : "";
       const hasDl = before || didHtml || result;
 
+      const alt = String(it.imageAlt || it.title || "");
+      const w = typeof it.imageWidth === "number" ? it.imageWidth : null;
+      const h = typeof it.imageHeight === "number" ? it.imageHeight : null;
       let img = "";
       if (opts.media) {
         img = renderMediaPicture(it.image, opts.media, {
-          fallbackAlt: String(it.imageAlt || it.title || ""),
+          fallbackAlt: alt,
           lazy: true,
-          width: typeof it.imageWidth === "number" ? it.imageWidth : null,
-          height: typeof it.imageHeight === "number" ? it.imageHeight : null,
+          width: w,
+          height: h,
         });
       }
       if (!img) {
-        const media = resolveMediaSrc(
-          it.image,
-          opts.media ?? null,
-          String(it.imageAlt || it.title || ""),
-        );
-        const w = typeof it.imageWidth === "number" ? it.imageWidth : null;
-        const h = typeof it.imageHeight === "number" ? it.imageHeight : null;
-        const wh = (w ? ` width="${w}"` : "") + (h ? ` height="${h}"` : "");
+        const media = resolveMediaSrc(it.image, opts.media ?? null, alt);
         img = media.src
-          ? `<img src="${escAttr(media.src)}" alt="${escAttr(media.alt)}"${wh} loading="lazy">`
+          ? renderStaticCasePicture(media.src, media.alt || alt, w, h)
           : "";
       }
 
@@ -498,7 +538,9 @@ function renderCases(
       return `<article class="card case reveal">${inner}</article>`;
     })
     .join("");
-  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="grid g3">${cards}</div>${secClose()}`;
+  // leadweb portfolio: class="grid" без g3
+  const gridCls = variant === "portfolio" ? "grid" : "grid g3";
+  return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header)}<div class="${gridCls}">${cards}</div>${secClose()}`;
 }
 function renderCta(data: Record<string, unknown>, anchor?: string | null): string {
   const rings = data.rings

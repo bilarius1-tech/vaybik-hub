@@ -162,11 +162,11 @@ function renderHeaderNav(
       const childCurrent = children.some((c) =>
         isExactCurrent(hrefOf(c), currentPath),
       );
-      // leadweb: родитель true, если активен любой пункт подменю
-      const parentCurrent = childCurrent
-        ? ' aria-current="true"'
-        : isExactCurrent(href, currentPath)
-          ? ' aria-current="page"'
+      // leadweb: exact родителя → page; иначе true, если активен пункт подменю
+      const parentCurrent = isExactCurrent(href, currentPath)
+        ? ' aria-current="page"'
+        : childCurrent
+          ? ' aria-current="true"'
           : "";
       const subId = `sub-${slugForSub(root.label, root.id)}`;
       const sub = children
@@ -258,30 +258,43 @@ function renderMobileMenu(
 function renderFooter(
   items: NavRenderItem[],
   year: number,
-  opts?: { includeHomeLink?: boolean; currentPath?: string },
+  opts?: {
+    includeHomeLink?: boolean;
+    currentPath?: string;
+    /** aria-current в футере только на body.svc (как в leadweb) */
+    markCurrent?: boolean;
+  },
 ): string {
   const roots = items
     .filter((i) => i.menu === "FOOTER" && !i.parentId && !i.isHidden)
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
+  // leadweb помечает только первое совпадение пути
+  let markedCurrent = false;
   const cols = roots
     .map((root) => {
       const children = items
         .filter((c) => c.parentId === root.id && !c.isHidden)
         .sort((a, b) => a.sortOrder - b.sortOrder);
-      // leadweb: на svc/calculator в «Разделы» первой идёт Главная
+      // leadweb: на svc/calculator в «Разделы» первой идёт Главная (без aria)
       const prefix =
         opts?.includeHomeLink && /разделы/i.test(root.label)
-          ? `<a href="/"${isExactCurrent("/", opts.currentPath) ? ' aria-current="page"' : ""}>Главная</a>`
+          ? `<a href="/">Главная</a>`
           : "";
       const links = children
         .map((c) => {
           const t = c.openInNewTab
             ? ' target="_blank" rel="noopener"'
             : "";
-          const cur = isExactCurrent(hrefOf(c), opts?.currentPath)
-            ? ' aria-current="page"'
-            : "";
+          let cur = "";
+          if (
+            opts?.markCurrent &&
+            !markedCurrent &&
+            isExactCurrent(hrefOf(c), opts.currentPath)
+          ) {
+            cur = ' aria-current="page"';
+            markedCurrent = true;
+          }
           return `<a href="${escAttr(hrefOf(c))}"${t}${cur}>${esc(c.label)}</a>`;
         })
         .join("");
@@ -407,6 +420,8 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
       includeHomeLink:
         assets.bodyClass === "svc" || assets.bodyClass === "lc-page",
       currentPath: opts.path,
+      // aria-current в футере — только body.svc (не lc-page / default)
+      markCurrent: assets.bodyClass === "svc",
     },
   );
   const head = renderHead({

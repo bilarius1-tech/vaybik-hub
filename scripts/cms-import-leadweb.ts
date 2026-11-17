@@ -52,9 +52,11 @@ function parseSitemap(xml: string): string[] {
 function templateFor(path: string): string {
   if (path === "/") return "home";
   if (path.startsWith("/kalkulyator")) return "calculator";
+  if (path.startsWith("/keysy-ii")) return "keysy";
+  // /avtomatizaciya/ — default (av-hero), не svc; /avtomatizaciya-1c/ — service
   if (
     path.startsWith("/uslugi/") ||
-    path.startsWith("/avtomatizaciya") ||
+    path.startsWith("/avtomatizaciya-") ||
     path.startsWith("/bitrix") ||
     path.startsWith("/sayt-za-0")
   ) {
