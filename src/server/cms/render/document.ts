@@ -121,19 +121,13 @@ function normPath(p: string): string {
   return noHash.endsWith("/") ? noHash : `${noHash}/`;
 }
 
-/** aria-current: точное совпадение → page; префикс родителя → true. */
-function ariaCurrentFor(
-  href: string,
-  currentPath: string | undefined,
-): string {
+/** Точное совпадение пути (hash в href меню не участвует в current страницы). */
+function isExactCurrent(href: string, currentPath: string | undefined): boolean {
   if (!currentPath || !href || href === "#" || /^https?:/i.test(href)) {
-    return "";
+    return false;
   }
-  const cur = normPath(currentPath);
-  const h = normPath(href);
-  if (h === cur) return ' aria-current="page"';
-  if (h !== "/" && cur.startsWith(h)) return ' aria-current="true"';
-  return "";
+  if (href.includes("#")) return false;
+  return normPath(href) === normPath(currentPath);
 }
 
 function renderHeaderNav(
@@ -159,10 +153,21 @@ function renderHeaderNav(
       const target = root.openInNewTab
         ? ' target="_blank" rel="noopener"'
         : "";
-      const current = ariaCurrentFor(href, currentPath);
       if (!children.length) {
+        const current = isExactCurrent(href, currentPath)
+          ? ' aria-current="page"'
+          : "";
         return `<div class="nav-item"><a class="nav-link" href="${escAttr(href)}"${target}${current}>${esc(root.label)}</a></div>`;
       }
+      const childCurrent = children.some((c) =>
+        isExactCurrent(hrefOf(c), currentPath),
+      );
+      // leadweb: родитель true, если активен любой пункт подменю
+      const parentCurrent = childCurrent
+        ? ' aria-current="true"'
+        : isExactCurrent(href, currentPath)
+          ? ' aria-current="page"'
+          : "";
       const subId = `sub-${slugForSub(root.label, root.id)}`;
       const sub = children
         .map((c) => {
@@ -171,11 +176,13 @@ function renderHeaderNav(
           const t = c.openInNewTab
             ? ' target="_blank" rel="noopener"'
             : "";
-          const cur = ariaCurrentFor(chref, currentPath);
+          const cur = isExactCurrent(chref, currentPath)
+            ? ' aria-current="page"'
+            : "";
           return `<li><a href="${escAttr(chref)}"${hl}${t}${cur}>${esc(c.label)}</a></li>`;
         })
         .join("");
-      return `<div class="nav-item has-sub"><a class="nav-link" href="${escAttr(href)}"${current}>${esc(root.label)}</a><button class="nav-caret" type="button" aria-expanded="false" aria-controls="${escAttr(subId)}" aria-label="Подменю: ${escAttr(root.label)}">${CARET_SVG}</button><ul class="nav-sub" id="${escAttr(subId)}">${sub}</ul></div>`;
+      return `<div class="nav-item has-sub"><a class="nav-link" href="${escAttr(href)}"${parentCurrent}>${esc(root.label)}</a><button class="nav-caret" type="button" aria-expanded="false" aria-controls="${escAttr(subId)}" aria-label="Подменю: ${escAttr(root.label)}">${CARET_SVG}</button><ul class="nav-sub" id="${escAttr(subId)}">${sub}</ul></div>`;
     })
     .join("");
 }
@@ -195,7 +202,9 @@ function renderMobileMenu(
     )
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
-  const homeCurrent = ariaCurrentFor("/", currentPath);
+  const homeCurrent = isExactCurrent("/", currentPath)
+    ? ' aria-current="page"'
+    : "";
   const parts: string[] = [`<a href="/"${homeCurrent}>Главная</a>`];
 
   for (const root of roots) {
@@ -203,22 +212,30 @@ function renderMobileMenu(
       .filter((c) => c.parentId === root.id && !c.isHidden)
       .sort((a, b) => a.sortOrder - b.sortOrder);
     if (root.isHighlighted) {
+      const cur = isExactCurrent(hrefOf(root), currentPath)
+        ? ' aria-current="page"'
+        : "";
       parts.push(
-        `<a class="menu-hl" href="${escAttr(hrefOf(root))}"${ariaCurrentFor(hrefOf(root), currentPath)}>${esc(root.label)}</a>`,
+        `<a class="menu-hl" href="${escAttr(hrefOf(root))}"${cur}>${esc(root.label)}</a>`,
       );
       continue;
     }
     if (!children.length) {
+      const cur = isExactCurrent(hrefOf(root), currentPath)
+        ? ' aria-current="page"'
+        : "";
       parts.push(
-        `<a href="${escAttr(hrefOf(root))}"${ariaCurrentFor(hrefOf(root), currentPath)}>${esc(root.label)}</a>`,
+        `<a href="${escAttr(hrefOf(root))}"${cur}>${esc(root.label)}</a>`,
       );
       continue;
     }
     const lis = children
-      .map(
-        (c) =>
-          `<a href="${escAttr(hrefOf(c))}"${ariaCurrentFor(hrefOf(c), currentPath)}>${esc(c.label)}</a>`,
-      )
+      .map((c) => {
+        const cur = isExactCurrent(hrefOf(c), currentPath)
+          ? ' aria-current="page"'
+          : "";
+        return `<a href="${escAttr(hrefOf(c))}"${cur}>${esc(c.label)}</a>`;
+      })
       .join("");
     parts.push(
       `<details class="menu-acc"><summary>${esc(root.label)}</summary><div class="menu-acc-list">${lis}</div></details>`,
@@ -241,6 +258,7 @@ function renderMobileMenu(
 function renderFooter(
   items: NavRenderItem[],
   year: number,
+  opts?: { includeHomeLink?: boolean; currentPath?: string },
 ): string {
   const roots = items
     .filter((i) => i.menu === "FOOTER" && !i.parentId && !i.isHidden)
@@ -251,15 +269,23 @@ function renderFooter(
       const children = items
         .filter((c) => c.parentId === root.id && !c.isHidden)
         .sort((a, b) => a.sortOrder - b.sortOrder);
+      // leadweb: на svc/calculator в «Разделы» первой идёт Главная
+      const prefix =
+        opts?.includeHomeLink && /разделы/i.test(root.label)
+          ? `<a href="/"${isExactCurrent("/", opts.currentPath) ? ' aria-current="page"' : ""}>Главная</a>`
+          : "";
       const links = children
         .map((c) => {
           const t = c.openInNewTab
             ? ' target="_blank" rel="noopener"'
             : "";
-          return `<a href="${escAttr(hrefOf(c))}"${t}>${esc(c.label)}</a>`;
+          const cur = isExactCurrent(hrefOf(c), opts?.currentPath)
+            ? ' aria-current="page"'
+            : "";
+          return `<a href="${escAttr(hrefOf(c))}"${t}${cur}>${esc(c.label)}</a>`;
         })
         .join("");
-      return `<div><h3>${esc(root.label)}</h3>${links}</div>`;
+      return `<div><h3>${esc(root.label)}</h3>${prefix}${links}</div>`;
     })
     .join("");
 
@@ -376,6 +402,12 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
   const footer = renderFooter(
     opts.nav,
     opts.year || new Date().getFullYear(),
+    {
+      // как в leadweb: Главная в футере только на svc / calculator
+      includeHomeLink:
+        assets.bodyClass === "svc" || assets.bodyClass === "lc-page",
+      currentPath: opts.path,
+    },
   );
   const head = renderHead({
     mode: opts.mode,

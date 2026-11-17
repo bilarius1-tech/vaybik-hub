@@ -39,12 +39,12 @@ function recognizeHero(
 ): RecognizedBlock | null {
   if (!hasClass(section, "hero")) return null;
   const $s = $(section);
-  const variant =
-    hasClass(section, "svc-hero") || hasClass(section, "av-hero")
-      ? "service"
-      : hasClass(section, "sub")
-        ? "sub"
-        : "home";
+  // av-hero сам по себе не svc-hero (/avtomatizaciya/ = home+avHero)
+  const variant = hasClass(section, "svc-hero")
+    ? "service"
+    : hasClass(section, "sub")
+      ? "sub"
+      : "home";
   const h1 = $s.find("h1").first();
   const accent = text(h1.find(".grad").first());
   // подзаголовок блоком (class=visually или display:block)
@@ -68,15 +68,23 @@ function recognizeHero(
     title = title.replace(titleVisual, "").replace(/^\s+/, "").trim();
   }
   if (!title && accent) title = accent;
-  const buttons: Array<{ label: string; href: string; style: "primary" | "secondary" }> =
-    [];
+  const buttons: Array<{
+    label: string;
+    href: string;
+    style: "primary" | "secondary";
+    icon?: string;
+  }> = [];
   $s.find(".acts a").each((_, a) => {
     const $a = $(a);
     const cls = $a.attr("class") || "";
+    const icon = $a.find("svg").first().toString() || undefined;
+    const clone = $a.clone();
+    clone.find("svg").remove();
     buttons.push({
-      label: text($a),
+      label: text(clone) || text($a),
       href: $a.attr("href") || "#",
       style: cls.includes("bt-btn2") ? "secondary" : "primary",
+      icon,
     });
   });
   const feats: Array<{ icon?: string; title?: string; text: string }> = [];
@@ -91,15 +99,13 @@ function recognizeHero(
       feats.push({ icon, text: featTitle || desc || text($f) });
     }
   });
-  let rings: unknown = null;
+  // сырые строки — сохраняют порядок ключей leadweb для DOM-parity
   const ringsAttr = $s.find("[data-magic-rings]").attr("data-magic-rings");
-  if (ringsAttr) {
-    try {
-      rings = JSON.parse(ringsAttr);
-    } catch {
-      rings = null;
-    }
-  }
+  const rings = ringsAttr?.trim() || null;
+  const blindsAttr = $s
+    .find("[data-gradient-blinds]")
+    .attr("data-gradient-blinds");
+  const gradientBlinds = blindsAttr?.trim() || null;
   const $brand = $s.find(".brand-lockup").first();
   const brandHtml = $brand.length
     ? sanitizeCmsHtml($.html($brand) || "")
@@ -109,9 +115,16 @@ function recognizeHero(
     const t = text($(n));
     if (t) notes.push(t);
   });
+  const mascotSrc =
+    $s.find("figure.mascot img").first().attr("src") ||
+    $s.find(".mascot img").first().attr("src") ||
+    "";
+  const mascotMatch = mascotSrc.match(/vaybik-([a-z0-9-]+)\./i);
+  const mascot = mascotMatch?.[1] || "privet";
   const data = parseBlockData("hero", {
     variant,
     avHero: hasClass(section, "av-hero"),
+    keysyHero: hasClass(section, "keysy-hero"),
     kicker: text($s.find(".kicker").first()) || null,
     title: title || "Без названия",
     titleAccent: accent || null,
@@ -120,9 +133,10 @@ function recognizeHero(
     buttons,
     brandHtml,
     notes,
-    mascot: "privet",
+    mascot,
     feats,
     rings,
+    gradientBlinds,
   });
   return { type: "hero", data, anchor: section.attribs?.id || null };
 }

@@ -35,21 +35,23 @@ const headerSchema = z
 
 const backgroundSchema = z.enum(["default", "alt"]).default("default");
 
-const buttonSchema = z.object({
-  label: z.string().min(1),
-  href: z.string().min(1),
-  style: z.enum(["primary", "secondary"]).default("primary"),
-});
-
 const iconField = z
   .string()
   .optional()
   .nullable()
   .transform((v) => (v ? sanitizeSvgIcon(v) : v));
 
+const buttonSchema = z.object({
+  label: z.string().min(1),
+  href: z.string().min(1),
+  style: z.enum(["primary", "secondary"]).default("primary"),
+  icon: iconField,
+});
+
 export const heroBlockSchema = z.object({
   variant: z.enum(["home", "sub", "service"]).default("home"),
   avHero: z.boolean().optional().default(false),
+  keysyHero: z.boolean().optional().default(false),
   kicker: optionalString,
   title: z.string().min(1),
   titleAccent: optionalString,
@@ -75,7 +77,10 @@ export const heroBlockSchema = z.object({
       }),
     )
     .default([]),
+  /** Сырой JSON из data-magic-rings (строка сохраняет порядок ключей leadweb) */
   rings: z.unknown().optional().nullable(),
+  /** Сырой JSON из data-gradient-blinds */
+  gradientBlinds: z.unknown().optional().nullable(),
   image: mediaRefField,
 });
 

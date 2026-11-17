@@ -93,18 +93,45 @@ function listAssets(
     .filter(Boolean);
 }
 
+function stableJsonValue(v: unknown): unknown {
+  if (Array.isArray(v)) return v.map(stableJsonValue);
+  if (v && typeof v === "object") {
+    const out: Record<string, unknown> = {};
+    for (const k of Object.keys(v as object).sort()) {
+      out[k] = stableJsonValue((v as Record<string, unknown>)[k]);
+    }
+    return out;
+  }
+  return v;
+}
+
+/** data-* JSON сравниваем по смыслу (порядок ключей в leadweb/CMS может отличаться). */
+function normalizeAttrValue(key: string, value: string): string {
+  if (
+    (key.startsWith("data-") || key === "data-magic-rings" || key === "data-gradient-blinds") &&
+    /^\s*[\[{]/.test(value)
+  ) {
+    try {
+      return JSON.stringify(stableJsonValue(JSON.parse(value)));
+    } catch {
+      return value;
+    }
+  }
+  return value;
+}
+
 function nodeSignature(el: Element): string {
   const tag = el.tagName.toLowerCase();
   const attrs = el.attribs || {};
   const parts: string[] = [tag];
   for (const key of STRUCT_ATTRS) {
     if (attrs[key] != null && attrs[key] !== "") {
-      parts.push(`${key}=${attrs[key]}`);
+      parts.push(`${key}=${normalizeAttrValue(key, attrs[key])}`);
     }
   }
   for (const [k, v] of Object.entries(attrs)) {
     if (k.startsWith("data-") || k.startsWith("aria-")) {
-      parts.push(`${k}=${v}`);
+      parts.push(`${k}=${normalizeAttrValue(k, v)}`);
     }
   }
   return parts.join("|");

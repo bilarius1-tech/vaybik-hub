@@ -12,6 +12,22 @@ export function escAttr(s: string | null | undefined): string {
   return esc(s);
 }
 
+/**
+ * JSON в одиночных кавычках атрибута (как leadweb: data-foo='{"a":1}').
+ * Не экранируем " — иначе &quot; ломает DOM-parity и парсер JS.
+ */
+export function escJsonAttr(value: unknown): string {
+  const raw =
+    typeof value === "string"
+      ? value
+      : JSON.stringify(value ?? null);
+  return raw
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Простой markdown → HTML (жирный, курсив, ссылки, абзацы, списки) */
 export function simpleMarkdown(md: string): string {
   if (!md) return "";

@@ -39,11 +39,13 @@ export const buttonSchema = z.object({
   label: z.string().min(1, "Укажите текст кнопки"),
   href: z.string().min(1, "Укажите ссылку"),
   style: z.enum(["primary", "secondary"]).default("primary"),
+  icon: optionalString,
 });
 
 export const heroClientSchema = z.object({
   variant: z.enum(["home", "sub", "service"]).default("home"),
   avHero: z.boolean().optional().default(false),
+  keysyHero: z.boolean().optional().default(false),
   kicker: optionalString,
   title: z.string().min(1, "Нужен заголовок"),
   titleAccent: optionalString,
@@ -63,6 +65,7 @@ export const heroClientSchema = z.object({
     )
     .default([]),
   rings: z.unknown().optional().nullable(),
+  gradientBlinds: z.unknown().optional().nullable(),
   image: mediaRefSchema.optional(),
 });
 

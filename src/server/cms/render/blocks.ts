@@ -1,5 +1,5 @@
 import { sanitizeCmsHtml, sanitizeRichText } from "../sanitize";
-import { esc, escAttr, simpleMarkdown } from "./escape";
+import { esc, escAttr, escJsonAttr, simpleMarkdown } from "./escape";
 import {
   CHECK_ICON,
   FAQ_ICON,
@@ -69,16 +69,22 @@ function secClose(): string {
 }
 
 function buttonsHtml(
-  buttons: Array<{ label: string; href: string; style?: string }> = [],
+  buttons: Array<{
+    label: string;
+    href: string;
+    style?: string;
+    icon?: string | null;
+  }> = [],
 ): string {
   if (!buttons.length) return "";
   return `<div class="acts">${buttons
     .map((b) => {
       const cls = b.style === "secondary" ? "bt-btn2" : "bt-btn";
+      const icon = b.icon ? fixMissingSvgViewBox(String(b.icon)) : "";
       const inner =
         b.style === "secondary"
-          ? esc(b.label)
-          : `<span class="bt-sl">${esc(b.label)}</span>`;
+          ? `${icon}${esc(b.label)}`
+          : `${icon}<span class="bt-sl">${esc(b.label)}</span>`;
       return `<a class="${cls}" href="${escAttr(b.href)}">${inner}</a>`;
     })
     .join("")}</div>`;
@@ -124,14 +130,24 @@ function renderHero(
   opts: RenderOptions = {},
 ): string {
   const variant = String(data.variant || "home");
-  const av = data.avHero ? " av-hero" : "";
-  const heroClass =
-    variant === "service"
-      ? `hero${av} svc-hero hero-mascot`
-      : variant === "sub"
-        ? "hero sub hero-mascot"
-        : "hero hero-mascot";
-  const id = anchor ? ` id="${escAttr(anchor)}"` : "";
+  const avHero = Boolean(data.avHero);
+  const keysyHero = Boolean(data.keysyHero);
+  const av = avHero ? " av-hero" : "";
+  const keysy = keysyHero ? " keysy-hero" : "";
+  // leadweb: home → hero hero-mascot; sub → hero sub; service → +svc-hero; av без svc на /avtomatizaciya/
+  let heroClass: string;
+  if (avHero && variant === "home") {
+    heroClass = `hero av-hero hero-mascot`;
+  } else if (variant === "service") {
+    heroClass = `hero${av} svc-hero${keysy} hero-mascot`;
+  } else if (variant === "sub") {
+    heroClass = "hero sub hero-mascot";
+  } else {
+    heroClass = `hero${av}${keysy} hero-mascot`;
+  }
+  const idAttr = anchor ? ` id="${escAttr(anchor)}"` : "";
+  const labelled =
+    anchor === "hero" ? ' aria-labelledby="hero-title"' : "";
   const accentRaw = data.titleAccent != null ? String(data.titleAccent).trim() : "";
   const titleRaw = data.title != null ? String(data.title).trim() : "";
   // Не дублировать: импорт часто кладёт один и тот же текст в accent и title
@@ -146,7 +162,7 @@ function renderHero(
     : "";
   // home: подзаголовок как .visually с тире (как в leadweb)
   let h1Inner: string;
-  if (variant === "home" && accentRaw) {
+  if (variant === "home" && accentRaw && !avHero) {
     const visualText =
       visualRaw ||
       (titleRest
@@ -159,7 +175,7 @@ function renderHero(
       : "";
     h1Inner = `${titleAccent}${titleVisual}`;
   } else {
-    // service/sub: visual — отдельная строка без принудительного тире
+    // service/sub/av: visual — отдельная строка без принудительного тире
     const titleVisual = visualRaw
       ? `<span class="visually" style="display:block;font-size:.5em;font-weight:600;margin-top:.35em">${esc(visualRaw)}</span>`
       : "";
@@ -168,7 +184,10 @@ function renderHero(
     h1Inner = [titleAccent, rest, titleVisual].filter(Boolean).join(rest ? " " : "");
   }
   const rings = data.rings
-    ? `<div class="rings" aria-hidden="true" data-magic-rings='${escAttr(JSON.stringify(data.rings))}'></div>`
+    ? `<div class="rings" aria-hidden="true" data-magic-rings='${escJsonAttr(data.rings)}'></div>`
+    : "";
+  const blinds = data.gradientBlinds
+    ? `<div class="av-bg" aria-hidden="true" data-gradient-blinds='${escJsonAttr(data.gradientBlinds)}'></div><div class="av-veil" aria-hidden="true"></div>`
     : "";
   const mascot = String(data.mascot || "privet");
   const feats = Array.isArray(data.feats)
@@ -186,7 +205,7 @@ function renderHero(
         })
         .join("")}</div>`
     : "";
-  const crumbs = variant === "home" ? "" : renderCrumbs(opts);
+  const crumbs = variant === "home" && !avHero ? "" : renderCrumbs(opts);
   const brand =
     typeof data.brandHtml === "string" && data.brandHtml.trim()
       ? fixMissingSvgViewBox(sanitizeCmsHtml(data.brandHtml))
@@ -196,15 +215,20 @@ function renderHero(
         .map((n) => `<p class="svc-note">${esc(String(n))}</p>`)
         .join("")
     : "";
+  const h1Id = anchor === "hero" ? ' id="hero-title"' : "";
   const copy = `${crumbs}${brand}${
     data.kicker ? `<span class="kicker">${esc(String(data.kicker))}</span>` : ""
-  }<h1>${h1Inner}</h1>${
+  }<h1${h1Id}>${h1Inner}</h1>${
     data.lead ? `<p class="lead">${esc(String(data.lead))}</p>` : ""
   }${buttonsHtml(data.buttons as never)}${notes}`;
 
-  // service/av: layout с маскотом; обычный sub тоже с маскотом как на статике
   const mascotHtml = renderMascotPicture(mascot, { fetchPriority: "high" });
-  return `<section class="${heroClass}"${id}>${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${copy}</div>${mascotHtml}</div>${feats}</div></section>`;
+  // home (не av): <div class="w"><div class="svc-hero-layout">…</div>feats</div>
+  // sub/service/av: <div class="w svc-hero-layout">…</div>
+  if (variant === "home" && !avHero) {
+    return `<section class="${heroClass}"${idAttr}${labelled}>${blinds}${rings}<div class="w"><div class="svc-hero-layout"><div class="svc-hero-copy">${copy}</div>${mascotHtml}</div>${feats}</div></section>`;
+  }
+  return `<section class="${heroClass}"${idAttr}${labelled}>${blinds}${rings}<div class="w svc-hero-layout"><div class="svc-hero-copy">${copy}</div>${mascotHtml}</div>${feats}</section>`;
 }
 
 function renderAnswer(data: Record<string, unknown>, anchor?: string | null): string {
@@ -384,11 +408,13 @@ function renderTeam(
                 /^https?:\/\//i.test(l.href) && !l.href.includes("vaybik.ru")
                   ? ' target="_blank" rel="noopener"'
                   : "";
-              return `<a href="${escAttr(l.href)}"${ext}>${l.icon || ""}${esc(l.label)}</a>`;
+              const ic = l.icon ? fixMissingSvgViewBox(String(l.icon)) : "";
+              return `<a href="${escAttr(l.href)}"${ext}>${ic}${esc(l.label)}</a>`;
             })
             .join("")}</div>`
         : "";
-      return `<article class="person reveal">${img}<div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p>${links}</div></article>`;    })
+      return `<article class="person reveal">${img}<div><h3>${esc(String(p.name || ""))}</h3><div class="role">${esc(String(p.role || ""))}</div>${p.quote ? `<q>${esc(String(p.quote))}</q>` : ""}<p class="muted">${bio}</p>${links}</div></article>`;
+    })
     .join("");
   return `${secOpen(anchor || "team", data.background === "alt")}${secHeader(data.header as Header)}<div class="team">${html}</div>${secClose()}`;
 }
