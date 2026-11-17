@@ -155,13 +155,28 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Unit + e2e; lint/typecheck/test/build
 - [x] Деплой CMS-2.1 на прод (`680e299`, миграция `cms_pages_soft_delete`, `Page_path_active_key` OK)
 
+## CMS-3 — публичный vaybik.ru из БД (часть 3 из 4)
+
+Промпт: `docs/prompts/12-cms-03-public-render.md`. Публичный vaybik.ru до cutover остаётся nginx-статикой; тестовый хост — `site-test.vaybik.ru`.
+
+- [ ] Общий код: visibility / load / renderSiteDocument(mode public|preview); шаблон keysy
+- [ ] Site-сервер `src/site/server.ts` → `dist/site.cjs`; сервис `site` в compose (порт 3100, cache volume)
+- [ ] Маршруты: healthz, media, sitemap/robots, redirects, slash/index, CMS-страницы, proxy → vaybik-main
+- [ ] Паритет разметки с leadweb (head/шапка/подвал/виджеты/медиа picture); 404
+- [ ] Кеш HTML+gzip/br + `site.contentVersion` / bumpSiteVersion на мутациях
+- [ ] Админка: бейдж неопубликованных изменений, unpublish, «Открыть на сайте» (SITE_PUBLIC_ORIGIN)
+- [ ] Traefik labels site-test + site (priority off=1); `scripts/site-cutover.sh` on/off/status
+- [ ] `scripts/site-parity.ts`; реестр сервиса; seed robots/assets; template keysy
+- [ ] vitest + e2e site-public; lint/typecheck/test/build
+- [ ] Деплой A: тестовый хост (после «задеплой»); cutover B — только после «да»
+
 ## Фазы
 - [x] Фаза 0 — каркас
 - [x] Фаза 1 — MVP (auth, сервисы, vault, SEO, настройки, деплой-пакет)
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
 - [ ] Фаза 4 — партнёры
-- [ ] Фаза 5 — публичный хаб / CMS (CMS-2.1 на проде `680e299`)
+- [ ] Фаза 5 — публичный хаб / CMS (CMS-2.1 на проде; **сейчас CMS-3**)
 
 ## Факты сервера (Traefik / тема)
 - Внешняя сеть Traefik: `proxy` (external)
