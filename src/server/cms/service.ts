@@ -1,5 +1,9 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db";
+import {
+  syncBlockMediaUsage,
+  syncRevisionMediaUsage,
+} from "@/server/cms/media/sync-usage";
 import { parseBlockData } from "./blocks";
 
 const REVISION_LIMIT = 20;
@@ -100,6 +104,18 @@ export async function publishPage(
         source: "manual",
       },
     });
+    const snapBlocks = (
+      snapshot as {
+        blocks?: { id?: string; type: string; data: unknown }[];
+      }
+    ).blocks;
+    if (snapBlocks?.length) {
+      await syncRevisionMediaUsage(tx, {
+        pageId,
+        revisionId: rev.id,
+        blocks: snapBlocks,
+      });
+    }
     const old = await tx.pageRevision.findMany({
       where: { pageId },
       orderBy: { createdAt: "desc" },
@@ -156,7 +172,7 @@ export async function restoreRevision(
     const blocks = snap.blocks || [];
     for (const b of blocks) {
       const data = parseBlockData(b.type, b.data ?? {});
-      await tx.block.create({
+      const created = await tx.block.create({
         data: {
           pageId: rev.pageId,
           type: b.type,
@@ -165,6 +181,12 @@ export async function restoreRevision(
           isHidden: b.isHidden ?? false,
           anchor: b.anchor ?? null,
         },
+      });
+      await syncBlockMediaUsage(tx, {
+        pageId: rev.pageId,
+        blockId: created.id,
+        type: created.type,
+        data: created.data,
       });
     }
 

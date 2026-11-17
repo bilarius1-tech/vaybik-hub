@@ -49,6 +49,8 @@ export const blockUpdateSchema = z
     isHidden: z.boolean().optional(),
     anchor: z.string().max(80).optional().nullable(),
     sortOrder: z.number().int().optional(),
+    /** ISO-время для оптимистичной блокировки */
+    updatedAt: z.string().datetime().optional(),
   })
   .superRefine((v, ctx) => {
     if (v.data !== undefined && !v.type) {

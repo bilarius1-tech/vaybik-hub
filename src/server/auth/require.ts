@@ -57,5 +57,5 @@ export async function requireReauth(): Promise<SessionContext> {
   return ctx;
 }
 
-export { can };
+export { can, requireRole };
 export type { AuthUser, Action };

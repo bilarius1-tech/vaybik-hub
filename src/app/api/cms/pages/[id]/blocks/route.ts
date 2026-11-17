@@ -10,6 +10,7 @@ import {
 import { prisma } from "@/server/db";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
+import { syncBlockMediaUsage } from "@/server/cms/media/sync-usage";
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -28,20 +29,28 @@ export async function POST(req: NextRequest, ctx: Ctx) {
     });
     const sortOrder = body.sortOrder ?? (max._max.sortOrder ?? -1) + 1;
 
-    const block = await prisma.block.create({
-      data: {
+    const block = await prisma.$transaction(async (tx) => {
+      const created = await tx.block.create({
+        data: {
+          pageId,
+          type: body.type,
+          data: body.data as Prisma.InputJsonValue,
+          isHidden: body.isHidden,
+          anchor: body.anchor ?? null,
+          sortOrder,
+        },
+      });
+      await syncBlockMediaUsage(tx, {
         pageId,
-        type: body.type,
-        data: body.data as Prisma.InputJsonValue,
-        isHidden: body.isHidden,
-        anchor: body.anchor ?? null,
-        sortOrder,
-      },
-    });
-
-    await prisma.page.update({
-      where: { id: pageId },
-      data: { updatedById: auth.user.id, source: "manual" },
+        blockId: created.id,
+        type: created.type,
+        data: created.data,
+      });
+      await tx.page.update({
+        where: { id: pageId },
+        data: { updatedById: auth.user.id, source: "manual" },
+      });
+      return created;
     });
 
     await writeAudit({
@@ -107,22 +116,47 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     });
     if (!existing) return jsonError("NOT_FOUND", "Блок не найден", 404);
 
-    const block = await prisma.block.update({
-      where: { id: blockId },
-      data: {
-        ...(fields.type ? { type: fields.type } : {}),
-        ...(fields.data !== undefined
-          ? { data: fields.data as Prisma.InputJsonValue }
-          : {}),
-        ...(fields.isHidden !== undefined ? { isHidden: fields.isHidden } : {}),
-        ...(fields.anchor !== undefined ? { anchor: fields.anchor } : {}),
-        ...(fields.sortOrder !== undefined ? { sortOrder: fields.sortOrder } : {}),
-      },
-    });
+    // Конфликт оптимистичной блокировки (§5)
+    if (
+      fields.updatedAt &&
+      existing.updatedAt.getTime() > new Date(fields.updatedAt).getTime()
+    ) {
+      return jsonError(
+        "CONFLICT",
+        "Изменено другим пользователем, обновить",
+        409,
+        { updatedAt: existing.updatedAt.toISOString() },
+      );
+    }
 
-    await prisma.page.update({
-      where: { id: pageId },
-      data: { updatedById: auth.user.id, source: "manual" },
+    const block = await prisma.$transaction(async (tx) => {
+      const updated = await tx.block.update({
+        where: { id: blockId },
+        data: {
+          ...(fields.type ? { type: fields.type } : {}),
+          ...(fields.data !== undefined
+            ? { data: fields.data as Prisma.InputJsonValue }
+            : {}),
+          ...(fields.isHidden !== undefined ? { isHidden: fields.isHidden } : {}),
+          ...(fields.anchor !== undefined ? { anchor: fields.anchor } : {}),
+          ...(fields.sortOrder !== undefined
+            ? { sortOrder: fields.sortOrder }
+            : {}),
+        },
+      });
+      if (fields.data !== undefined || fields.type) {
+        await syncBlockMediaUsage(tx, {
+          pageId,
+          blockId: updated.id,
+          type: updated.type,
+          data: updated.data,
+        });
+      }
+      await tx.page.update({
+        where: { id: pageId },
+        data: { updatedById: auth.user.id, source: "manual" },
+      });
+      return updated;
     });
 
     await writeAudit({

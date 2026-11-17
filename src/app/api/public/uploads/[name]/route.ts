@@ -20,9 +20,21 @@ export async function GET(_req: Request, ctx: Ctx) {
     const filePath = path.join(uploadsRoot(), safe);
     const buf = await readFile(filePath);
     const ext = path.extname(safe);
+    if (ext === ".svg") {
+      return new Response(buf, {
+        headers: {
+          "Content-Type": "image/svg+xml; charset=utf-8",
+          "Content-Security-Policy":
+            "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+          "X-Content-Type-Options": "nosniff",
+          "Cache-Control": "public, max-age=31536000, immutable",
+        },
+      });
+    }
     return new Response(buf, {
       headers: {
         "Content-Type": MIME[ext] || "application/octet-stream",
+        "X-Content-Type-Options": "nosniff",
         "Cache-Control": "public, max-age=31536000, immutable",
       },
     });

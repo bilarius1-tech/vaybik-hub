@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { sanitizeSvgFile } from "@/server/cms/sanitize";
 
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -49,7 +50,11 @@ export async function saveUpload(file: File): Promise<{
     throw new UploadError("Файл больше 2 МБ", 400, "TOO_LARGE");
   }
 
-  const buf = Buffer.from(await file.arrayBuffer());
+  let buf = Buffer.from(await file.arrayBuffer());
+  if (ext === ".svg") {
+    const cleaned = sanitizeSvgFile(buf.toString("utf8"));
+    buf = Buffer.from(cleaned, "utf8");
+  }
   const sha256 = createHash("sha256").update(buf).digest("hex");
   const filename = `${randomBytes(12).toString("hex")}${ext}`;
   const root = uploadsRoot();
