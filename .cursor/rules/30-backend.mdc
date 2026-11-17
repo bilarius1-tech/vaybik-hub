@@ -9,3 +9,4 @@ alwaysApply: false
 - Фоновые задачи — только в worker (`src/worker`, pg-boss): health-checks, метрики, уведомления, бэкапы, вебхуки с ретраями.
 - Тесты Vitest для crypto, auth, RBAC, валидации; e2e Playwright для ключевых сценариев.
 - Миграции — `prisma migrate dev --name <что_изменено>`, коммитить вместе с кодом.
+- Partial unique `Page_path_active_key` (`WHERE "deletedAt" IS NULL`) Prisma не моделирует. Если новая миграция содержит `DROP INDEX "Page_path_active_key"` — **убрать эту строку** до `migrate`/`deploy`; индекс нужен.

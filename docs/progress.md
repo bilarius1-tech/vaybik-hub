@@ -153,7 +153,7 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] API: list/sort/paginate, trash/restore/purge, duplicate, unpublish, bulk + audit
 - [x] Меню/редиректы: create в модалке, действия; медиа: «Найдено» + сброс
 - [x] Unit + e2e; lint/typecheck/test/build
-- [ ] Деплой — после «задеплой»
+- [x] Деплой CMS-2.1 — в процессе / см. devlog
 
 ## Фазы
 - [x] Фаза 0 — каркас

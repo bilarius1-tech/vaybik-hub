@@ -59,6 +59,7 @@
 - **2026-11-17** — главный сайт vaybik.ru: статика из `bilarius1-tech/leadweb` (`/opt/vaybik-site-src`), выкладка `scripts/deploy-site.sh` в `/opt/apps/vaybik-main` (nginx reload). `/admin` остаётся хабом (Traefik priority 100). URL: `/automation.html`→`/avtomatizaciya-1c/`, `/bitrix.html`→`/bitrix/` (301).
 - **2026-11-17** — CMS-1 в хабе: Page/Block/NavItem/Redirect/PageRevision, `/admin/site`, предпросмотр, импорт leadweb. Публичный рендер из БД — позже (часть 3). Новый env: `SITE_ASSETS_ORIGIN`.
 - **2026-11-17** — CMS-2.1: soft delete страниц + списки `/admin/site` (сортировка/пагинация/URL/bulk/корзина); purge — OWNER.
+- **2026-11-17** — Уникальность активных `Page.path` — partial index `Page_path_active_key` (`WHERE "deletedAt" IS NULL`). Prisma его не моделирует: в новой миграции, если появится `DROP INDEX "Page_path_active_key"`, **удалить эту строку** и оставить индекс.
 
 ## 6. Договорённости
 
