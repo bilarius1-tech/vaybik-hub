@@ -1,11 +1,11 @@
-export type NavItem = {
+export type SidebarItem = {
   href: string;
   label: string;
   icon: string;
 };
 
 /** Пункты меню сайдбара (TZ §6) */
-export const NAV_ITEMS: NavItem[] = [
+export const NAV_ITEMS: SidebarItem[] = [
   { href: "/", label: "Дашборд", icon: "◈" },
   { href: "/services", label: "Сервисы", icon: "⌂" },
   { href: "/settings", label: "Настройки Вайбика", icon: "✦" },
