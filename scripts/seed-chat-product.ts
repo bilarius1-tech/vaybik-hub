@@ -8,13 +8,13 @@
 import { prisma } from "../src/server/db";
 
 function defaultManageUrl(): string {
+  // Прод: всегда chat.vaybik.ru (не chat-test), даже если CHAT_BASE_URL ещё пуст.
+  if (process.env.APP_ENV === "prod") {
+    return "https://chat.vaybik.ru/manage/clients/{externalId}";
+  }
   const fromEnv = (process.env.CHAT_BASE_URL || "").trim().replace(/\/$/, "");
   if (fromEnv) return `${fromEnv}/manage/clients/{externalId}`;
-  const host =
-    process.env.APP_ENV === "prod"
-      ? "https://chat.vaybik.ru"
-      : "https://chat-test.vaybik.ru";
-  return `${host}/manage/clients/{externalId}`;
+  return "https://chat-test.vaybik.ru/manage/clients/{externalId}";
 }
 
 async function main() {

@@ -197,8 +197,9 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Ф-B (каркас хаба) — SSO token + `SsoJti`, кнопка + reauth, AuditLog `client.impersonate`, 302 на `/sso` (связка с чатом — когда будет `/sso`)
 - [ ] Этап 2 — кабинет CLIENT / ClientMember / Invite (только план, код позже)
 - [x] Env на **dev** (Алексей): `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` — заданы; apiReady/ssoReady = true
-- [ ] Env на **проде** — после «задеплой»
-- [ ] Приёмка Ф-A/Ф-B на стенде (когда чат отдаст `/api/hub/clients` и `/sso`)
+- [ ] Env на **проде** — Алексей впишет в `/opt/apps/vaybik-hub/.env` (CHAT_* пока ABSENT)
+- [ ] Выкат Ф-A+Ф-B — чеклист `docs/plans/2026-11-18-prod-rollout-clients.md`; **только после чата + «задеплой»** (+бэкап до migrate)
+- [ ] Приёмка Ф-A/Ф-B **на проде** (после выката)
 
 ## Фазы
 - [x] Фаза 0 — каркас
