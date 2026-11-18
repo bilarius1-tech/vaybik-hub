@@ -188,12 +188,22 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] lint / typecheck / test / build зелёные
 - [x] Деплой + cutover vaybik.ru (`e613dd7`, вечер 17.11)
 
+## Клиенты ↔ продукт «Чат» (2026-11-18)
+
+План: `docs/plans/2026-11-18-services-clients-access.md`. Промпт 8 (PARTNER) отложен; Client ≠ Partner.
+
+- [x] Ф0 — план (модели, контракт, фазы, риски миграций)
+- [ ] Ф-A — Service.isProduct/manageUrl; Client + ClientService; RBAC `clients.manage`; UI `/admin/clients`; connect Chat (HMAC); AuditLog; фильтр продуктов
+- [ ] Ф-B — «Войти как клиент» (SSO token + jti, AuditLog `client.impersonate`, без подмены cookie хаба)
+- [ ] Этап 2 — кабинет CLIENT / ClientMember / Invite (только план, код позже)
+- [ ] Env на стенде/проде (Алексей): `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET`
+
 ## Фазы
 - [x] Фаза 0 — каркас
 - [x] Фаза 1 — MVP (auth, сервисы, vault, SEO, настройки, деплой-пакет)
 - [x] Фаза 2 — Docker
 - [x] Фаза 3 — БД и бэкапы (код готов; деплой и Метрика — отдельно)
-- [ ] Фаза 4 — партнёры
+- [ ] Фаза 4 — партнёры (**отложена**; не смешивать с Client)
 - [x] Фаза 5 / CMS-3+3a — публичный сайт из БД (cutover ON; источник правды — админка)
 
 ## Факты сервера (Traefik / тема)
