@@ -1,15 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
 import { requireCan, requireReauth } from "@/server/auth/require";
 import { startClientImpersonate } from "@/server/clients/impersonate";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
-import { handleRouteError, jsonError } from "@/server/http/response";
+import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 
 type Ctx = { params: Promise<{ id: string }> };
 
 /**
- * «Войти как клиент»: reauth → выпуск SSO → 302 на чат.
- * Токен только в Location, не в JSON и не в AuditLog.diff.
+ * «Войти как клиент»: reauth → выпуск SSO → 200 { redirectUrl }.
+ * Не 302: fetch+redirect:manual даёт opaqueredirect без Location.
+ * Токен только внутри redirectUrl; в AuditLog.diff — только jti.
  */
 export async function POST(req: NextRequest, ctx: Ctx) {
   try {
@@ -46,8 +47,15 @@ export async function POST(req: NextRequest, ctx: Ctx) {
       userAgent: userAgent(req),
     });
 
-    // Токен уходит только в Location (браузерный redirect)
-    return NextResponse.redirect(result.ssoUrl, 302);
+    return jsonOk(
+      { redirectUrl: result.ssoUrl },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (err) {
     return handleRouteError(err);
   }

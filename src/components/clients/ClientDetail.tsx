@@ -169,7 +169,10 @@ export function ClientDetail({
     await refresh();
   }
 
-  /** POST impersonate → 302 Location на чат. Токен не кладём в state. */
+  /**
+   * POST impersonate → 200 { redirectUrl } → window.location.assign.
+   * Токен не кладём в state и не логируем (сразу уходим по URL).
+   */
   async function tryImpersonateRedirect(): Promise<"ok" | "reauth" | "error"> {
     try {
       const res = await fetch(`/admin/api/clients/${client.id}/impersonate`, {
@@ -177,18 +180,15 @@ export function ClientDetail({
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: "{}",
-        redirect: "manual",
       });
-      if (res.status >= 300 && res.status < 400) {
-        const loc = res.headers.get("Location");
-        if (loc) {
-          window.location.assign(loc);
-          return "ok";
-        }
-      }
       const json = (await res.json().catch(() => null)) as {
+        redirectUrl?: string;
         error?: { message?: string; code?: string };
       } | null;
+      if (res.ok && typeof json?.redirectUrl === "string" && json.redirectUrl) {
+        window.location.assign(json.redirectUrl);
+        return "ok";
+      }
       if (json?.error?.code === "REAUTH_REQUIRED") return "reauth";
       setError(json?.error?.message || "Не удалось войти как клиент");
       return "error";
