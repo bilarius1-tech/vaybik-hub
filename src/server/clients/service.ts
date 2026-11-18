@@ -1,19 +1,30 @@
 import type { Client, ClientService, Prisma, Service } from "@prisma/client";
-import { prisma } from "@/server/db";
-import { upsertHubChatClient } from "@/server/chat/hub-client";
+import { runAdminBackup } from "@/server/backup/run";
 import {
-  clientStatusToChat,
-  clientStatusToServiceStatus,
-} from "./status-map";
+  deleteHubChatClient,
+  upsertHubChatClient,
+} from "@/server/chat/hub-client";
+import { prisma } from "@/server/db";
+import { dateToYmd, todayMskYmd, ymdToDate } from "./period";
+import { buildChatUpsertPayload } from "./sync-payload";
+import { clientStatusToServiceStatus } from "./status-map";
 
 export type ClientWithServices = Client & {
   services: (ClientService & { service: Service })[];
 };
 
-export async function listClients(opts: {
+export type ListClientsOpts = {
   q?: string;
   status?: "active" | "paused" | "archived";
-}): Promise<ClientWithServices[]> {
+  /** Фильтр по сроку Чата */
+  expiry?: "expiring" | "expired";
+  sort?: "created" | "until_asc" | "until_desc";
+  todayYmd?: string;
+};
+
+export async function listClients(
+  opts: ListClientsOpts,
+): Promise<ClientWithServices[]> {
   const where: Prisma.ClientWhereInput = {};
   if (opts.status) where.status = opts.status;
   if (opts.q?.trim()) {
@@ -24,13 +35,48 @@ export async function listClients(opts: {
       { siteUrl: { contains: q, mode: "insensitive" } },
     ];
   }
-  return prisma.client.findMany({
+
+  const rows = await prisma.client.findMany({
     where,
-    orderBy: [{ createdAt: "desc" }],
     include: {
       services: { include: { service: true } },
     },
   });
+
+  const today = opts.todayYmd ?? todayMskYmd();
+  let filtered = rows;
+  if (opts.expiry === "expiring" || opts.expiry === "expired") {
+    filtered = rows.filter((c) => {
+      const chat = c.services.find((s) => s.service.slug === "chat");
+      const until = dateToYmd(chat?.activeUntil ?? null);
+      if (!until) return false;
+      if (opts.expiry === "expired") return until < today;
+      const left =
+        (ymdToDate(until).getTime() - ymdToDate(today).getTime()) /
+        86_400_000;
+      return left >= 0 && left <= 7;
+    });
+  }
+
+  const sort = opts.sort ?? "created";
+  filtered.sort((a, b) => {
+    if (sort === "created") {
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    }
+    const au = dateToYmd(
+      a.services.find((s) => s.service.slug === "chat")?.activeUntil ?? null,
+    );
+    const bu = dateToYmd(
+      b.services.find((s) => s.service.slug === "chat")?.activeUntil ?? null,
+    );
+    if (au == null && bu == null) return 0;
+    if (au == null) return 1;
+    if (bu == null) return -1;
+    const cmp = au.localeCompare(bu);
+    return sort === "until_asc" ? cmp : -cmp;
+  });
+
+  return filtered;
 }
 
 export async function getClient(
@@ -41,6 +87,25 @@ export async function getClient(
     include: {
       services: { include: { service: true } },
     },
+  });
+}
+
+async function syncChatLink(
+  client: Pick<Client, "id" | "name" | "status">,
+  link: ClientService & { service: Service },
+): Promise<ClientService & { service: Service }> {
+  if (link.service.slug !== "chat" || !link.service.isProduct) {
+    return link;
+  }
+  const res = await upsertHubChatClient(buildChatUpsertPayload(client, link));
+  return prisma.clientService.update({
+    where: { id: link.id },
+    data: {
+      lastSyncAt: new Date(),
+      lastSyncError: res.ok ? null : res.message,
+      ...(res.ok ? { externalId: res.externalId } : {}),
+    },
+    include: { service: true },
   });
 }
 
@@ -93,13 +158,18 @@ export async function connectProduct(input: {
   let lastSyncError: string | null = null;
   let lastSyncAt: Date | null = null;
 
+  const draftLink = {
+    status: "setup" as const,
+    activeFrom: null,
+    activeUntil: null,
+    paymentNote: null,
+  };
+
   if (!manual) {
     if (service.slug === "chat") {
-      const res = await upsertHubChatClient({
-        hubClientId: client.id,
-        name: client.name,
-        status: clientStatusToChat(client.status),
-      });
+      const res = await upsertHubChatClient(
+        buildChatUpsertPayload(client, draftLink),
+      );
       if (!res.ok) {
         return { ok: false, code: res.code, message: res.message };
       }
@@ -113,12 +183,9 @@ export async function connectProduct(input: {
       };
     }
   } else if (service.slug === "chat") {
-    // Ручной ID: пробуем sync, но при сбое всё равно создаём запись с пометкой
-    const res = await upsertHubChatClient({
-      hubClientId: client.id,
-      name: client.name,
-      status: clientStatusToChat(client.status),
-    });
+    const res = await upsertHubChatClient(
+      buildChatUpsertPayload(client, draftLink),
+    );
     if (res.ok) {
       externalId = res.externalId;
       lastSyncAt = new Date();
@@ -167,32 +234,14 @@ export async function retrySyncClientService(
     };
   }
 
-  const res = await upsertHubChatClient({
-    hubClientId: row.client.id,
-    name: row.client.name,
-    status: clientStatusToChat(row.client.status),
-  });
-
-  if (!res.ok) {
-    await prisma.clientService.update({
-      where: { id: row.id },
-      data: {
-        lastSyncAt: new Date(),
-        lastSyncError: res.message,
-      },
-    });
-    return { ok: false, code: res.code, message: res.message };
+  const updated = await syncChatLink(row.client, row);
+  if (updated.lastSyncError) {
+    return {
+      ok: false,
+      code: "CHAT_UNAVAILABLE",
+      message: updated.lastSyncError,
+    };
   }
-
-  const updated = await prisma.clientService.update({
-    where: { id: row.id },
-    data: {
-      externalId: res.externalId,
-      lastSyncAt: new Date(),
-      lastSyncError: null,
-    },
-    include: { service: true },
-  });
   return { ok: true, clientService: updated };
 }
 
@@ -220,14 +269,14 @@ export async function updateClientStatus(input: {
   });
 
   const desiredCs = clientStatusToServiceStatus(input.status);
+  const clientAfter = { ...existing, status: input.status };
 
   for (const link of links) {
     if (link.service.slug === "chat" && link.service.isProduct) {
-      const res = await upsertHubChatClient({
-        hubClientId: input.clientId,
-        name: existing.name,
-        status: clientStatusToChat(input.status),
-      });
+      const withStatus = { ...link, status: desiredCs };
+      const res = await upsertHubChatClient(
+        buildChatUpsertPayload(clientAfter, withStatus),
+      );
       await prisma.clientService.update({
         where: { id: link.id },
         data: {
@@ -263,40 +312,79 @@ export async function updateClientServiceStatus(input: {
     return { ok: false, code: "NOT_FOUND", message: "Подключение не найдено" };
   }
 
-  await prisma.clientService.update({
+  const updatedStatus = await prisma.clientService.update({
     where: { id: row.id },
     data: { status: input.status },
+    include: { service: true },
   });
 
   if (row.service.slug === "chat") {
-    const chatStatus =
-      input.status === "paused"
-        ? "paused"
-        : input.status === "off"
-          ? "off"
-          : "active";
-    const res = await upsertHubChatClient({
-      hubClientId: row.clientId,
-      name: row.client.name,
-      status: chatStatus,
+    const synced = await syncChatLink(row.client, {
+      ...updatedStatus,
+      status: input.status,
     });
-    const updated = await prisma.clientService.update({
-      where: { id: row.id },
-      data: {
-        lastSyncAt: new Date(),
-        lastSyncError: res.ok ? null : res.message,
-        ...(res.ok ? { externalId: res.externalId } : {}),
-      },
-      include: { service: true },
-    });
-    return { ok: true, clientService: updated };
+    return { ok: true, clientService: synced };
   }
 
-  const updated = await prisma.clientService.findUniqueOrThrow({
+  return { ok: true, clientService: updatedStatus };
+}
+
+export async function updateClientServicePeriod(input: {
+  clientServiceId: string;
+  activeFrom?: string | null;
+  activeUntil?: string | null;
+  paymentNote?: string | null;
+}): Promise<
+  | {
+      ok: true;
+      clientService: ClientService & { service: Service };
+      previous: {
+        activeFrom: string | null;
+        activeUntil: string | null;
+        paymentNote: string | null;
+      };
+    }
+  | { ok: false; code: string; message: string }
+> {
+  const row = await prisma.clientService.findUnique({
+    where: { id: input.clientServiceId },
+    include: { client: true, service: true },
+  });
+  if (!row) {
+    return { ok: false, code: "NOT_FOUND", message: "Подключение не найдено" };
+  }
+
+  const previous = {
+    activeFrom: dateToYmd(row.activeFrom),
+    activeUntil: dateToYmd(row.activeUntil),
+    paymentNote: row.paymentNote,
+  };
+
+  const data: Prisma.ClientServiceUpdateInput = {};
+  if (input.activeFrom !== undefined) {
+    data.activeFrom =
+      input.activeFrom == null ? null : ymdToDate(input.activeFrom);
+  }
+  if (input.activeUntil !== undefined) {
+    data.activeUntil =
+      input.activeUntil == null ? null : ymdToDate(input.activeUntil);
+  }
+  if (input.paymentNote !== undefined) {
+    data.paymentNote = input.paymentNote;
+  }
+
+  const updated = await prisma.clientService.update({
     where: { id: row.id },
+    data,
     include: { service: true },
   });
-  return { ok: true, clientService: updated };
+
+  if (row.service.slug === "chat") {
+    const synced = await syncChatLink(row.client, updated);
+    return { ok: true, clientService: synced, previous };
+  }
+
+  return { ok: true, clientService: updated, previous };
 }
 
 export async function setManualExternalId(input: {
@@ -312,4 +400,89 @@ export async function setManualExternalId(input: {
     },
     include: { service: true },
   });
+}
+
+export type DeleteClientResult =
+  | { ok: true; backupId: string }
+  | {
+      ok: false;
+      code: string;
+      message: string;
+      backupId?: string;
+      incomplete?: boolean;
+    };
+
+/**
+ * Удаление клиента: бэкап хаба → delete в каждый подключённый продукт →
+ * только после успеха удаляем в хабе. При сбое — deleteIncomplete.
+ */
+export async function deleteClient(input: {
+  clientId: string;
+  confirmName: string;
+}): Promise<DeleteClientResult> {
+  const client = await prisma.client.findUnique({
+    where: { id: input.clientId },
+    include: { services: { include: { service: true } } },
+  });
+  if (!client) {
+    return { ok: false, code: "NOT_FOUND", message: "Клиент не найден" };
+  }
+  if (input.confirmName.trim() !== client.name) {
+    return {
+      ok: false,
+      code: "NAME_MISMATCH",
+      message: "Название не совпадает — удаление отменено",
+    };
+  }
+
+  let backupId: string;
+  try {
+    const backup = await runAdminBackup();
+    backupId = backup.id;
+  } catch (err) {
+    return {
+      ok: false,
+      code: "BACKUP_FAILED",
+      message:
+        err instanceof Error
+          ? `Бэкап хаба не удался: ${err.message}`
+          : "Бэкап хаба не удался",
+    };
+  }
+
+  const failures: string[] = [];
+  for (const link of client.services) {
+    if (!link.service.isProduct) continue;
+    if (link.service.slug === "chat") {
+      const res = await deleteHubChatClient({ hubClientId: client.id });
+      if (!res.ok) {
+        failures.push(`Чат: ${res.message}`);
+      }
+    } else {
+      failures.push(
+        `${link.service.name}: удаление в сервисе ещё не реализовано`,
+      );
+    }
+  }
+
+  if (failures.length > 0) {
+    const message = failures.join("; ");
+    await prisma.client.update({
+      where: { id: client.id },
+      data: {
+        deleteIncomplete: true,
+        deleteIncompleteError: message,
+      },
+    });
+    return {
+      ok: false,
+      code: "SERVICE_DELETE_FAILED",
+      message,
+      backupId,
+      incomplete: true,
+    };
+  }
+
+  await prisma.client.delete({ where: { id: client.id } });
+  return { ok: true, backupId };
 }

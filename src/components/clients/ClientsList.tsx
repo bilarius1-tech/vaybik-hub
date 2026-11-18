@@ -1,5 +1,6 @@
 "use client";
 
+import { DeleteClientControls } from "@/components/clients/DeleteClientControls";
 import { ImpersonateControls } from "@/components/clients/ImpersonateControls";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -8,6 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
+import { daysRemaining, periodTone } from "@/lib/period-ymd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -19,8 +21,11 @@ type Row = {
   contact: string | null;
   status: "active" | "paused" | "archived";
   createdAt: string;
+  deleteIncomplete: boolean;
+  deleteIncompleteError: string | null;
   chatManageHref: string | null;
   canImpersonate: boolean;
+  chatActiveUntil: string | null;
   services: {
     id: string;
     status: string;
@@ -35,10 +40,37 @@ function statusPill(s: Row["status"]) {
   return <Pill tone="red">архив</Pill>;
 }
 
+function WorksUntilCell({ until }: { until: string | null }) {
+  if (!until) return <span className="text-mu">—</span>;
+  const tone = periodTone(until);
+  const left = daysRemaining(until);
+  if (tone === "expired") {
+    return (
+      <span className="font-semibold text-rd">
+        {until} · истёк
+      </span>
+    );
+  }
+  if (tone === "warn") {
+    return (
+      <span className="font-semibold text-yl">
+        {until} · осталось {left} дн.
+      </span>
+    );
+  }
+  return (
+    <span className="text-tx">
+      {until} · осталось {left} дн.
+    </span>
+  );
+}
+
 export function ClientsList({
   initial,
   initialQ,
   initialStatus,
+  initialExpiry,
+  initialSort,
   chatApiReady,
   chatMissingKeys,
   totpEnabled = false,
@@ -46,6 +78,8 @@ export function ClientsList({
   initial: Row[];
   initialQ: string;
   initialStatus: string;
+  initialExpiry: string;
+  initialSort: string;
   chatApiReady: boolean;
   chatMissingKeys: string[];
   totpEnabled?: boolean;
@@ -53,6 +87,8 @@ export function ClientsList({
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
   const [status, setStatus] = useState(initialStatus);
+  const [expiry, setExpiry] = useState(initialExpiry);
+  const [sort, setSort] = useState(initialSort);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -60,11 +96,13 @@ export function ClientsList({
       const params = new URLSearchParams();
       if (q.trim()) params.set("q", q.trim());
       if (status !== "all") params.set("status", status);
+      if (expiry !== "all") params.set("expiry", expiry);
+      if (sort !== "created") params.set("sort", sort);
       const qs = params.toString();
       router.replace(qs ? `/clients?${qs}` : "/clients");
     }, 300);
     return () => clearTimeout(t);
-  }, [q, status, router]);
+  }, [q, status, expiry, sort, router]);
 
   return (
     <div className="space-y-6">
@@ -108,6 +146,24 @@ export function ClientsList({
               { value: "archived", label: "Архив" },
             ]}
           />
+          <Segmented
+            value={expiry as "all" | "expiring" | "expired"}
+            onChange={(v) => setExpiry(v)}
+            options={[
+              { value: "all", label: "Срок: все" },
+              { value: "expiring", label: "Истекает за 7 дн." },
+              { value: "expired", label: "Истёк" },
+            ]}
+          />
+          <Segmented
+            value={sort as "created" | "until_asc" | "until_desc"}
+            onChange={(v) => setSort(v)}
+            options={[
+              { value: "created", label: "Новые" },
+              { value: "until_asc", label: "Конец ↑" },
+              { value: "until_desc", label: "Конец ↓" },
+            ]}
+          />
         </div>
 
         {initial.length === 0 ? (
@@ -130,19 +186,31 @@ export function ClientsList({
                 key: "name",
                 header: "Клиент",
                 render: (r) => (
-                  <Link
-                    href={`/clients/${r.id}`}
-                    className="font-semibold text-tx underline-offset-2 hover:text-ac hover:underline"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {r.name}
-                  </Link>
+                  <div>
+                    <Link
+                      href={`/clients/${r.id}`}
+                      className="font-semibold text-tx underline-offset-2 hover:text-ac hover:underline"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {r.name}
+                    </Link>
+                    {r.deleteIncomplete ? (
+                      <div className="mt-0.5">
+                        <Pill tone="red">удаление не завершено</Pill>
+                      </div>
+                    ) : null}
+                  </div>
                 ),
               },
               {
                 key: "status",
                 header: "Статус",
                 render: (r) => statusPill(r.status),
+              },
+              {
+                key: "until",
+                header: "Работает до",
+                render: (r) => <WorksUntilCell until={r.chatActiveUntil} />,
               },
               {
                 key: "svc",
@@ -200,6 +268,14 @@ export function ClientsList({
                         Настроить
                       </Button>
                     )}
+                    <DeleteClientControls
+                      clientId={r.id}
+                      clientName={r.name}
+                      totpEnabled={totpEnabled}
+                      incomplete={r.deleteIncomplete}
+                      incompleteError={r.deleteIncompleteError}
+                      onError={setError}
+                    />
                   </div>
                 ),
               },

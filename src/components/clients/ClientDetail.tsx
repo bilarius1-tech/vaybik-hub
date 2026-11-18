@@ -1,11 +1,14 @@
 "use client";
 
+import { DeleteClientControls } from "@/components/clients/DeleteClientControls";
 import { ImpersonateControls } from "@/components/clients/ImpersonateControls";
+import { ServicePeriodControls } from "@/components/clients/ServicePeriodControls";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { api } from "@/lib/api-client";
+import { dateToYmd } from "@/lib/period-ymd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,6 +18,9 @@ type Cs = {
   status: "setup" | "active" | "paused" | "off";
   externalId: string | null;
   note: string | null;
+  activeFrom: string | null;
+  activeUntil: string | null;
+  paymentNote: string | null;
   lastSyncAt: string | null;
   lastSyncError: string | null;
   manageHref: string | null;
@@ -33,9 +39,19 @@ type Client = {
   siteUrl: string | null;
   contact: string | null;
   status: "active" | "paused" | "archived";
+  deleteIncomplete?: boolean;
+  deleteIncompleteError?: string | null;
   updatedAt?: string;
   services: Cs[];
 };
+
+function asYmd(value: string | null | undefined): string | null {
+  if (!value) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  return dateToYmd(d);
+}
 
 function statusPill(s: Client["status"]) {
   if (s === "active") return <Pill tone="green">активен</Pill>;
@@ -173,10 +189,23 @@ export function ClientDetail({
             {client.name}
           </h2>
           {statusPill(client.status)}
+          {client.deleteIncomplete ? (
+            <Pill tone="red">удаление не завершено</Pill>
+          ) : null}
         </div>
-        <Link href="/clients">
-          <Button variant="ghost">К списку</Button>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/clients">
+            <Button variant="ghost">К списку</Button>
+          </Link>
+          <DeleteClientControls
+            clientId={client.id}
+            clientName={client.name}
+            totpEnabled={totpEnabled}
+            incomplete={Boolean(client.deleteIncomplete)}
+            incompleteError={client.deleteIncompleteError}
+            onError={setError}
+          />
+        </div>
       </div>
 
       {error ? (
@@ -332,6 +361,17 @@ export function ClientDetail({
                     <option value="off">off</option>
                   </Select>
                 </div>
+                {cs.service.slug === "chat" ? (
+                  <ServicePeriodControls
+                    clientServiceId={cs.id}
+                    activeFrom={asYmd(cs.activeFrom)}
+                    activeUntil={asYmd(cs.activeUntil)}
+                    paymentNote={cs.paymentNote}
+                    disabled={busy}
+                    onSaved={() => void refresh()}
+                    onError={setError}
+                  />
+                ) : null}
               </li>
             ))}
           </ul>

@@ -38,7 +38,10 @@ export default async function ClientPage({ params }: Props) {
   return (
     <ClientDetail
       key={`${client.id}-${client.updatedAt}-${client.services
-        .map((s) => `${s.id}:${s.status}:${s.externalId}:${s.lastSyncError}`)
+        .map(
+          (s) =>
+            `${s.id}:${s.status}:${s.externalId}:${s.lastSyncError}:${s.activeUntil}:${s.paymentNote}`,
+        )
         .join("|")}`}
       client={payload}
       chatApiReady={Boolean(getChatApiConfig())}

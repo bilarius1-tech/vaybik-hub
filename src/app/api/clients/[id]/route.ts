@@ -1,9 +1,13 @@
 import { NextRequest } from "next/server";
 import { writeAudit } from "@/server/auth/audit";
-import { requireCan } from "@/server/auth/require";
+import { requireCan, requireReauth } from "@/server/auth/require";
 import { prisma } from "@/server/db";
-import { clientUpdateSchema } from "@/server/clients/schemas";
 import {
+  clientUpdateSchema,
+  deleteClientSchema,
+} from "@/server/clients/schemas";
+import {
+  deleteClient,
   getClient,
   updateClientStatus,
 } from "@/server/clients/service";
@@ -77,6 +81,73 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
     });
 
     return jsonOk({ client });
+  } catch (err) {
+    return handleRouteError(err);
+  }
+}
+
+export async function DELETE(req: NextRequest, ctx: Ctx) {
+  try {
+    assertSameOrigin(req);
+    const auth = await requireCan("clients.manage");
+    await requireReauth();
+    const { id } = await ctx.params;
+    const body = deleteClientSchema.parse(await req.json());
+
+    const existing = await prisma.client.findUnique({
+      where: { id },
+      select: { id: true, name: true },
+    });
+    if (!existing) return jsonError("NOT_FOUND", "Клиент не найден", 404);
+
+    const result = await deleteClient({
+      clientId: id,
+      confirmName: body.confirmName,
+    });
+
+    if (!result.ok) {
+      await writeAudit({
+        actorId: auth.user.id,
+        action: "clients.delete_failed",
+        entity: "Client",
+        entityId: id,
+        diff: {
+          code: result.code,
+          incomplete: result.incomplete ?? false,
+          backupId: result.backupId ?? null,
+          message: result.message,
+        },
+        ip: clientIp(req),
+        userAgent: userAgent(req),
+      });
+      const status =
+        result.code === "NAME_MISMATCH"
+          ? 400
+          : result.code === "BACKUP_FAILED"
+            ? 503
+            : result.code === "SERVICE_DELETE_FAILED"
+              ? 409
+              : 400;
+      return jsonError(result.code, result.message, status, {
+        incomplete: result.incomplete ?? false,
+        backupId: result.backupId ?? null,
+      });
+    }
+
+    await writeAudit({
+      actorId: auth.user.id,
+      action: "clients.delete",
+      entity: "Client",
+      entityId: id,
+      diff: {
+        name: existing.name,
+        backupId: result.backupId,
+      },
+      ip: clientIp(req),
+      userAgent: userAgent(req),
+    });
+
+    return jsonOk({ deleted: true, backupId: result.backupId });
   } catch (err) {
     return handleRouteError(err);
   }

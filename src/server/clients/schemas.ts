@@ -64,3 +64,36 @@ export const setExternalIdSchema = z.object({
     .min(1, "Укажите externalId")
     .max(120),
 });
+
+const ymdSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Дата в формате ГГГГ-ММ-ДД")
+  .refine((v) => {
+    const [y, m, d] = v.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return (
+      dt.getUTCFullYear() === y &&
+      dt.getUTCMonth() === m - 1 &&
+      dt.getUTCDate() === d
+    );
+  }, "Некорректная дата");
+
+export const clientServicePeriodSchema = z.object({
+  activeFrom: z.union([ymdSchema, z.null()]).optional(),
+  activeUntil: z.union([ymdSchema, z.null()]).optional(),
+  paymentNote: z
+    .string()
+    .max(2000)
+    .optional()
+    .nullable()
+    .transform((v) =>
+      v === undefined ? undefined : v == null || v.trim() === "" ? null : v.trim(),
+    ),
+});
+
+export const deleteClientSchema = z.object({
+  confirmName: z
+    .string()
+    .trim()
+    .min(1, "Введите название клиента для подтверждения"),
+});
