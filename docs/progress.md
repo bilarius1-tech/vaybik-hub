@@ -200,7 +200,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Env на **проде** — CHAT_* в `/opt/apps/vaybik-hub/.env` (Алексей)
 - [x] Выкат Ф-A+Ф-B — … → `ba8e103` (модалка reauth + impersonate `redirectUrl`); CMS `X-Vaybik-Site: cms`
 - [x] fix: impersonate 200 `{redirectUrl}` вместо 302 — на проде `ba8e103`
-- [ ] Приёмка Ф-A/Ф-B **на проде** (прокликать клиенты / connect / SSO)
+- [x] Список клиентов: клик по строке + колонка «Действия» (Открыть / Войти как клиент / Настроить) — прод `e51c963`
+- [ ] Приёмка Ф-A/Ф-B **на проде** (прокликать карточку «Тест» / SSO; Чат подключён, externalId задан)
 
 ## Фазы
 - [x] Фаза 0 — каркас
