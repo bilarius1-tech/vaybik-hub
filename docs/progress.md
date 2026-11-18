@@ -198,8 +198,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [ ] Этап 2 — кабинет CLIENT / ClientMember / Invite (только план, код позже)
 - [x] Env на **dev** (Алексей): `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` — заданы; apiReady/ssoReady = true
 - [x] Env на **проде** — CHAT_* в `/opt/apps/vaybik-hub/.env` (Алексей)
-- [x] Выкат Ф-A+Ф-B — `110d409` → `24d6426` → `c17c3a8` (модалка reauth / Zod RU); CMS `X-Vaybik-Site: cms`
-- [x] fix: impersonate 200 `{redirectUrl}` вместо 302 (opaqueredirect) — `origin/main`, прод после «задеплой»
+- [x] Выкат Ф-A+Ф-B — … → `ba8e103` (модалка reauth + impersonate `redirectUrl`); CMS `X-Vaybik-Site: cms`
+- [x] fix: impersonate 200 `{redirectUrl}` вместо 302 — на проде `ba8e103`
 - [ ] Приёмка Ф-A/Ф-B **на проде** (прокликать клиенты / connect / SSO)
 
 ## Фазы
