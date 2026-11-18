@@ -20,10 +20,15 @@
    Стенд хаба → `chat-test.vaybik.ru`, прод → `chat.vaybik.ru`.
 
 1. **Upsert клиента:** `POST {CHAT_BASE_URL}/api/hub/clients`  
-   body `{ hubClientId, name, status: active|paused|off }`  
-   `X-Hub-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")>`  
+   body `{ hubClientId, name, status: ACTIVE|PAUSED|EXPIRED|OFF, activeFrom?: YYYY-MM-DD|null, activeUntil?: YYYY-MM-DD|null, paymentNote?: string|null }`  
+   `X-Hub-Signature: t=<unix>,v1=<hex HMAC-SHA256(secret, "<t>.<raw body>")}`  
    отклонять при `|now−t|>300` или неверной подписи (constant-time). Идемпотентно по `hubClientId`.  
-   Ответ `200 { externalId }`. `paused|off` → в чате `Client.isActive=false`.
+   Ответ `200 { externalId }`. Только `ACTIVE` → `Client.isActive=true`; даты и paymentNote пишутся в Client.  
+   Хаб ставит `EXPIRED`, если сервис active, но `activeUntil < сегодня (MSK)`.
+
+1a. **Удаление:** `DELETE {CHAT_BASE_URL}/api/hub/clients` body `{ hubClientId }` (та же подпись).  
+    Чат: бэкап среза → cascade delete (идемпотентно).  
+    Хаб: бэкап БД → delete в продукты → только после успеха удаляет Client; иначе `deleteIncomplete`.
 
 2. **SSO:** `GET {CHAT_BASE_URL}/sso?token=<b64url(payload)>.<b64url(HMAC(payload))>`  
    payload: `{ iss:"vaybik-hub", aud:"chat", jti, iat, exp:iat+60, mode:"impersonate"|"client", sub, email, hubClientId, impersonatedBy, returnUrl }`.  

@@ -73,6 +73,7 @@
 - **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget`; экран `/admin/settings/chat-widget`; CSP-RO +`chat.vaybik.ru`. На проде: enabled, publicId `xA6FHnneH5CW`, **paths `[]` = весь сайт** (сначала был только `/`).
 - **2026-11-18** — Клиенты хаба ≠ Partner. Хаб — реестр (`Client` / `ClientService`); чат хранит рабочие данные по `hubClientId`. Контракт HMAC + SSO — в плане. Dev хаба → `chat-test.vaybik.ru`, прод → `chat.vaybik.ru`. Пауза клиента: upsert во все продукты (`archived→off`); при сбое чата — пометка «не синхронизировано», статус хаба не откатываем. Env: `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` (без запасных значений).
 - **2026-11-18** — Ф-B каркас: `SsoJti` (только jti), `POST /api/clients/[id]/impersonate` после reauth → **200 `{ redirectUrl }`** (не 302: fetch+manual = opaqueredirect); AuditLog `client.impersonate`; cookie `vaybik_session` не трогаем.
+- **2026-11-18** — Срок ClientService: `activeFrom`/`activeUntil` (дата MSK), `paymentNote`. Upsert в чат: `status ACTIVE|PAUSED|EXPIRED|OFF` + даты. Удаление клиента: бэкап хаба → `DELETE /api/hub/clients` → только потом cascade в хабе; иначе `deleteIncomplete`.
 
 ## 6. Договорённости
 

@@ -201,7 +201,10 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Выкат Ф-A+Ф-B — … → `ba8e103` (модалка reauth + impersonate `redirectUrl`); CMS `X-Vaybik-Site: cms`
 - [x] fix: impersonate 200 `{redirectUrl}` вместо 302 — на проде `ba8e103`
 - [x] Список клиентов: клик по строке + колонка «Действия» (Открыть / Войти как клиент / Настроить) — прод `e51c963`
-- [ ] Приёмка Ф-A/Ф-B **на проде** (прокликать карточку «Тест» / SSO; Чат подключён, externalId задан)
+- [x] Срок сервиса (Чат): activeFrom/Until + paymentNote; UI календари/+N мес/Продлить; колонка «Работает до»; фильтр/сорт; audit; sync ACTIVE|PAUSED|EXPIRED|OFF
+- [x] Удаление клиента: имя+reauth; бэкап → delete в чат → хаб; `deleteIncomplete` при сбое; audit
+- [ ] Приёмка на проде после «задеплой» (срок / удаление / SSO)
+- [ ] Деплой чата (paymentNote + status UPPERCASE) вместе с хабом
 
 ## Фазы
 - [x] Фаза 0 — каркас
