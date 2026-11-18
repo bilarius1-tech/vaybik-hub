@@ -65,10 +65,14 @@ export function ClientDetail({
   const [siteUrl, setSiteUrl] = useState(client.siteUrl ?? "");
   const [contact, setContact] = useState(client.contact ?? "");
   const [manualExternalId, setManualExternalId] = useState("");
+  const [reauthPassword, setReauthPassword] = useState("");
+  const [reauthCode, setReauthCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const chatLink = client.services.find((s) => s.service.slug === "chat");
+  const canImpersonate =
+    chatSsoReady && Boolean(chatLink?.externalId);
 
   async function refresh() {
     router.refresh();
@@ -158,6 +162,65 @@ export function ClientDetail({
       return;
     }
     await refresh();
+  }
+
+  async function doReauth(): Promise<boolean> {
+    const res = await api("/api/auth/reauth", {
+      method: "POST",
+      body: JSON.stringify({
+        password: reauthPassword,
+        code: reauthCode || undefined,
+      }),
+    });
+    if (res.error) {
+      setError(res.error.message);
+      return false;
+    }
+    return true;
+  }
+
+  /**
+   * Reauth → POST impersonate с redirect:manual → Location на чат.
+   * Токен не читаем в UI и не кладём в state.
+   */
+  async function impersonate() {
+    if (!canImpersonate) return;
+    setBusy(true);
+    setError(null);
+    const ok = await doReauth();
+    if (!ok) {
+      setBusy(false);
+      return;
+    }
+    try {
+      const res = await fetch(`/admin/api/clients/${client.id}/impersonate`, {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+        redirect: "manual",
+      });
+      if (res.status >= 300 && res.status < 400) {
+        const loc = res.headers.get("Location");
+        if (loc) {
+          // уходим на чат; cookie хаба не трогаем
+          window.location.assign(loc);
+          return;
+        }
+      }
+      const json = (await res.json().catch(() => null)) as {
+        error?: { message?: string; code?: string };
+      } | null;
+      if (json?.error?.code === "REAUTH_REQUIRED") {
+        setError("Нужен повторный ввод пароля (reauth).");
+      } else {
+        setError(json?.error?.message || "Не удалось войти как клиент");
+      }
+    } catch {
+      setError("Не удалось войти как клиент");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -289,17 +352,22 @@ export function ClientDetail({
                         Повторить sync
                       </Button>
                     ) : null}
-                    <Button
-                      variant="ghost"
-                      disabled
-                      title={
-                        chatSsoReady
-                          ? "Скоро (Ф-B)"
-                          : "Нужен HUB_CHAT_SSO_SECRET (Ф-B)"
-                      }
-                    >
-                      Войти как клиент
-                    </Button>
+                    {cs.service.slug === "chat" ? (
+                      <Button
+                        variant="ghost"
+                        disabled={busy || !canImpersonate}
+                        title={
+                          !chatSsoReady
+                            ? "Нужны CHAT_BASE_URL и HUB_CHAT_SSO_SECRET"
+                            : !cs.externalId
+                              ? "Сначала нужен externalId"
+                              : "Откроет чат через SSO (нужен reauth ниже)"
+                        }
+                        onClick={() => void impersonate()}
+                      >
+                        Войти как клиент
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
                 <p className="mt-2 text-[12.5px] text-mu">
@@ -369,6 +437,48 @@ export function ClientDetail({
               <p className="text-[12.5px] text-mu">
                 Автоподключение выключено. Задайте в .env:{" "}
                 {chatMissingKeys.join(", ")}. Либо укажите externalId вручную.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        {chatLink ? (
+          <div className="mt-4 space-y-2 border-t border-bd pt-4">
+            <p className="text-[12.5px] text-mu">
+              «Войти как клиент» — после reauth (как в Vault). Cookie хаба не
+              подменяется. Пока чат не отдаёт /sso, откроется ошибка чата — это
+              ожидаемо.
+            </p>
+            <div className="flex flex-wrap items-end gap-3">
+              <Field label="Пароль (reauth)" htmlFor="reauth-pass">
+                <Input
+                  id="reauth-pass"
+                  type="password"
+                  autoComplete="current-password"
+                  value={reauthPassword}
+                  onChange={(e) => setReauthPassword(e.target.value)}
+                  className="max-w-xs"
+                />
+              </Field>
+              <Field label="TOTP (если включён)" htmlFor="reauth-totp">
+                <Input
+                  id="reauth-totp"
+                  value={reauthCode}
+                  onChange={(e) => setReauthCode(e.target.value)}
+                  className="max-w-[140px]"
+                  placeholder="000000"
+                />
+              </Field>
+              <Button
+                disabled={busy || !canImpersonate || !reauthPassword}
+                onClick={() => void impersonate()}
+              >
+                Войти как клиент
+              </Button>
+            </div>
+            {!chatSsoReady ? (
+              <p className="text-[12.5px] text-mu">
+                SSO выключен: задайте CHAT_BASE_URL и HUB_CHAT_SSO_SECRET.
               </p>
             ) : null}
           </div>

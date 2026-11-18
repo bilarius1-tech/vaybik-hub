@@ -186,6 +186,20 @@ model ClientService {
   @@index([externalId])
 }
 
+/// Одноразовые SSO jti (полный токен в БД не храним).
+model SsoJti {
+  jti        String   @id
+  mode       String // impersonate | client
+  userId     String
+  clientId   String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([expiresAt])
+  @@index([clientId])
+  @@index([userId])
+}
+
 model HealthCheck {
   id         BigInt      @id @default(autoincrement())
   serviceId  String
