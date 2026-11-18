@@ -1,5 +1,6 @@
 "use client";
 
+import { ImpersonateControls } from "@/components/clients/ImpersonateControls";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
@@ -18,7 +19,14 @@ type Row = {
   contact: string | null;
   status: "active" | "paused" | "archived";
   createdAt: string;
-  services: { id: string; status: string; service: { name: string; slug: string } }[];
+  chatManageHref: string | null;
+  canImpersonate: boolean;
+  services: {
+    id: string;
+    status: string;
+    externalId: string | null;
+    service: { name: string; slug: string };
+  }[];
 };
 
 function statusPill(s: Row["status"]) {
@@ -33,16 +41,19 @@ export function ClientsList({
   initialStatus,
   chatApiReady,
   chatMissingKeys,
+  totpEnabled = false,
 }: {
   initial: Row[];
   initialQ: string;
   initialStatus: string;
   chatApiReady: boolean;
   chatMissingKeys: string[];
+  totpEnabled?: boolean;
 }) {
   const router = useRouter();
   const [q, setQ] = useState(initialQ);
   const [status, setStatus] = useState(initialStatus);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -72,6 +83,10 @@ export function ClientsList({
           {chatMissingKeys.join(", ") || "CHAT_BASE_URL, HUB_CHAT_API_SECRET"}.
           Можно создать клиента и указать externalId вручную.
         </p>
+      ) : null}
+
+      {error ? (
+        <p className="text-[13px] text-rd">{error}</p>
       ) : null}
 
       <Card>
@@ -109,6 +124,7 @@ export function ClientsList({
           <DataTable
             rows={initial}
             rowKey={(r) => r.id}
+            onRowClick={(r) => router.push(`/clients/${r.id}`)}
             columns={[
               {
                 key: "name",
@@ -116,7 +132,8 @@ export function ClientsList({
                 render: (r) => (
                   <Link
                     href={`/clients/${r.id}`}
-                    className="font-semibold hover:text-ac"
+                    className="font-semibold text-tx underline-offset-2 hover:text-ac hover:underline"
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {r.name}
                   </Link>
@@ -141,6 +158,50 @@ export function ClientsList({
                 key: "site",
                 header: "Сайт",
                 render: (r) => r.siteUrl || "—",
+              },
+              {
+                key: "actions",
+                header: "Действия",
+                className: "whitespace-nowrap",
+                render: (r) => (
+                  <div
+                    className="flex flex-wrap items-center gap-1.5"
+                    data-no-row-click
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <Link href={`/clients/${r.id}`}>
+                      <Button type="button" variant="ghost">
+                        Открыть
+                      </Button>
+                    </Link>
+                    <ImpersonateControls
+                      clientId={r.id}
+                      enabled={r.canImpersonate}
+                      totpEnabled={totpEnabled}
+                      onError={setError}
+                    />
+                    {r.chatManageHref ? (
+                      <a
+                        href={r.chatManageHref}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <Button type="button" variant="ghost">
+                          Настроить
+                        </Button>
+                      </a>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled
+                        title="Сначала подключите Чат с externalId"
+                      >
+                        Настроить
+                      </Button>
+                    )}
+                  </div>
+                ),
               },
             ]}
           />
