@@ -203,8 +203,9 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Список клиентов: клик по строке + колонка «Действия» (Открыть / Войти как клиент / Настроить) — прод `e51c963`
 - [x] Срок сервиса (Чат): activeFrom/Until + paymentNote; UI календари/+N мес/Продлить; колонка «Работает до»; фильтр/сорт; audit; sync ACTIVE|PAUSED|EXPIRED|OFF
 - [x] Удаление клиента: имя+reauth; бэкап → delete в чат → хаб; `deleteIncomplete` при сбое; audit
-- [ ] Приёмка на проде после «задеплой» (срок / удаление / SSO)
-- [ ] Деплой чата (paymentNote + status UPPERCASE) вместе с хабом
+- [x] Деплой хаба `ffb8fbc` (фича `9532e0e`) + миграция period_delete; чат уже `8600501`
+- [x] Sync «Тест» после деплоя; виджет russait.ru `a5TlJfshD_OB` ACTIVE
+- [ ] Приёмка UI срока/удаления на проде (календари, фильтр, delete)
 
 ## Фазы
 - [x] Фаза 0 — каркас
