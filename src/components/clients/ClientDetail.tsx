@@ -1,5 +1,6 @@
 "use client";
 
+import { ConnectionStatusSelect } from "@/components/clients/ConnectionStatusSelect";
 import { DeleteClientControls } from "@/components/clients/DeleteClientControls";
 import { ImpersonateControls } from "@/components/clients/ImpersonateControls";
 import { ServicePeriodControls } from "@/components/clients/ServicePeriodControls";
@@ -7,11 +8,18 @@ import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
+import { Toast, type ToastState } from "@/components/ui/Toast";
 import { api } from "@/lib/api-client";
+import {
+  CLIENT_STATUS_LABEL,
+  clientStatusLabel,
+  serviceStatusLabel,
+  type ClientStatusCode,
+} from "@/lib/client-status-labels";
 import { coerceYmd } from "@/lib/period-ymd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type Cs = {
   id: string;
@@ -46,16 +54,16 @@ type Client = {
 };
 
 function statusPill(s: Client["status"]) {
-  if (s === "active") return <Pill tone="green">активен</Pill>;
-  if (s === "paused") return <Pill tone="yellow">пауза</Pill>;
-  return <Pill tone="red">архив</Pill>;
+  if (s === "active") return <Pill tone="green">{clientStatusLabel(s)}</Pill>;
+  if (s === "paused") return <Pill tone="yellow">{clientStatusLabel(s)}</Pill>;
+  return <Pill tone="red">{clientStatusLabel(s)}</Pill>;
 }
 
 function csPill(s: Cs["status"]) {
-  if (s === "active") return <Pill tone="green">active</Pill>;
-  if (s === "setup") return <Pill tone="accent">setup</Pill>;
-  if (s === "paused") return <Pill tone="yellow">paused</Pill>;
-  return <Pill tone="red">off</Pill>;
+  if (s === "active") return <Pill tone="green">{serviceStatusLabel(s)}</Pill>;
+  if (s === "setup") return <Pill tone="accent">{serviceStatusLabel(s)}</Pill>;
+  if (s === "paused") return <Pill tone="yellow">{serviceStatusLabel(s)}</Pill>;
+  return <Pill tone="red">{serviceStatusLabel(s)}</Pill>;
 }
 
 export function ClientDetail({
@@ -78,10 +86,18 @@ export function ClientDetail({
   const [manualExternalId, setManualExternalId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [toast, setToast] = useState<ToastState>(null);
+  const toastTimer = useRef<number | null>(null);
 
   const chatLink = client.services.find((s) => s.service.slug === "chat");
   const canImpersonate =
     chatSsoReady && Boolean(chatLink?.externalId);
+
+  function showToast(tone: "ok" | "err", text: string) {
+    setToast({ tone, text });
+    if (toastTimer.current) window.clearTimeout(toastTimer.current);
+    toastTimer.current = window.setTimeout(() => setToast(null), 2500);
+  }
 
   async function refresh() {
     router.refresh();
@@ -150,21 +166,6 @@ export function ClientDetail({
     const res = await api(`/api/clients/services/${csId}/sync`, {
       method: "POST",
       body: "{}",
-    });
-    setBusy(false);
-    if (res.error) {
-      setError(res.error.message);
-      return;
-    }
-    await refresh();
-  }
-
-  async function setCsStatus(csId: string, status: Cs["status"]) {
-    setBusy(true);
-    setError(null);
-    const res = await api(`/api/clients/services/${csId}`, {
-      method: "PATCH",
-      body: JSON.stringify({ status }),
     });
     setBusy(false);
     if (res.error) {
@@ -244,20 +245,30 @@ export function ClientDetail({
               onChange={(e) => setName(e.target.value)}
             />
           </Field>
-          <Field label="Статус" htmlFor="cstatus">
-            <Select
-              id="cstatus"
-              value={client.status}
-              disabled={busy}
-              onChange={(e) =>
-                setStatus(e.target.value as Client["status"])
-              }
-            >
-              <option value="active">active</option>
-              <option value="paused">paused</option>
-              <option value="archived">archived</option>
-            </Select>
-          </Field>
+          <div>
+            <Field label="Статус клиента" htmlFor="cstatus">
+              <Select
+                id="cstatus"
+                value={client.status}
+                disabled={busy}
+                onChange={(e) =>
+                  setStatus(e.target.value as Client["status"])
+                }
+              >
+                {(Object.keys(CLIENT_STATUS_LABEL) as ClientStatusCode[]).map(
+                  (code) => (
+                    <option key={code} value={code}>
+                      {CLIENT_STATUS_LABEL[code]}
+                    </option>
+                  ),
+                )}
+              </Select>
+            </Field>
+            <p className="mt-1 text-[11.5px] text-mu">
+              Общий статус клиента: влияет на все его сервисы (сохраняется сразу
+              при выборе).
+            </p>
+          </div>
           <Field label="Сайт" htmlFor="csite">
             <Input
               id="csite"
@@ -347,22 +358,14 @@ export function ClientDetail({
                     </>
                   ) : null}
                 </p>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <span className="text-[12.5px] text-mu">Статус подключения:</span>
-                  <Select
-                    className="max-w-[160px]"
-                    value={cs.status}
-                    disabled={busy}
-                    onChange={(e) =>
-                      setCsStatus(cs.id, e.target.value as Cs["status"])
-                    }
-                  >
-                    <option value="setup">setup</option>
-                    <option value="active">active</option>
-                    <option value="paused">paused</option>
-                    <option value="off">off</option>
-                  </Select>
-                </div>
+                <ConnectionStatusSelect
+                  key={`${cs.id}:${cs.status}`}
+                  clientServiceId={cs.id}
+                  status={cs.status}
+                  disabled={busy}
+                  onToast={showToast}
+                  onSaved={() => void refresh()}
+                />
                 {cs.service.slug === "chat" ? (
                   <ServicePeriodControls
                     key={`${cs.id}:${coerceYmd(cs.activeFrom)}:${coerceYmd(cs.activeUntil)}:${cs.paymentNote ?? ""}`}
@@ -434,6 +437,7 @@ export function ClientDetail({
           </div>
         ) : null}
       </Card>
+      <Toast toast={toast} />
     </div>
   );
 }

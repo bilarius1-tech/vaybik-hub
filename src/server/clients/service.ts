@@ -251,7 +251,25 @@ export async function retrySyncClientService(
 }
 
 /**
- * Смена статуса клиента: пишем в хаб, затем upsert во все подключённые продукты.
+ * Sync имени/карточки в продукты без смены ClientService.status
+ * (иначе «Сохранить» карточки затирало setup → active).
+ */
+export async function syncClientProducts(
+  clientId: string,
+): Promise<ClientWithServices | null> {
+  const client = await getClient(clientId);
+  if (!client) return null;
+  for (const link of client.services) {
+    if (link.service.slug === "chat" && link.service.isProduct) {
+      await syncChatLink(client, link);
+    }
+  }
+  return getClient(clientId);
+}
+
+/**
+ * Смена статуса клиента: пишем в хаб, затем upsert во все подключённые продукты
+ * и выравниваем статус подключения (paused→paused, archived→off, active→active).
  * При сбое sync — lastSyncError, статус хаба не откатываем.
  */
 export async function updateClientStatus(input: {

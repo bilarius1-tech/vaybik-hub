@@ -9,6 +9,10 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
+import {
+  clientStatusLabel,
+  serviceStatusLabel,
+} from "@/lib/client-status-labels";
 import { worksUntilLabel } from "@/lib/period-ymd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -35,9 +39,9 @@ type Row = {
 };
 
 function statusPill(s: Row["status"]) {
-  if (s === "active") return <Pill tone="green">активен</Pill>;
-  if (s === "paused") return <Pill tone="yellow">пауза</Pill>;
-  return <Pill tone="red">архив</Pill>;
+  if (s === "active") return <Pill tone="green">{clientStatusLabel(s)}</Pill>;
+  if (s === "paused") return <Pill tone="yellow">{clientStatusLabel(s)}</Pill>;
+  return <Pill tone="red">{clientStatusLabel(s)}</Pill>;
 }
 
 function WorksUntilCell({ until }: { until: string | null }) {
@@ -130,8 +134,8 @@ export function ClientsList({
             onChange={(v) => setStatus(v)}
             options={[
               { value: "all", label: "Все" },
-              { value: "active", label: "Активные" },
-              { value: "paused", label: "Пауза" },
+              { value: "active", label: "Активен" },
+              { value: "paused", label: "На паузе" },
               { value: "archived", label: "Архив" },
             ]}
           />
@@ -207,7 +211,10 @@ export function ClientsList({
                 render: (r) =>
                   r.services.length
                     ? r.services
-                        .map((s) => `${s.service.name} (${s.status})`)
+                        .map(
+                          (s) =>
+                            `${s.service.name} (${serviceStatusLabel(s.status)})`,
+                        )
                         .join(", ")
                     : "—",
               },

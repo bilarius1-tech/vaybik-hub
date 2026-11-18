@@ -9,6 +9,7 @@ import {
 import {
   deleteClient,
   getClient,
+  syncClientProducts,
   updateClientStatus,
 } from "@/server/clients/service";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
@@ -58,12 +59,14 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
 
     if (!client) return jsonError("NOT_FOUND", "Клиент не найден", 404);
 
-    // Если меняли только имя — sync в чат с новым именем для уже подключённых
-    if (body.name !== undefined && body.status === undefined) {
-      client = await updateClientStatus({
-        clientId: id,
-        status: client.status,
-      });
+    // Имя/контакты: sync в чат без смены статуса подключения сервисов
+    if (
+      body.status === undefined &&
+      (body.name !== undefined ||
+        body.siteUrl !== undefined ||
+        body.contact !== undefined)
+    ) {
+      client = (await syncClientProducts(id)) ?? client;
     }
 
     await writeAudit({
