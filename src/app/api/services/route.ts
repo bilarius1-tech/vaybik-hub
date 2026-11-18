@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
         composeProject: body.composeProject || null,
         branch: body.branch || "main",
         keyword: body.keyword || null,
+        publicPagePath: body.publicPagePath || null,
+        manageUrl: body.manageUrl || null,
       },
     });
 

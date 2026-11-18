@@ -193,10 +193,11 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 План: `docs/plans/2026-11-18-services-clients-access.md`. Промпт 8 (PARTNER) отложен; Client ≠ Partner.
 
 - [x] Ф0 — план (модели, контракт, фазы, риски миграций)
-- [ ] Ф-A — Service.isProduct/manageUrl; Client + ClientService; RBAC `clients.manage`; UI `/admin/clients`; connect Chat (HMAC); AuditLog; фильтр продуктов
+- [x] Ф-A — Service.isProduct/manageUrl; Client + ClientService; RBAC `clients.manage`; UI `/admin/clients`; connect Chat (HMAC); AuditLog; фильтр продуктов; сид chat
 - [ ] Ф-B — «Войти как клиент» (SSO token + jti, AuditLog `client.impersonate`, без подмены cookie хаба)
 - [ ] Этап 2 — кабинет CLIENT / ClientMember / Invite (только план, код позже)
 - [ ] Env на стенде/проде (Алексей): `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET`
+- [ ] Приёмка Ф-A Алексеем на стенде (после ключей + API чата)
 
 ## Фазы
 - [x] Фаза 0 — каркас

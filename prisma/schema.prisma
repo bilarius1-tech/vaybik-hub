@@ -95,6 +95,19 @@ enum CheckStatus {
   UNKNOWN
 }
 
+enum ClientStatus {
+  active
+  paused
+  archived
+}
+
+enum ClientServiceStatus {
+  setup
+  active
+  paused
+  off
+}
+
 model Service {
   id             String       @id @default(cuid())
   slug           String       @unique
@@ -115,6 +128,12 @@ model Service {
   isPublic       Boolean      @default(false)
   /// false = «не развёрнут» (чат/лид и т.п.)
   isDeployed     Boolean      @default(true)
+  /// Продукт для клиентов (Чат и т.п.), не инфраструктура
+  isProduct      Boolean      @default(false)
+  /// Публичная страница продукта (опционально)
+  publicPagePath String?
+  /// Шаблон deep link: …/manage/clients/{externalId}
+  manageUrl      String?
   sortOrder      Int          @default(0)
   tags           String[]
   status         CheckStatus  @default(UNKNOWN)
@@ -123,8 +142,48 @@ model Service {
   lastResponseMs Int?
   ownerPartnerId String?
   checks         HealthCheck[]
+  clientServices ClientService[]
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+/// Клиент студии (не Partner). Источник правды — хаб.
+model Client {
+  id        String         @id @default(cuid())
+  name      String
+  siteUrl   String?
+  contact   String?
+  status    ClientStatus   @default(active)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  services  ClientService[]
+
+  @@index([status])
+  @@index([name])
+}
+
+/// Подключение продукта к клиенту. Без полей квот/VPS.
+model ClientService {
+  id           String              @id @default(cuid())
+  clientId     String
+  client       Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  serviceId    String
+  service      Service             @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  status       ClientServiceStatus @default(setup)
+  /// ID сущности в сервисе (для Чата = Client.id чата)
+  externalId   String?
+  note         String?
+  startedAt    DateTime?
+  /// null = синхронизировано или ещё не пытались после ручного ввода
+  lastSyncAt   DateTime?
+  /// Непустой = «не синхронизировано» (статус хаба не откатываем)
+  lastSyncError String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@unique([clientId, serviceId])
+  @@index([serviceId])
+  @@index([externalId])
 }
 
 model HealthCheck {

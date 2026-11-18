@@ -21,6 +21,9 @@ export type ServiceFormValues = {
   timeoutMs: number;
   isPublic: boolean;
   isDeployed: boolean;
+  isProduct: boolean;
+  publicPagePath?: string | null;
+  manageUrl?: string | null;
   tags: string[];
 };
 
@@ -38,6 +41,9 @@ const empty: ServiceFormValues = {
   timeoutMs: 10000,
   isPublic: false,
   isDeployed: true,
+  isProduct: false,
+  publicPagePath: "",
+  manageUrl: "",
   tags: [],
 };
 
@@ -66,6 +72,8 @@ export function ServiceForm({ mode, serviceId, initial }: Props) {
       healthUrl: form.healthUrl || null,
       description: form.description || null,
       keyword: form.keyword || null,
+      publicPagePath: form.publicPagePath || null,
+      manageUrl: form.manageUrl || null,
       containerNames: form.containerNames,
       tags: form.tags,
     };
@@ -196,6 +204,31 @@ export function ServiceForm({ mode, serviceId, initial }: Props) {
           />
           На публичной витрине
         </label>
+        <label className="mt-6 flex items-center gap-2 text-[13px]">
+          <input
+            type="checkbox"
+            checked={form.isProduct}
+            onChange={(e) => set("isProduct", e.target.checked)}
+          />
+          Продукт для клиентов
+        </label>
+        <Field label="manageUrl (шаблон {externalId})" htmlFor="manageUrl">
+          <Input
+            id="manageUrl"
+            type="url"
+            value={form.manageUrl || ""}
+            onChange={(e) => set("manageUrl", e.target.value)}
+            placeholder="https://chat…/manage/clients/{externalId}"
+          />
+        </Field>
+        <Field label="publicPagePath" htmlFor="publicPagePath">
+          <Input
+            id="publicPagePath"
+            value={form.publicPagePath || ""}
+            onChange={(e) => set("publicPagePath", e.target.value)}
+            placeholder="/…"
+          />
+        </Field>
         {error ? (
           <p className="col-span-full text-[13px] text-rd">{error}</p>
         ) : null}

@@ -29,6 +29,9 @@ type Service = {
   timeoutMs: number;
   isPublic: boolean;
   isDeployed: boolean;
+  isProduct: boolean;
+  publicPagePath: string | null;
+  manageUrl: string | null;
   status: string;
   lastCheckedAt: string | null;
   lastResponseMs: number | null;
@@ -279,6 +282,9 @@ export function ServiceDetail({
           timeoutMs: service.timeoutMs,
           isPublic: service.isPublic,
           isDeployed: service.isDeployed,
+          isProduct: service.isProduct,
+          publicPagePath: service.publicPagePath,
+          manageUrl: service.manageUrl,
           tags: service.tags,
         }}
       />

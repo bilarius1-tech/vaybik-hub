@@ -22,6 +22,15 @@ export const serviceUpsertSchema = z.object({
   timeoutMs: z.number().int().min(1000).max(60000).default(10000),
   isPublic: z.boolean().default(false),
   isDeployed: z.boolean().default(true),
+  isProduct: z.boolean().default(false),
+  publicPagePath: z.string().max(200).optional().nullable(),
+  // Шаблон с {externalId} — не строгий URL
+  manageUrl: z
+    .string()
+    .max(500)
+    .optional()
+    .nullable()
+    .transform((v) => (v == null || v.trim() === "" ? null : v.trim())),
   sortOrder: z.number().int().default(0),
   tags: z.array(z.string()).default([]),
 });

@@ -8,9 +8,10 @@ export type SidebarItem = {
 export const NAV_ITEMS: SidebarItem[] = [
   { href: "/", label: "Дашборд", icon: "◈" },
   { href: "/services", label: "Сервисы", icon: "⌂" },
+  { href: "/clients", label: "Клиенты", icon: "◎" },
   { href: "/site", label: "Сайт", icon: "▣" },
   { href: "/settings", label: "Настройки Вайбика", icon: "✦" },
-  { href: "/seo", label: "SEO", icon: "◎" },
+  { href: "/seo", label: "SEO", icon: "◇" },
   { href: "/vault", label: "Доступы", icon: "⚿" },
   { href: "/partners", label: "Партнёры", icon: "⇄" },
   { href: "/databases", label: "Базы данных", icon: "▤" },

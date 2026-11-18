@@ -36,4 +36,10 @@ describe("rbac", () => {
     expect(can(admin, "content.manage")).toBe(true);
     expect(can(partner, "content.manage")).toBe(false);
   });
+
+  it("clients.manage — OWNER и ADMIN, не PARTNER", () => {
+    expect(can(owner, "clients.manage")).toBe(true);
+    expect(can(admin, "clients.manage")).toBe(true);
+    expect(can(partner, "clients.manage")).toBe(false);
+  });
 });

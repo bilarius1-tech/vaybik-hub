@@ -52,6 +52,9 @@ export async function PATCH(req: NextRequest, ctx: Ctx) {
         ...body,
         repoUrl: body.repoUrl === "" ? null : body.repoUrl,
         healthUrl: body.healthUrl === "" ? null : body.healthUrl,
+        publicPagePath:
+          body.publicPagePath === "" ? null : body.publicPagePath,
+        manageUrl: body.manageUrl === "" ? null : body.manageUrl,
       },
     });
 

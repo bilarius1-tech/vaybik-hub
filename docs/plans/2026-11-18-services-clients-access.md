@@ -43,6 +43,14 @@
 
 Порядок: сначала **dev/стенд**; прод — только после «задеплой». Секреты в `.env` вписывает Алексей.
 
+### Уточнения 2026-11-18 (ответы)
+
+1. Endpoint чата ещё не готов → хаб с ошибкой «Чат недоступен», «Повторить», ручной `externalId`.
+2. Смена статуса клиента → upsert во все подключённые продукты; `active→active`, `paused→paused`, `archived→off`. Сбой sync → пометка, статус хаба не откатываем.
+3. Dev → `https://chat-test.vaybik.ru`, прод → `https://chat.vaybik.ru`.
+4. Сид идемпотентно: `isProduct=true`, `manageUrl` (не перетирать вручную заполненное).
+5. Без env — кнопка «Подключить Чат» disabled + подсказка ключей.
+
 ## Риски миграций
 
 - Partial unique `Page_path_active_key` (`WHERE "deletedAt" IS NULL`) Prisma не моделирует: если SQL миграции содержит `DROP INDEX "Page_path_active_key"` — **удалить строку**, индекс оставить.

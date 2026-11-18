@@ -45,15 +45,17 @@ const DEMO = [
   },
   {
     slug: "chat",
-    name: "Chat",
+    name: "Чат",
     url: "https://chat.vaybik.ru",
     healthUrl: null,
-    description: "Чат — ещё не развёрнут",
+    description: "ИИ-чат для клиентов студии",
     type: "DOCKER" as const,
     isPublic: true,
-    isDeployed: false,
+    isDeployed: true,
+    isProduct: true,
+    manageUrl: "https://chat.vaybik.ru/manage/clients/{externalId}",
     sortOrder: 3,
-    tags: ["chat", "undeployed"],
+    tags: ["chat", "product"],
   },
   {
     slug: "lead",
@@ -79,6 +81,8 @@ async function main() {
         expectedStatus: 200,
         intervalSec: 60,
         timeoutMs: 10000,
+        isProduct: "isProduct" in s ? Boolean(s.isProduct) : false,
+        manageUrl: "manageUrl" in s ? (s.manageUrl as string) : null,
       },
       update: {
         name: s.name,
@@ -90,6 +94,8 @@ async function main() {
         sortOrder: s.sortOrder,
         tags: s.tags,
         type: s.type,
+        ...("isProduct" in s ? { isProduct: Boolean(s.isProduct) } : {}),
+        // manageUrl не трогаем здесь — см. seed:chat-product (не перетирает ручное)
         ...("containerNames" in s
           ? { containerNames: s.containerNames }
           : {}),

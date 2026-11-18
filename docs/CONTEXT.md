@@ -32,15 +32,15 @@
 
 Не относится к Вайбику, не трогать отсюда: сайт стоматологии цауне-дентал.рф (хостинг HandyHost).
 
-## 4. Текущее состояние (на 2026-11-17)
+## 4. Текущее состояние (на 2026-11-18)
 
-- Фазы 0–3 + CMS-3a на проде. Образ **`110d409`** (+ docs/`1a3dbfb`). Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`); роутер site-test снят. `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- **Источник правды — админка.** `robots`/`llms` — SEO; виджет чата — `site.chatWidget` (включён на **всём сайте**, publicId `xA6FHnneH5CW`, paths `[]`). leadweb/`vaybik-main` — css/js/fonts/img/kp.
-- Деплой/cutover: всегда unset `POSTGRES_*` и `SITE_PROD_PRIORITY`/`SITE_PUBLIC_ORIGIN` из shell (`deploy-prod.sh`, `site-cutover.sh`).
+- Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
+- **Источник правды — админка.** Виджет чата — `site.chatWidget` (весь сайт, publicId `xA6FHnneH5CW`).
+- В работе: **Клиенты хаба ↔ продукт «Чат»** (план `docs/plans/2026-11-18-services-clients-access.md`). Промпт 8 (PARTNER) отложен; Client ≠ Partner.
+- Деплой/cutover: всегда unset `POSTGRES_*` и `SITE_PROD_PRIORITY`/`SITE_PUBLIC_ORIGIN` из shell.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
-- Прод-реестр: **Whoami** и **Вайбик (главная)**. **Region** не в реестре и не трогаем без согласия.
-- Бэкапы: `/var/backups/vaybik` (uid 1001), клиент pg 16, `-Fc`. Ручной бэкап после деплоя OK (`admin/db-….dump.enc`).
-- Яндекс.Метрика на дашборд — отложена.
+- Прод-реестр: **Whoami**, **Вайбик (главная)**, CMS site. **Region** не трогаем без согласия.
+- Бэкапы: `/var/backups/vaybik` (uid 1001). Яндекс.Метрика — отложена.
 
 ## 5. Решения (кратко, новые — снизу)
 
@@ -70,6 +70,7 @@
 - **2026-11-17** — CMS-3a: calcMini/calcFull только из шаблонов (снимок sanitize без form); санитайзер сохраняет `viewBox`; на рендере `fixMissingSvgViewBox`; calculator CSS/JS + lc-bar; hero страницы скрывается при calcFull; header без дубля CTA, лат. id подменю, aria-current; mascot через `<picture>`; декоративные svg в карточках/FAQ.
 - **2026-11-17** — Источник правды сайта = админка; импортов leadweb нет. `robots.txt`/`llms.txt` только из SEO; статические файлы удалены из leadweb и `vaybik-main/html`.
 - **2026-11-17** — Виджет ИИ-консультанта: Setting `site.chatWidget`; экран `/admin/settings/chat-widget`; CSP-RO +`chat.vaybik.ru`. На проде: enabled, publicId `xA6FHnneH5CW`, **paths `[]` = весь сайт** (сначала был только `/`).
+- **2026-11-18** — Клиенты хаба ≠ Partner. Хаб — реестр (`Client` / `ClientService`); чат хранит рабочие данные по `hubClientId`. Контракт HMAC + SSO — в плане. Dev хаба → `chat-test.vaybik.ru`, прод → `chat.vaybik.ru`. Пауза клиента: upsert во все продукты (`archived→off`); при сбое чата — пометка «не синхронизировано», статус хаба не откатываем. Env: `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` (без запасных значений).
 
 ## 6. Договорённости
 
@@ -96,8 +97,8 @@
 
 ## 8. Следующие шаги
 
-1. Промпт 8 — партнёры и лиды (фаза 4).
-2. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
-3. chat.vaybik.ru — прод живой (Фаза 4 пилот); сервис `/opt/apps/vaybik-chat`; виджет на главной уже с publicId xA6FHnneH5CW.
+1. Ф-A/Ф-B: клиенты хаба ↔ Чат (см. план 2026-11-18).
+2. Промпт 8 — партнёры и лиды (фаза 4) — **отложена**.
+3. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
 4. Яндекс.Метрика на дашборд (отложено).
 5. По желанию: Telegram-бот; 2FA владельцу; экспорт CMS → статика как страховка.
