@@ -35,7 +35,7 @@
 ## 4. Текущее состояние (на 2026-11-18)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Образ **`24d6426`**: Ф-A+Ф-B клиенты/чат (миграции Client/ClientService/SsoJti). Виджет чата — `site.chatWidget` (весь сайт).
+- Образ **`c17c3a8`**: Ф-A+Ф-B клиенты/чат + модалка reauth (TTL 15 мин). Виджет чата — `site.chatWidget` (весь сайт).
 - **Источник правды — админка.** Приёмка клиентов на проде — вручную. Промпт 8 (PARTNER) отложен; Client ≠ Partner.
 - Деплой/cutover: всегда unset `POSTGRES_*` и `SITE_PROD_PRIORITY`/`SITE_PUBLIC_ORIGIN` из shell.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
