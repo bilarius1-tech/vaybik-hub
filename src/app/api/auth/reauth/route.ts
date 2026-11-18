@@ -33,12 +33,20 @@ export async function POST(req: NextRequest) {
         action: "auth.reauth_failed",
         entity: "User",
         entityId: user.id,
+        // без секретов: что именно не сошлось
+        diff: {
+          passOk,
+          totpChecked: has2fa,
+          totpOk: has2fa ? totpOk : null,
+        },
         ip: clientIp(req),
         userAgent: userAgent(req),
       });
       return jsonError(
         "INVALID",
-        has2fa ? "Неверный пароль или код" : "Неверный пароль",
+        !passOk
+          ? "Неверный пароль"
+          : "Неверный код 2FA",
         401,
       );
     }

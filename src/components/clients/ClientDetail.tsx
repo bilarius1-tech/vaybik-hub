@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { api } from "@/lib/api-client";
@@ -54,19 +55,23 @@ export function ClientDetail({
   chatApiReady,
   chatSsoReady,
   chatMissingKeys,
+  totpEnabled = false,
 }: {
   client: Client;
   chatApiReady: boolean;
   chatSsoReady: boolean;
   chatMissingKeys: string[];
+  totpEnabled?: boolean;
 }) {
   const router = useRouter();
   const [name, setName] = useState(client.name);
   const [siteUrl, setSiteUrl] = useState(client.siteUrl ?? "");
   const [contact, setContact] = useState(client.contact ?? "");
   const [manualExternalId, setManualExternalId] = useState("");
+  const [reauthOpen, setReauthOpen] = useState(false);
   const [reauthPassword, setReauthPassword] = useState("");
   const [reauthCode, setReauthCode] = useState("");
+  const [reauthError, setReauthError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -164,34 +169,8 @@ export function ClientDetail({
     await refresh();
   }
 
-  async function doReauth(): Promise<boolean> {
-    const res = await api("/api/auth/reauth", {
-      method: "POST",
-      body: JSON.stringify({
-        password: reauthPassword,
-        code: reauthCode || undefined,
-      }),
-    });
-    if (res.error) {
-      setError(res.error.message);
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Reauth → POST impersonate с redirect:manual → Location на чат.
-   * Токен не читаем в UI и не кладём в state.
-   */
-  async function impersonate() {
-    if (!canImpersonate) return;
-    setBusy(true);
-    setError(null);
-    const ok = await doReauth();
-    if (!ok) {
-      setBusy(false);
-      return;
-    }
+  /** POST impersonate → 302 Location на чат. Токен не кладём в state. */
+  async function tryImpersonateRedirect(): Promise<"ok" | "reauth" | "error"> {
     try {
       const res = await fetch(`/admin/api/clients/${client.id}/impersonate`, {
         method: "POST",
@@ -203,24 +182,57 @@ export function ClientDetail({
       if (res.status >= 300 && res.status < 400) {
         const loc = res.headers.get("Location");
         if (loc) {
-          // уходим на чат; cookie хаба не трогаем
           window.location.assign(loc);
-          return;
+          return "ok";
         }
       }
       const json = (await res.json().catch(() => null)) as {
         error?: { message?: string; code?: string };
       } | null;
-      if (json?.error?.code === "REAUTH_REQUIRED") {
-        setError("Нужен повторный ввод пароля (reauth).");
-      } else {
-        setError(json?.error?.message || "Не удалось войти как клиент");
-      }
+      if (json?.error?.code === "REAUTH_REQUIRED") return "reauth";
+      setError(json?.error?.message || "Не удалось войти как клиент");
+      return "error";
     } catch {
       setError("Не удалось войти как клиент");
-    } finally {
-      setBusy(false);
+      return "error";
     }
+  }
+
+  /** Свежий reauth (≤15 мин) → сразу SSO; иначе модалка пароля. */
+  async function impersonate() {
+    if (!canImpersonate) return;
+    setBusy(true);
+    setError(null);
+    const result = await tryImpersonateRedirect();
+    if (result === "reauth") {
+      setReauthPassword("");
+      setReauthCode("");
+      setReauthError(null);
+      setReauthOpen(true);
+    }
+    setBusy(false);
+  }
+
+  async function confirmReauthAndGo() {
+    setBusy(true);
+    setReauthError(null);
+    const res = await api("/api/auth/reauth", {
+      method: "POST",
+      body: JSON.stringify({
+        password: reauthPassword,
+        code: reauthCode || undefined,
+      }),
+    });
+    if (res.error) {
+      setReauthError(res.error.message);
+      setBusy(false);
+      return;
+    }
+    setReauthOpen(false);
+    setReauthPassword("");
+    setReauthCode("");
+    await tryImpersonateRedirect();
+    setBusy(false);
   }
 
   return (
@@ -361,7 +373,7 @@ export function ClientDetail({
                             ? "Нужны CHAT_BASE_URL и HUB_CHAT_SSO_SECRET"
                             : !cs.externalId
                               ? "Сначала нужен externalId"
-                              : "Откроет чат через SSO (нужен reauth ниже)"
+                              : "SSO в чат (если давно не вводили пароль — спросим)"
                         }
                         onClick={() => void impersonate()}
                       >
@@ -445,37 +457,10 @@ export function ClientDetail({
         {chatLink ? (
           <div className="mt-4 space-y-2 border-t border-bd pt-4">
             <p className="text-[12.5px] text-mu">
-              «Войти как клиент» — после reauth (как в Vault). Cookie хаба не
-              подменяется. Пока чат не отдаёт /sso, откроется ошибка чата — это
-              ожидаемо.
+              «Войти как клиент» — кнопка у сервиса выше. Если пароль вводили
+              меньше 15 минут назад, переход сразу; иначе спросим пароль.
+              Cookie хаба не подменяется.
             </p>
-            <div className="flex flex-wrap items-end gap-3">
-              <Field label="Пароль (reauth)" htmlFor="reauth-pass">
-                <Input
-                  id="reauth-pass"
-                  type="password"
-                  autoComplete="current-password"
-                  value={reauthPassword}
-                  onChange={(e) => setReauthPassword(e.target.value)}
-                  className="max-w-xs"
-                />
-              </Field>
-              <Field label="TOTP (если включён)" htmlFor="reauth-totp">
-                <Input
-                  id="reauth-totp"
-                  value={reauthCode}
-                  onChange={(e) => setReauthCode(e.target.value)}
-                  className="max-w-[140px]"
-                  placeholder="000000"
-                />
-              </Field>
-              <Button
-                disabled={busy || !canImpersonate || !reauthPassword}
-                onClick={() => void impersonate()}
-              >
-                Войти как клиент
-              </Button>
-            </div>
             {!chatSsoReady ? (
               <p className="text-[12.5px] text-mu">
                 SSO выключен: задайте CHAT_BASE_URL и HUB_CHAT_SSO_SECRET.
@@ -484,6 +469,52 @@ export function ClientDetail({
           </div>
         ) : null}
       </Card>
+
+      <ConfirmDialog
+        open={reauthOpen}
+        title="Подтвердите пароль"
+        confirmLabel="Войти"
+        busy={busy}
+        onCancel={() => {
+          if (busy) return;
+          setReauthOpen(false);
+          setReauthPassword("");
+          setReauthCode("");
+          setReauthError(null);
+        }}
+        onConfirm={() => void confirmReauthAndGo()}
+      >
+        <p className="mb-3">
+          Чтобы войти в чат как клиент, подтвердите пароль админки.
+        </p>
+        <Field label="Пароль" htmlFor="impersonate-pass">
+          <Input
+            id="impersonate-pass"
+            type="password"
+            autoComplete="current-password"
+            value={reauthPassword}
+            onChange={(e) => setReauthPassword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void confirmReauthAndGo();
+            }}
+          />
+        </Field>
+        {totpEnabled ? (
+          <Field label="Код 2FA" htmlFor="impersonate-totp">
+            <Input
+              id="impersonate-totp"
+              value={reauthCode}
+              onChange={(e) => setReauthCode(e.target.value)}
+              placeholder="000000"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+            />
+          </Field>
+        ) : null}
+        {reauthError ? (
+          <p className="mt-2 text-[13px] text-rd">{reauthError}</p>
+        ) : null}
+      </ConfirmDialog>
     </div>
   );
 }

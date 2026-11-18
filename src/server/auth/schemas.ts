@@ -16,7 +16,7 @@ export const twoFaSchema = z.object({
 });
 
 export const reauthSchema = z.object({
-  password: z.string().min(1),
+  password: z.string().min(1, "Введите пароль"),
   /** Обязателен, только если у пользователя включена 2FA */
   code: z.string().max(20).optional().default(""),
 });

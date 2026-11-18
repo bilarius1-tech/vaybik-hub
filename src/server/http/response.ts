@@ -22,12 +22,24 @@ export function handleRouteError(err: unknown) {
     return jsonError(err.code, err.message, err.status);
   }
   if (err && typeof err === "object" && "name" in err && (err as { name: string }).name === "ZodError") {
-    const zerr = err as { issues?: { message: string }[] };
-    return jsonError(
-      "VALIDATION",
-      zerr.issues?.[0]?.message || "Ошибка валидации",
-      400,
-    );
+    const zerr = err as {
+      issues?: { message: string; path?: (string | number)[] }[];
+    };
+    const issue = zerr.issues?.[0];
+    let message = issue?.message || "Ошибка валидации";
+    // Английские дефолты Zod → по-русски
+    if (/^Too small: expected string to have >=\s*1/i.test(message)) {
+      const field = issue?.path?.map(String).join(".") || "";
+      const labels: Record<string, string> = {
+        password: "Введите пароль",
+        name: "Укажите название",
+        externalId: "Укажите externalId",
+        code: "Введите код",
+        email: "Укажите email",
+      };
+      message = labels[field] || "Заполните обязательное поле";
+    }
+    return jsonError("VALIDATION", message, 400);
   }
   if (err && typeof err === "object" && "status" in err && "code" in err) {
     const e = err as {

@@ -12,8 +12,9 @@ import { notFound, redirect } from "next/navigation";
 type Props = { params: Promise<{ id: string }> };
 
 export default async function ClientPage({ params }: Props) {
+  let auth;
   try {
-    await requireCan("clients.manage");
+    auth = await requireCan("clients.manage");
   } catch {
     redirect("/");
   }
@@ -43,6 +44,7 @@ export default async function ClientPage({ params }: Props) {
       chatApiReady={Boolean(getChatApiConfig())}
       chatSsoReady={Boolean(getChatSsoConfig())}
       chatMissingKeys={chatApiMissingKeys()}
+      totpEnabled={auth.user.totpEnabled}
     />
   );
 }

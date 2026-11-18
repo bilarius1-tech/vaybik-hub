@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 export const clientCreateSchema = z.object({
-  name: z.string().trim().min(1).max(200),
+  name: z.string().trim().min(1, "Укажите название клиента").max(200),
   siteUrl: z
     .union([z.string().url(), z.literal(""), z.null()])
     .optional()
@@ -16,7 +16,7 @@ export const clientCreateSchema = z.object({
 });
 
 export const clientUpdateSchema = z.object({
-  name: z.string().trim().min(1).max(200).optional(),
+  name: z.string().trim().min(1, "Укажите название клиента").max(200).optional(),
   siteUrl: z
     .union([z.string().url(), z.literal(""), z.null()])
     .optional()
@@ -33,15 +33,15 @@ export const clientUpdateSchema = z.object({
 });
 
 export const connectServiceSchema = z.object({
-  serviceSlug: z.string().min(1).max(64).default("chat"),
+  serviceSlug: z
+    .string()
+    .min(1, "Укажите сервис")
+    .max(64)
+    .default("chat"),
   /** Запасной ручной ID, если API чата недоступен */
   externalId: z
-    .string()
-    .trim()
-    .min(1)
-    .max(120)
+    .union([z.string().trim().min(1, "Укажите externalId"), z.literal(""), z.null()])
     .optional()
-    .nullable()
     .transform((v) => (v == null || v === "" ? null : v)),
   note: z
     .string()
@@ -52,9 +52,15 @@ export const connectServiceSchema = z.object({
 });
 
 export const clientServiceStatusSchema = z.object({
-  status: z.enum(["setup", "active", "paused", "off"]),
+  status: z.enum(["setup", "active", "paused", "off"], {
+    message: "Некорректный статус подключения",
+  }),
 });
 
 export const setExternalIdSchema = z.object({
-  externalId: z.string().trim().min(1).max(120),
+  externalId: z
+    .string()
+    .trim()
+    .min(1, "Укажите externalId")
+    .max(120),
 });
