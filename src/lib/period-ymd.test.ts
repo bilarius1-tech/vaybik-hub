@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
   addMonthsYmd,
+  coerceYmd,
   daysRemaining,
   dateToYmd,
   extendBaseYmd,
+  formatYmdRu,
   isYmd,
   periodTone,
   todayMskYmd,
+  worksUntilLabel,
   ymdToDate,
 } from "./period-ymd";
 
@@ -46,5 +49,25 @@ describe("period-ymd", () => {
     expect(todayMskYmd(new Date("2026-11-18T10:00:00+03:00"))).toMatch(
       /^\d{4}-\d{2}-\d{2}$/,
     );
+  });
+
+  it("worksUntilLabel", () => {
+    expect(worksUntilLabel(null).text).toBe("без срока");
+    expect(worksUntilLabel("2027-01-18", "2026-11-18")).toEqual({
+      text: "до 18.01.2027 · осталось 61 дн.",
+      tone: "ok",
+    });
+    expect(worksUntilLabel("2026-11-20", "2026-11-18").tone).toBe("warn");
+    expect(worksUntilLabel("2026-11-10", "2026-11-18")).toEqual({
+      text: "до 10.11.2026 · истёк 8 дн. назад",
+      tone: "expired",
+    });
+    expect(formatYmdRu("2027-01-18")).toBe("18.01.2027");
+  });
+
+  it("coerceYmd", () => {
+    expect(coerceYmd("2027-01-18")).toBe("2027-01-18");
+    expect(coerceYmd("2027-01-18T00:00:00.000Z")).toBe("2027-01-18");
+    expect(coerceYmd(null)).toBeNull();
   });
 });

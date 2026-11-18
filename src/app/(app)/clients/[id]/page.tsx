@@ -1,5 +1,6 @@
 import { ClientDetail } from "@/components/clients/ClientDetail";
 import { requireCan } from "@/server/auth/require";
+import { dateToYmd } from "@/server/clients/period";
 import { getClient } from "@/server/clients/service";
 import { resolveManageUrl } from "@/server/clients/status-map";
 import {
@@ -25,6 +26,9 @@ export default async function ClientPage({ params }: Props) {
 
   const links = client.services.map((cs) => ({
     ...cs,
+    // Сразу YYYY-MM-DD — чтобы date-input и save не теряли срок после refresh
+    activeFrom: dateToYmd(cs.activeFrom),
+    activeUntil: dateToYmd(cs.activeUntil),
     manageHref: resolveManageUrl(cs.service.manageUrl, cs.externalId),
   }));
 
@@ -40,7 +44,7 @@ export default async function ClientPage({ params }: Props) {
       key={`${client.id}-${client.updatedAt}-${client.services
         .map(
           (s) =>
-            `${s.id}:${s.status}:${s.externalId}:${s.lastSyncError}:${s.activeUntil}:${s.paymentNote}`,
+            `${s.id}:${s.status}:${s.externalId}:${s.lastSyncError}:${dateToYmd(s.activeUntil)}:${s.paymentNote}`,
         )
         .join("|")}`}
       client={payload}

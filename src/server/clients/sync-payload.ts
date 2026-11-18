@@ -3,22 +3,38 @@ import type { UpsertHubClientInput } from "@/server/chat/hub-client";
 import { dateToYmd } from "./period";
 import { toChatContractStatus } from "./status-map";
 
+/**
+ * Собрать тело upsert в чат.
+ * includePeriodNulls=true — при сохранении срока можно очистить даты (null в теле).
+ * иначе null-даты не кладём в payload, чтобы sync имени/статуса не затирал срок в чате.
+ */
 export function buildChatUpsertPayload(
   client: Pick<Client, "id" | "name" | "status">,
-  link: Pick<ClientService, "status" | "activeFrom" | "activeUntil" | "paymentNote">,
-  todayYmd?: string,
+  link: Pick<
+    ClientService,
+    "status" | "activeFrom" | "activeUntil" | "paymentNote"
+  >,
+  opts?: { todayYmd?: string; includePeriodNulls?: boolean },
 ): UpsertHubClientInput {
-  return {
+  const activeFrom = dateToYmd(link.activeFrom);
+  const activeUntil = dateToYmd(link.activeUntil);
+  const paymentNote = link.paymentNote;
+  const includeNulls = opts?.includePeriodNulls === true;
+
+  const payload: UpsertHubClientInput = {
     hubClientId: client.id,
     name: client.name,
     status: toChatContractStatus({
       clientStatus: client.status,
       serviceStatus: link.status,
       activeUntil: link.activeUntil,
-      todayYmd,
+      todayYmd: opts?.todayYmd,
     }),
-    activeFrom: dateToYmd(link.activeFrom),
-    activeUntil: dateToYmd(link.activeUntil),
-    paymentNote: link.paymentNote,
   };
+
+  if (includeNulls || activeFrom != null) payload.activeFrom = activeFrom;
+  if (includeNulls || activeUntil != null) payload.activeUntil = activeUntil;
+  if (includeNulls || paymentNote != null) payload.paymentNote = paymentNote;
+
+  return payload;
 }

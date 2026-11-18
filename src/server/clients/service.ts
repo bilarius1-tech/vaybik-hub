@@ -93,11 +93,16 @@ export async function getClient(
 async function syncChatLink(
   client: Pick<Client, "id" | "name" | "status">,
   link: ClientService & { service: Service },
+  opts?: { includePeriodNulls?: boolean },
 ): Promise<ClientService & { service: Service }> {
   if (link.service.slug !== "chat" || !link.service.isProduct) {
     return link;
   }
-  const res = await upsertHubChatClient(buildChatUpsertPayload(client, link));
+  const res = await upsertHubChatClient(
+    buildChatUpsertPayload(client, link, {
+      includePeriodNulls: opts?.includePeriodNulls,
+    }),
+  );
   return prisma.clientService.update({
     where: { id: link.id },
     data: {
@@ -380,7 +385,9 @@ export async function updateClientServicePeriod(input: {
   });
 
   if (row.service.slug === "chat") {
-    const synced = await syncChatLink(row.client, updated);
+    const synced = await syncChatLink(row.client, updated, {
+      includePeriodNulls: true,
+    });
     return { ok: true, clientService: synced, previous };
   }
 

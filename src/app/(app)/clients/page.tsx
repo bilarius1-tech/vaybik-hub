@@ -1,6 +1,6 @@
 import { ClientsList } from "@/components/clients/ClientsList";
 import { requireCan } from "@/server/auth/require";
-import { dateToYmd } from "@/server/clients/period";
+import { coerceYmd } from "@/lib/period-ymd";
 import { listClients } from "@/server/clients/service";
 import { resolveManageUrl } from "@/server/clients/status-map";
 import {
@@ -56,7 +56,7 @@ export default async function ClientsPage({
     return {
       ...c,
       chatManageHref,
-      chatActiveUntil: dateToYmd(chat?.activeUntil ?? null),
+      chatActiveUntil: coerceYmd(chat?.activeUntil ?? null),
       canImpersonate: Boolean(
         ssoReady && chat?.externalId && chat.service.isProduct,
       ),

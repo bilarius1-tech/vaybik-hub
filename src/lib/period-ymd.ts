@@ -79,3 +79,47 @@ export function extendBaseYmd(
 ): string {
   return activeUntil && isYmd(activeUntil) ? activeUntil : todayYmd;
 }
+
+/** YYYY-MM-DD → ДД.ММ.ГГГГ */
+export function formatYmdRu(ymd: string): string {
+  if (!isYmd(ymd)) return ymd;
+  const [y, m, d] = ymd.split("-");
+  return `${d}.${m}.${y}`;
+}
+
+/**
+ * Текст колонки «Работает до».
+ * «до 18.01.2027 · осталось 61 дн.» / жёлтый ≤7 / «истёк N дн. назад» / «без срока».
+ */
+export function worksUntilLabel(
+  untilYmd: string | null,
+  todayYmd = todayMskYmd(),
+): { text: string; tone: PeriodTone } {
+  if (!untilYmd || !isYmd(untilYmd)) {
+    return { text: "без срока", tone: "none" };
+  }
+  const left = daysRemaining(untilYmd, todayYmd);
+  const dateRu = formatYmdRu(untilYmd);
+  if (left < 0) {
+    return {
+      text: `до ${dateRu} · истёк ${Math.abs(left)} дн. назад`,
+      tone: "expired",
+    };
+  }
+  const tone: PeriodTone = left <= 7 ? "warn" : "ok";
+  return { text: `до ${dateRu} · осталось ${left} дн.`, tone };
+}
+
+/** ISO / Date / YYYY-MM-DD → YYYY-MM-DD или null */
+export function coerceYmd(value: string | Date | null | undefined): string | null {
+  if (value == null || value === "") return null;
+  if (value instanceof Date) return dateToYmd(value);
+  if (typeof value === "string") {
+    if (isYmd(value)) return value;
+    const head = value.slice(0, 10);
+    if (isYmd(head)) return head;
+    const d = new Date(value);
+    if (!Number.isNaN(d.getTime())) return dateToYmd(d);
+  }
+  return null;
+}

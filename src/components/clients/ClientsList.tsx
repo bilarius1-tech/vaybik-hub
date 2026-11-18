@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
-import { daysRemaining, periodTone } from "@/lib/period-ymd";
+import { worksUntilLabel } from "@/lib/period-ymd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -41,28 +41,17 @@ function statusPill(s: Row["status"]) {
 }
 
 function WorksUntilCell({ until }: { until: string | null }) {
-  if (!until) return <span className="text-mu">—</span>;
-  const tone = periodTone(until);
-  const left = daysRemaining(until);
+  const { text, tone } = worksUntilLabel(until);
+  if (tone === "none") {
+    return <span className="text-mu">{text}</span>;
+  }
   if (tone === "expired") {
-    return (
-      <span className="font-semibold text-rd">
-        {until} · истёк
-      </span>
-    );
+    return <span className="font-semibold text-rd">{text}</span>;
   }
   if (tone === "warn") {
-    return (
-      <span className="font-semibold text-yl">
-        {until} · осталось {left} дн.
-      </span>
-    );
+    return <span className="font-semibold text-yl">{text}</span>;
   }
-  return (
-    <span className="text-tx">
-      {until} · осталось {left} дн.
-    </span>
-  );
+  return <span className="text-tx">{text}</span>;
 }
 
 export function ClientsList({

@@ -8,7 +8,7 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input, Select } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { api } from "@/lib/api-client";
-import { dateToYmd } from "@/lib/period-ymd";
+import { coerceYmd } from "@/lib/period-ymd";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -44,14 +44,6 @@ type Client = {
   updatedAt?: string;
   services: Cs[];
 };
-
-function asYmd(value: string | null | undefined): string | null {
-  if (!value) return null;
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return dateToYmd(d);
-}
 
 function statusPill(s: Client["status"]) {
   if (s === "active") return <Pill tone="green">активен</Pill>;
@@ -98,6 +90,7 @@ export function ClientDetail({
   async function saveMeta() {
     setBusy(true);
     setError(null);
+    // Только карточка: срок ClientService этим запросом не трогаем.
     const res = await api<{ client: Client }>(`/api/clients/${client.id}`, {
       method: "PATCH",
       body: JSON.stringify({
@@ -233,8 +226,17 @@ export function ClientDetail({
       ) : null}
 
       <Card>
-        <CardHeader title="Карточка" subtitle="данные в хабе" />
-        <div className="grid-g2 max-w-3xl">
+        <CardHeader
+          title="Карточка"
+          subtitle="имя и контакты; срок работы — отдельно у сервиса"
+        />
+        <form
+          className="grid-g2 max-w-3xl"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void saveMeta();
+          }}
+        >
           <Field label="Название" htmlFor="cname">
             <Input
               id="cname"
@@ -272,11 +274,11 @@ export function ClientDetail({
             />
           </Field>
           <div className="col-span-full flex gap-2">
-            <Button type="button" disabled={busy} onClick={saveMeta}>
+            <Button type="submit" disabled={busy}>
               Сохранить
             </Button>
           </div>
-        </div>
+        </form>
       </Card>
 
       <Card>
@@ -363,9 +365,10 @@ export function ClientDetail({
                 </div>
                 {cs.service.slug === "chat" ? (
                   <ServicePeriodControls
+                    key={`${cs.id}:${coerceYmd(cs.activeFrom)}:${coerceYmd(cs.activeUntil)}:${cs.paymentNote ?? ""}`}
                     clientServiceId={cs.id}
-                    activeFrom={asYmd(cs.activeFrom)}
-                    activeUntil={asYmd(cs.activeUntil)}
+                    activeFrom={coerceYmd(cs.activeFrom)}
+                    activeUntil={coerceYmd(cs.activeUntil)}
                     paymentNote={cs.paymentNote}
                     disabled={busy}
                     onSaved={() => void refresh()}
