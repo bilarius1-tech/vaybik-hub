@@ -35,7 +35,7 @@
 ## 4. Текущее состояние (на 2026-11-18)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Образ **`ffb8fbc`** (фича `9532e0e`): срок ClientService + удаление клиента; список с «Работает до»; impersonate → 200 `{redirectUrl}`. Виджет чата — `site.chatWidget` (весь сайт).
+- Образ **`2d2da76`**: срок ClientService + удаление; «Сохранить срок» отдельно от карточки; список «до ДД.ММ · осталось N»; impersonate → 200 `{redirectUrl}`. Виджет чата — `site.chatWidget` (весь сайт).
 - Клиент **«Тест»** на проде: Чат `active`, externalId `cmwlwck34000ale012cg3nqjs`, виджет `a5TlJfshD_OB` на russait.ru.
 - **Источник правды — админка.** Приёмка клиентов на проде — вручную. Промпт 8 (PARTNER) отложен; Client ≠ Partner.
 - Деплой/cutover: всегда unset `POSTGRES_*` и `SITE_PROD_PRIORITY`/`SITE_PUBLIC_ORIGIN` из shell.
