@@ -195,10 +195,12 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Ф0 — план (модели, контракт, фазы, риски миграций)
 - [x] Ф-A — Service.isProduct/manageUrl; Client + ClientService; RBAC `clients.manage`; UI `/admin/clients`; connect Chat (HMAC); AuditLog; фильтр продуктов; сид chat
 - [x] Ф-B (каркас хаба) — SSO token + `SsoJti`, кнопка + reauth, AuditLog `client.impersonate`, 302 на `/sso` (связка с чатом — когда будет `/sso`)
-- [x] Этап 2 минимум — CLIENT + Invite 72ч + «Мои сервисы» + SSO mode=client (19.11; без аналитики)
+- [x] Этап 2 минимум — CLIENT + Invite 72ч + «Мои сервисы» + SSO mode=client — прод **`e9efeb2`** (19.11; без аналитики)
 - [ ] Этап 2+ — кабинет-аналитика (диалоги/заявки) — позже
+- [x] Почта клиентам (SMTP `bilariuss@yandex.ru`, без 360/DNS): invite / −7 / −1 / expired=`activeUntil+1`; cron 09:00 MSK; галочка + журнал — прод **`edc0b17`**
+- [x] Шаблон сообщения приглашения (настройки + копирование + тот же текст в письме) — прод **`c2ea57e`**
 - [x] Env на **dev** (Алексей): `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` — заданы; apiReady/ssoReady = true
-- [x] Env на **проде** — CHAT_* в `/opt/apps/vaybik-hub/.env` (Алексей)
+- [x] Env на **проде** — только `/opt/apps/vaybik-hub/.env` (CHAT_*, SMTP_*/MAIL_*); dev `.env` прод не читает
 - [x] Выкат Ф-A+Ф-B — … → `ba8e103` (модалка reauth + impersonate `redirectUrl`); CMS `X-Vaybik-Site: cms`
 - [x] fix: impersonate 200 `{redirectUrl}` вместо 302 — на проде `ba8e103`
 - [x] Список клиентов: клик по строке + колонка «Действия» (Открыть / Войти как клиент / Настроить) — прод `e51c963`
