@@ -237,3 +237,12 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] `GET /admin/api/services/[id]/help` — `services.manage` (OWNER/ADMIN)
 - [x] UI: кнопка «Справка» у продукта chat + модалка (TOC / поиск / HTML)
 - [x] Деплой хаба `b391513` (бэкап `20261119T154348Z`, откат `prev-c2ea57e`)
+
+
+## SSO студии в чат (2026-11-19, вечер)
+
+- [x] `GET /admin/sso/chat?next=` + sanitize
+- [x] Логин/2FA/`middleware` уважают `?next=`
+- [x] «Настроить» → `/sso/chat?next=/manage/clients/…`
+- [ ] Деплой хаба — по «задеплой»
+- [ ] Чат: редирект на `/admin/sso/chat`, `/sso` принимает `next` и пустой hubClientId
