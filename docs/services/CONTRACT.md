@@ -129,6 +129,53 @@ Body: { "hubClientId": "…" }
 
 ---
 
+## 4a. Справка студии (help)
+
+Опционально для продуктов со студийной справкой в MD (референс — **Чат**). Хаб может забирать тексты server-to-server и показывать у себя; UI `/manage/help` в чате остаётся.
+
+```
+GET {SERVICE_BASE_URL}/api/hub/help
+X-Hub-Signature: t=<unix>,v1=<hex>
+```
+
+### Подпись
+
+Та же схема, что у POST `/api/hub/clients` (§2). Для **GET** тело запроса пустое:  
+`v1 = HMAC-SHA256(secret, "<t>.")`  (raw body = `""`).
+
+Секрет: `HUB_CHAT_API_SECRET` (чат). Без сессии браузера.
+
+### Ответ 200
+
+Массив страниц (порядок по `order`):
+
+```json
+[
+  {
+    "slug": "01-new-client",
+    "title": "Новый клиент от А до Я",
+    "order": 1,
+    "updated": "2026-11-19",
+    "commit": "0ecc096",
+    "markdown": "# …\n(тело без YAML-frontmatter)"
+  }
+]
+```
+
+Источник в чате: `docs/admin-help/*.md`.
+
+### Коды
+
+| HTTP | Когда |
+| --- | --- |
+| **200** | ok, JSON-массив |
+| **401** | нет / неверная подпись / skew |
+| **503** | секрет не задан (`HUB_NOT_CONFIGURED`) |
+
+Референс чат: `src/app/api/hub/help/route.ts`, `src/server/admin-help/load.ts` (`listHelpPagesWithMarkdown`).
+
+---
+
 ## 5. Поведение сервиса по статусам / сроку
 
 Шаблон ожидаемого UX (исполняет сервис):
@@ -189,6 +236,7 @@ Body: { "hubClientId": "…" }
 4. **Эндпоинты сервиса**  
    - `POST /api/hub/clients` — upsert (§2)  
    - `DELETE /api/hub/clients` — удаление (§4)  
+   - `GET /api/hub/help` — справка студии (§4a), опционально  
    - `GET /sso?token=…` — вход под клиентом (§ ниже)
 
 5. **Подпись** — та же схема `X-Hub-Signature` (§2); общий секрет; unit-тесты зеркала.
@@ -280,6 +328,7 @@ Body: { "hubClientId": "…" }
 | Тема | Путь |
 | --- | --- |
 | API | `src/app/api/hub/clients/route.ts` |
+| Справка GET `/api/hub/help` | `src/app/api/hub/help/route.ts`, `docs/admin-help/*.md` |
 | Подпись | `src/server/hub/signature.ts` |
 | Lifecycle / EXPIRED / reminders due | `src/server/client/lifecycle.ts` |
 | JSON-бэкап + cascade | `src/server/client/delete-client.ts` |
