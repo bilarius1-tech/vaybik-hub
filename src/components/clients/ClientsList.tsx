@@ -245,15 +245,11 @@ export function ClientsList({
                       onError={setError}
                     />
                     {r.chatManageHref ? (
-                      <a
-                        href={r.chatManageHref}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
+                      <Link href={r.chatManageHref}>
                         <Button type="button" variant="ghost">
                           Настроить
                         </Button>
-                      </a>
+                      </Link>
                     ) : (
                       <Button
                         type="button"

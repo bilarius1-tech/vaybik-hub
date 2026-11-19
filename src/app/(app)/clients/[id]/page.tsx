@@ -3,12 +3,12 @@ import { requireCan } from "@/server/auth/require";
 import { getClientAccess } from "@/server/clients/access";
 import { dateToYmd } from "@/server/clients/period";
 import { getClient } from "@/server/clients/service";
-import { resolveManageUrl } from "@/server/clients/status-map";
 import {
   chatApiMissingKeys,
   getChatApiConfig,
   getChatSsoConfig,
 } from "@/server/chat/config";
+import { resolveChatManageSsoHref } from "@/server/chat/studio-sso";
 import { notFound, redirect } from "next/navigation";
 
 type Props = { params: Promise<{ id: string }> };
@@ -30,7 +30,10 @@ export default async function ClientPage({ params }: Props) {
     // Сразу YYYY-MM-DD — чтобы date-input и save не теряли срок после refresh
     activeFrom: dateToYmd(cs.activeFrom),
     activeUntil: dateToYmd(cs.activeUntil),
-    manageHref: resolveManageUrl(cs.service.manageUrl, cs.externalId),
+    manageHref: resolveChatManageSsoHref(
+      cs.service.manageUrl,
+      cs.externalId,
+    ),
   }));
 
   const access = await getClientAccess(id);

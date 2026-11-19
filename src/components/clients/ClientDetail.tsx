@@ -361,9 +361,9 @@ export function ClientDetail({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {cs.manageHref ? (
-                      <a href={cs.manageHref} target="_blank" rel="noreferrer">
+                      <Link href={cs.manageHref}>
                         <Button variant="ghost">Настроить</Button>
-                      </a>
+                      </Link>
                     ) : (
                       <Button variant="ghost" disabled title="Нужен externalId">
                         Настроить

@@ -2,12 +2,12 @@ import { ClientsList } from "@/components/clients/ClientsList";
 import { requireCan } from "@/server/auth/require";
 import { coerceYmd } from "@/lib/period-ymd";
 import { listClients } from "@/server/clients/service";
-import { resolveManageUrl } from "@/server/clients/status-map";
 import {
   chatApiMissingKeys,
   getChatApiConfig,
   getChatSsoConfig,
 } from "@/server/chat/config";
+import { resolveChatManageSsoHref } from "@/server/chat/studio-sso";
 import { redirect } from "next/navigation";
 
 export default async function ClientsPage({
@@ -49,7 +49,7 @@ export default async function ClientsPage({
 
   const rows = clients.map((c) => {
     const chat = c.services.find((s) => s.service.slug === "chat");
-    const chatManageHref = resolveManageUrl(
+    const chatManageHref = resolveChatManageSsoHref(
       chat?.service.manageUrl,
       chat?.externalId,
     );
