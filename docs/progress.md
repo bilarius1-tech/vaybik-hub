@@ -195,7 +195,8 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Ф0 — план (модели, контракт, фазы, риски миграций)
 - [x] Ф-A — Service.isProduct/manageUrl; Client + ClientService; RBAC `clients.manage`; UI `/admin/clients`; connect Chat (HMAC); AuditLog; фильтр продуктов; сид chat
 - [x] Ф-B (каркас хаба) — SSO token + `SsoJti`, кнопка + reauth, AuditLog `client.impersonate`, 302 на `/sso` (связка с чатом — когда будет `/sso`)
-- [ ] Этап 2 — кабинет CLIENT / ClientMember / Invite (только план, код позже)
+- [x] Этап 2 минимум — CLIENT + Invite 72ч + «Мои сервисы» + SSO mode=client (19.11; без аналитики)
+- [ ] Этап 2+ — кабинет-аналитика (диалоги/заявки) — позже
 - [x] Env на **dev** (Алексей): `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` — заданы; apiReady/ssoReady = true
 - [x] Env на **проде** — CHAT_* в `/opt/apps/vaybik-hub/.env` (Алексей)
 - [x] Выкат Ф-A+Ф-B — … → `ba8e103` (модалка reauth + impersonate `redirectUrl`); CMS `X-Vaybik-Site: cms`

@@ -1,5 +1,6 @@
 "use client";
 
+import { ClientAccessPanel } from "@/components/clients/ClientAccessPanel";
 import { ConnectionStatusSelect } from "@/components/clients/ConnectionStatusSelect";
 import { DeleteClientControls } from "@/components/clients/DeleteClientControls";
 import { ImpersonateControls } from "@/components/clients/ImpersonateControls";
@@ -66,14 +67,34 @@ function csPill(s: Cs["status"]) {
   return <Pill tone="red">{serviceStatusLabel(s)}</Pill>;
 }
 
+type AccessInitial = {
+  members: {
+    id: string;
+    userId: string;
+    email: string;
+    name: string | null;
+    isBlocked: boolean;
+    lastLoginAt: string | null;
+    createdAt: string;
+  }[];
+  activeInvite: {
+    id: string;
+    email: string | null;
+    expiresAt: string;
+    createdAt: string;
+  } | null;
+};
+
 export function ClientDetail({
   client,
+  initialAccess,
   chatApiReady,
   chatSsoReady,
   chatMissingKeys,
   totpEnabled = false,
 }: {
   client: Client;
+  initialAccess: AccessInitial;
   chatApiReady: boolean;
   chatSsoReady: boolean;
   chatMissingKeys: string[];
@@ -225,6 +246,8 @@ export function ClientDetail({
           ) : null}
         </div>
       ) : null}
+
+      <ClientAccessPanel clientId={client.id} initial={initialAccess} />
 
       <Card>
         <CardHeader

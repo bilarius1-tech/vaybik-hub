@@ -44,3 +44,27 @@ export const acceptInviteSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   password: z.string().min(12),
 });
+
+export const createClientInviteSchema = z.object({
+  email: z
+    .union([
+      z
+        .string()
+        .email()
+        .transform((v) => v.toLowerCase()),
+      z.literal(""),
+      z.null(),
+    ])
+    .optional(),
+});
+
+export const acceptClientInviteSchema = z.object({
+  token: z.string().min(1),
+  email: z
+    .string()
+    .email("Некорректный email")
+    .transform((v) => v.toLowerCase())
+    .optional(),
+  name: z.string().min(1).max(120).optional(),
+  password: z.string().min(10, "Пароль ≥ 10 символов"),
+});

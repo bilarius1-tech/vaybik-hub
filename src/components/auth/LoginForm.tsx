@@ -23,6 +23,7 @@ export function LoginForm() {
       needs2fa?: boolean;
       needsSetup2fa?: boolean;
       pendingToken?: string;
+      redirectTo?: string;
     }>("/api/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password, remember }),
@@ -42,7 +43,7 @@ export function LoginForm() {
       router.push("/login/2fa");
       return;
     }
-    router.push("/");
+    router.push(res.data?.redirectTo || "/");
     router.refresh();
   }
 

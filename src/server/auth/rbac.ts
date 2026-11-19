@@ -15,7 +15,8 @@ export type Action =
   | "databases.restore"
   | "content.manage"
   | "clients.manage"
-  | "partner.self";
+  | "partner.self"
+  | "client.self";
 
 const ROLE_PERMS: Record<Role, ReadonlySet<Action>> = {
   OWNER: new Set([
@@ -45,6 +46,7 @@ const ROLE_PERMS: Record<Role, ReadonlySet<Action>> = {
     "clients.manage",
   ]),
   PARTNER: new Set(["partner.self"]),
+  CLIENT: new Set(["client.self"]),
 };
 
 export type AuthUser = Pick<User, "id" | "email" | "role" | "totpEnabled" | "isBlocked" | "partnerId" | "name">;

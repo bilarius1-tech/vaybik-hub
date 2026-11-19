@@ -1,5 +1,6 @@
 import { ClientDetail } from "@/components/clients/ClientDetail";
 import { requireCan } from "@/server/auth/require";
+import { getClientAccess } from "@/server/clients/access";
 import { dateToYmd } from "@/server/clients/period";
 import { getClient } from "@/server/clients/service";
 import { resolveManageUrl } from "@/server/clients/status-map";
@@ -32,6 +33,7 @@ export default async function ClientPage({ params }: Props) {
     manageHref: resolveManageUrl(cs.service.manageUrl, cs.externalId),
   }));
 
+  const access = await getClientAccess(id);
   const payload = JSON.parse(
     JSON.stringify({
       ...client,
@@ -48,6 +50,7 @@ export default async function ClientPage({ params }: Props) {
         )
         .join("|")}`}
       client={payload}
+      initialAccess={JSON.parse(JSON.stringify(access))}
       chatApiReady={Boolean(getChatApiConfig())}
       chatSsoReady={Boolean(getChatSsoConfig())}
       chatMissingKeys={chatApiMissingKeys()}

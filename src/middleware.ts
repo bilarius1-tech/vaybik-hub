@@ -9,6 +9,8 @@ const PUBLIC_PREFIXES = [
   "/api/auth/login",
   "/api/auth/2fa",
   "/api/invites/accept",
+  "/api/client-invites/accept",
+  "/api/client-invites/preview",
   "/api/health",
   "/api/public",
 ];

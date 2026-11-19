@@ -76,6 +76,7 @@
 - **2026-11-18** — Срок ClientService: `activeFrom`/`activeUntil` (дата MSK), `paymentNote`. Upsert в чат: `status ACTIVE|PAUSED|EXPIRED|OFF` + даты. Удаление клиента: бэкап хаба → `DELETE /api/hub/clients` → только потом cascade в хабе; иначе `deleteIncomplete`.
 - **2026-11-19** — Шаблон контракта подключения сервиса к клиенту хаба: `docs/services/CONTRACT.md` (референс — чат; для lead/Профи и др.). Расхождения с кодом — в §8 файла.
 - **2026-11-19** — §8 п.1 закрыт в чате: `hubStatus` + EXPIRED→заглушка (деплой чата после «задеплой»).
+- **2026-11-19** — Этап 2 минимум: роль `CLIENT`, `ClientMember`/`ClientInvite` (72 ч), блок «Доступ клиента», `/my-services` + SSO `mode=client`. Кабинет-аналитика не берём. Правки чата (скрыть Group Privacy, оставить /link) — `docs/plans/2026-11-19-client-access-chat-notes.md`.
 
 ## 6. Договорённости
 
@@ -102,7 +103,7 @@
 
 ## 8. Следующие шаги
 
-1. Этап 2 клиентов (позже): кабинет CLIENT / ClientMember / Invite — план `docs/plans/2026-11-18-services-clients-access.md`.
+1. Этап 2+ аналитика кабинета (позже). Минимум доступа CLIENT — сделан 19.11; chat-notes для агента чата.
 2. Промпт 8 — партнёры и лиды (фаза 4) — **отложена**.
 3. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
 4. Яндекс.Метрика на дашборд (отложено).

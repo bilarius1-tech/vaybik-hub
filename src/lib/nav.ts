@@ -4,7 +4,7 @@ export type SidebarItem = {
   icon: string;
 };
 
-/** Пункты меню сайдбара (TZ §6) */
+/** Пункты меню сайдбара (TZ §6). CLIENT — только /my-services (см. Sidebar). */
 export const NAV_ITEMS: SidebarItem[] = [
   { href: "/", label: "Дашборд", icon: "◈" },
   { href: "/services", label: "Сервисы", icon: "⌂" },

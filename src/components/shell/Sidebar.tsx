@@ -31,9 +31,11 @@ export function Sidebar({
   const foot = sidefoot?.length ? sidefoot : SIDEFOOT_ROWS;
 
   const items =
-    userRole === "PARTNER"
-      ? NAV_ITEMS.filter((i) => i.href === "/" || i.href === "/profile")
-      : NAV_ITEMS;
+    userRole === "CLIENT"
+      ? [{ href: "/my-services", label: "Мои сервисы", icon: "◎" }]
+      : userRole === "PARTNER"
+        ? NAV_ITEMS.filter((i) => i.href === "/" || i.href === "/profile")
+        : NAV_ITEMS;
 
   async function logout() {
     await api("/api/auth/logout", { method: "POST", body: "{}" });

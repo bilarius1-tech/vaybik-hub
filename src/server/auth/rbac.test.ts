@@ -13,6 +13,7 @@ const owner: AuthUser = {
 
 const admin: AuthUser = { ...owner, id: "2", role: "ADMIN" };
 const partner: AuthUser = { ...owner, id: "3", role: "PARTNER" };
+const client: AuthUser = { ...owner, id: "4", role: "CLIENT" };
 const blocked: AuthUser = { ...owner, isBlocked: true };
 
 describe("rbac", () => {
@@ -37,9 +38,17 @@ describe("rbac", () => {
     expect(can(partner, "content.manage")).toBe(false);
   });
 
-  it("clients.manage — OWNER и ADMIN, не PARTNER", () => {
+  it("clients.manage — OWNER и ADMIN, не PARTNER/CLIENT", () => {
     expect(can(owner, "clients.manage")).toBe(true);
     expect(can(admin, "clients.manage")).toBe(true);
     expect(can(partner, "clients.manage")).toBe(false);
+    expect(can(client, "clients.manage")).toBe(false);
+  });
+
+  it("CLIENT только client.self — без админки", () => {
+    expect(can(client, "client.self")).toBe(true);
+    expect(can(client, "services.manage")).toBe(false);
+    expect(can(client, "users.manage")).toBe(false);
+    expect(can(owner, "client.self")).toBe(false);
   });
 });

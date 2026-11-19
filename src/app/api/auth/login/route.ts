@@ -102,7 +102,11 @@ export async function POST(req: NextRequest) {
         ip,
         userAgent: ua,
       });
-      const res = NextResponse.json({ ok: true, needs2fa: false });
+      const res = NextResponse.json({
+        ok: true,
+        needs2fa: false,
+        redirectTo: user.role === "CLIENT" ? "/my-services" : "/",
+      });
       attachSessionCookie(res, token, expiresAt, remember);
       return res;
     }
