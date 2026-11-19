@@ -236,4 +236,4 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] `fetchStudioHelpFromChat` + HMAC пустое тело + кэш 5 мин + MD→HTML (`marked` + sanitize)
 - [x] `GET /admin/api/services/[id]/help` — `services.manage` (OWNER/ADMIN)
 - [x] UI: кнопка «Справка» у продукта chat + модалка (TOC / поиск / HTML)
-- [ ] Деплой хаба — по «задеплой»
+- [x] Деплой хаба `b391513` (бэкап `20261119T154348Z`, откат `prev-c2ea57e`)
