@@ -1,5 +1,6 @@
 "use client";
 
+import { ServiceHelpModal } from "@/components/services/ServiceHelpModal";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
@@ -34,8 +35,16 @@ function tone(s: string): "up" | "down" | "degraded" | "unknown" {
   return "unknown";
 }
 
+/** Пока справка только у продукта «Чат» (контракт GET /api/hub/help). */
+function hasStudioHelp(r: Row): boolean {
+  return r.isProduct && r.slug === "chat";
+}
+
 export function ServicesList({ initial }: { initial: Row[] }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [helpFor, setHelpFor] = useState<{ id: string; name: string } | null>(
+    null,
+  );
   const rows = useMemo(() => {
     if (filter === "products") return initial.filter((r) => r.isProduct);
     if (filter === "infra") return initial.filter((r) => !r.isProduct);
@@ -124,10 +133,33 @@ export function ServicesList({ initial }: { initial: Row[] }) {
                 header: "спарклайн",
                 render: (r) => <Sparkline values={r.spark} />,
               },
+              {
+                key: "help",
+                header: "",
+                render: (r) =>
+                  hasStudioHelp(r) ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHelpFor({ id: r.id, name: r.name })}
+                    >
+                      Справка
+                    </Button>
+                  ) : null,
+              },
             ]}
           />
         )}
       </Card>
+
+      {helpFor ? (
+        <ServiceHelpModal
+          open
+          serviceId={helpFor.id}
+          serviceName={helpFor.name}
+          onClose={() => setHelpFor(null)}
+        />
+      ) : null}
     </div>
   );
 }
