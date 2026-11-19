@@ -7,13 +7,18 @@ import { api } from "@/lib/api-client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-export function LoginForm() {
+export function LoginForm({ next = null }: { next?: string | null }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  function goAfterLogin(fallback: string) {
+    router.push(next || fallback);
+    router.refresh();
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -40,11 +45,12 @@ export function LoginForm() {
     }
     if (res.data?.needs2fa && res.data.pendingToken) {
       sessionStorage.setItem("vaybik_pending", res.data.pendingToken);
+      if (next) sessionStorage.setItem("vaybik_login_next", next);
+      else sessionStorage.removeItem("vaybik_login_next");
       router.push("/login/2fa");
       return;
     }
-    router.push(res.data?.redirectTo || "/");
-    router.refresh();
+    goAfterLogin(res.data?.redirectTo || "/");
   }
 
   return (

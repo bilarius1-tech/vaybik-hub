@@ -113,7 +113,9 @@ export function middleware(req: NextRequest) {
     }
     const url = req.nextUrl.clone();
     url.pathname = "/login";
-    url.searchParams.set("next", pathname);
+    url.search = "";
+    const nextTarget = pathname + (req.nextUrl.search || "");
+    url.searchParams.set("next", nextTarget);
     return securityHeaders(NextResponse.redirect(url));
   }
 

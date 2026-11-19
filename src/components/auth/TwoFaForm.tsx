@@ -12,6 +12,11 @@ function readPending(): string | null {
   return sessionStorage.getItem("vaybik_pending");
 }
 
+function readLoginNext(): string | null {
+  if (typeof window === "undefined") return null;
+  return sessionStorage.getItem("vaybik_login_next");
+}
+
 export function TwoFaForm() {
   const router = useRouter();
   const [code, setCode] = useState("");
@@ -37,8 +42,10 @@ export function TwoFaForm() {
       setError(res.error.message);
       return;
     }
+    const next = readLoginNext();
     sessionStorage.removeItem("vaybik_pending");
-    router.push("/");
+    sessionStorage.removeItem("vaybik_login_next");
+    router.push(next || "/");
     router.refresh();
   }
 
