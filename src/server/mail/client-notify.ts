@@ -6,6 +6,7 @@ import {
   formatYmdRu,
   todayMskYmd,
 } from "@/lib/period-ymd";
+import { renderClientInviteMessage } from "@/server/clients/invite-message";
 import { cabinetLoginUrl, getMailConfig, isMailConfigured } from "@/server/mail/config";
 import { sendMail } from "@/server/mail/send";
 import {
@@ -134,10 +135,17 @@ export async function sendClientInviteEmail(input: {
 
   const client = await prisma.client.findUniqueOrThrow({
     where: { id: input.clientId },
-    select: { name: true },
+    select: { name: true, contact: true, siteUrl: true },
+  });
+  const bodyText = await renderClientInviteMessage({
+    contactName: client.contact,
+    siteUrl: client.siteUrl,
+    inviteUrl: invite.acceptUrl,
+    loginUrl: cabinetLoginUrl(),
   });
   const content = inviteMail({
     clientName: client.name,
+    bodyText,
     inviteUrl: invite.acceptUrl,
     loginUrl: cabinetLoginUrl(),
   });

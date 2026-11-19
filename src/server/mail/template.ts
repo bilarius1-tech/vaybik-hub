@@ -58,49 +58,34 @@ function contactsText(): string {
   ].join("\n");
 }
 
+/** Текст приглашения (шаблон из настроек) → HTML-абзацы, URL → ссылки. */
+function inviteBodyHtml(bodyText: string, inviteUrl: string): string {
+  const paragraphs = bodyText
+    .trim()
+    .split(/\n{2,}/)
+    .map((block) => {
+      const withBreaks = esc(block).replace(/\n/g, "<br>");
+      const linked = withBreaks.replace(
+        /(https?:\/\/[^\s<]+)/g,
+        '<a href="$1" style="color:#ff8a1f;word-break:break-all">$1</a>',
+      );
+      return `<p style="margin:0 0 14px;font-size:15px;line-height:1.55">${linked}</p>`;
+    })
+    .join("");
+  return `${paragraphs}<div style="margin:8px 0 8px">${btn(inviteUrl, "Задать пароль")}</div>`;
+}
+
 export function inviteMail(input: {
   clientName: string;
+  /** Уже подставленный шаблон из настроек (тот же, что «Скопировать сообщение»). */
+  bodyText: string;
   inviteUrl: string;
   loginUrl?: string;
 }): MailContent {
   const loginUrl = input.loginUrl || cabinetLoginUrl();
   const subject = `Приглашение в кабинет Вайбик — ${input.clientName}`;
-  const bodyHtml = `
-    <h1 style="margin:0 0 12px;font-size:22px;line-height:1.3">Добро пожаловать в Вайбик</h1>
-    <p style="margin:0 0 12px;font-size:15px;line-height:1.55">
-      <b>Вайбик</b> — студия автоматизации. <b>AI-консультант</b> на вашем сайте отвечает посетителям
-      и передаёт заявки менеджерам в Telegram.
-    </p>
-    <p style="margin:0 0 18px;font-size:15px;line-height:1.55">
-      Для «${esc(input.clientName)}» подготовлен доступ в кабинет. Задайте пароль по кнопке ниже
-      (ссылка действует <b>72 часа</b>).
-    </p>
-    <div style="margin:0 0 22px">${btn(input.inviteUrl, "Задать пароль")}</div>
-    <p style="margin:0 0 8px;font-size:14px;font-weight:700">Три шага после входа</p>
-    <ol style="margin:0 0 16px;padding-left:20px;font-size:14px;line-height:1.55;color:#2a3038">
-      <li>Войти в кабинет</li>
-      <li>Подключить Telegram-группу менеджеров</li>
-      <li>Проверить виджет на сайте</li>
-    </ol>
-    <p style="margin:0;font-size:13px;line-height:1.5;color:#5c6570">
-      <b>Сохраните эту ссылку для входа:</b><br>
-      <a href="${esc(loginUrl)}" style="color:#ff8a1f;word-break:break-all">${esc(loginUrl)}</a>
-    </p>`;
-  const text = [
-    "Добро пожаловать в Вайбик",
-    "",
-    "Вайбик — студия автоматизации. AI-консультант на сайте отвечает посетителям и передаёт заявки в Telegram.",
-    "",
-    `Задать пароль (72 ч): ${input.inviteUrl}`,
-    "",
-    "Три шага: 1) войти → 2) подключить Telegram-группу → 3) проверить виджет.",
-    "",
-    `Сохраните ссылку для входа: ${loginUrl}`,
-    "",
-    "Войти в кабинет: " + loginUrl,
-    "",
-    contactsText(),
-  ].join("\n");
+  const bodyHtml = inviteBodyHtml(input.bodyText, input.inviteUrl);
+  const text = [input.bodyText.trim(), "", contactsText()].join("\n");
   return {
     subject,
     html: wrapHtml({ title: subject, bodyHtml, loginUrl }),

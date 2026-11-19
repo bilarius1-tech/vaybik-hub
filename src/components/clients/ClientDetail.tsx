@@ -70,6 +70,8 @@ function csPill(s: Cs["status"]) {
 type AccessInitial = {
   emailNotifyEnabled: boolean;
   mailConfigured: boolean;
+  inviteMessageTemplate: string;
+  loginUrl: string;
   members: {
     id: string;
     userId: string;
@@ -259,7 +261,12 @@ export function ClientDetail({
         </div>
       ) : null}
 
-      <ClientAccessPanel clientId={client.id} initial={initialAccess} />
+      <ClientAccessPanel
+        clientId={client.id}
+        contactName={contact || null}
+        siteUrl={siteUrl || null}
+        initial={initialAccess}
+      />
 
       <Card>
         <CardHeader

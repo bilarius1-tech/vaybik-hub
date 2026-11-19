@@ -11,8 +11,9 @@ import {
 } from "@/server/chat/sso-token";
 import { getChatSsoConfig } from "@/server/chat/config";
 import { resolveManageUrl } from "@/server/clients/status-map";
-import { isMailConfigured } from "@/server/mail/config";
+import { cabinetLoginUrl, isMailConfigured } from "@/server/mail/config";
 import { listMailLogsForClient } from "@/server/mail/client-notify";
+import { getInviteMessageTemplate } from "@/server/clients/invite-message";
 
 function inviteBaseUrl(): string {
   return (
@@ -21,34 +22,36 @@ function inviteBaseUrl(): string {
 }
 
 export async function getClientAccess(clientId: string) {
-  const [client, members, invites, mailLogs] = await Promise.all([
-    prisma.client.findUnique({
-      where: { id: clientId },
-      select: { emailNotifyEnabled: true },
-    }),
-    prisma.clientMember.findMany({
-      where: { clientId },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            name: true,
-            isBlocked: true,
-            lastLoginAt: true,
-            createdAt: true,
+  const [client, members, invites, mailLogs, inviteMessageTemplate] =
+    await Promise.all([
+      prisma.client.findUnique({
+        where: { id: clientId },
+        select: { emailNotifyEnabled: true },
+      }),
+      prisma.clientMember.findMany({
+        where: { clientId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              isBlocked: true,
+              lastLoginAt: true,
+              createdAt: true,
+            },
           },
         },
-      },
-      orderBy: { createdAt: "asc" },
-    }),
-    prisma.clientInvite.findMany({
-      where: { clientId },
-      orderBy: { createdAt: "desc" },
-      take: 10,
-    }),
-    listMailLogsForClient(clientId, 25),
-  ]);
+        orderBy: { createdAt: "asc" },
+      }),
+      prisma.clientInvite.findMany({
+        where: { clientId },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      listMailLogsForClient(clientId, 25),
+      getInviteMessageTemplate(),
+    ]);
 
   const now = new Date();
   const activeInvite = invites.find(
@@ -58,6 +61,8 @@ export async function getClientAccess(clientId: string) {
   return {
     emailNotifyEnabled: client?.emailNotifyEnabled ?? false,
     mailConfigured: isMailConfigured(),
+    inviteMessageTemplate,
+    loginUrl: cabinetLoginUrl(),
     members: members.map((m) => ({
       id: m.id,
       userId: m.userId,

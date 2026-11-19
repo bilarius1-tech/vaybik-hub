@@ -19,6 +19,7 @@ vi.mock("@/server/db", () => ({
       findFirst: vi.fn(),
     },
     clientMailLog: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
+    setting: { findUnique: vi.fn() },
     clientService: { findUnique: vi.fn() },
     ssoJti: { create: vi.fn() },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => {

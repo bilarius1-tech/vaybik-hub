@@ -37,8 +37,27 @@ export const contactsSchema = z.object({
     .default({}),
 });
 
+/** Шаблон сообщения/письма-приглашения клиенту. Переменные: {имя} {сайт} {ссылка} {вход} {срок_ссылки} */
+export const DEFAULT_CLIENT_INVITE_MESSAGE = `{имя}, добрый день! На сайт {сайт} подключили AI-консультанта: он отвечает посетителям на вопросы и передаёт заявки вашим менеджерам в Telegram.
+
+Чтобы управлять им (тексты, внешний вид, подключение группы менеджеров), создайте вход в кабинет по ссылке:
+{ссылка}
+
+Там укажите свою почту и придумайте пароль. Ссылка действует {срок_ссылки}. Дальше входите здесь: {вход}
+
+Если будут вопросы — пишите мне.`;
+
+export const clientInviteMessageSchema = z.object({
+  template: z
+    .string()
+    .min(20)
+    .max(8000)
+    .default(DEFAULT_CLIENT_INVITE_MESSAGE),
+});
+
 export const SETTINGS_KEYS = {
   brand: "brand",
   content: "site.content",
   contacts: "site.contacts",
+  clientInviteMessage: "clients.inviteMessage",
 } as const;

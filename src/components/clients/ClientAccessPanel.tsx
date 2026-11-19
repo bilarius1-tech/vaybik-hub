@@ -5,6 +5,10 @@ import { Card, CardHeader } from "@/components/ui/Card";
 import { Field, Input } from "@/components/ui/Field";
 import { Pill } from "@/components/ui/Pill";
 import { api } from "@/lib/api-client";
+import {
+  buildInviteMessageVars,
+  renderInviteMessage,
+} from "@/lib/invite-message";
 import { useState } from "react";
 
 type Member = {
@@ -38,6 +42,8 @@ type MailLog = {
 type Initial = {
   emailNotifyEnabled: boolean;
   mailConfigured: boolean;
+  inviteMessageTemplate: string;
+  loginUrl: string;
   members: Member[];
   activeInvite: ActiveInvite | null;
   mailLogs: MailLog[];
@@ -53,15 +59,23 @@ const KIND_LABEL: Record<string, string> = {
 
 export function ClientAccessPanel({
   clientId,
+  contactName,
+  siteUrl,
   initial,
 }: {
   clientId: string;
+  /** Поле «Контакт» в карточке → {имя} */
+  contactName: string | null;
+  /** URL сайта клиента → {сайт} */
+  siteUrl: string | null;
   initial: Initial;
 }) {
   const [members, setMembers] = useState(initial.members);
   const [activeInvite, setActiveInvite] = useState(initial.activeInvite);
   const [emailNotify, setEmailNotify] = useState(initial.emailNotifyEnabled);
   const [mailConfigured] = useState(initial.mailConfigured);
+  const [inviteTemplate] = useState(initial.inviteMessageTemplate);
+  const [loginUrl] = useState(initial.loginUrl);
   const [mailLogs, setMailLogs] = useState(initial.mailLogs);
   const [email, setEmail] = useState("");
   const [acceptUrl, setAcceptUrl] = useState<string | null>(null);
@@ -69,6 +83,7 @@ export function ClientAccessPanel({
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedMsg, setCopiedMsg] = useState(false);
 
   async function reload() {
     const res = await api<Initial>(`/api/clients/${clientId}/access`);
@@ -128,8 +143,30 @@ export function ClientAccessPanel({
     try {
       await navigator.clipboard.writeText(acceptUrl);
       setCopied(true);
+      setCopiedMsg(false);
     } catch {
       setError("Не удалось скопировать — скопируйте вручную");
+    }
+  }
+
+  async function copyClientMessage() {
+    if (!acceptUrl) return;
+    const text = renderInviteMessage(
+      inviteTemplate,
+      buildInviteMessageVars({
+        contactName,
+        siteUrl,
+        inviteUrl: acceptUrl,
+        loginUrl,
+      }),
+    );
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedMsg(true);
+      setCopied(false);
+      setMsg(null);
+    } catch {
+      setError("Не удалось скопировать сообщение");
     }
   }
 
@@ -269,12 +306,17 @@ export function ClientAccessPanel({
             <p className="break-all text-[12.5px] text-tx">{acceptUrl}</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button onClick={() => void copyLink()}>
-                {copied ? "Скопировано" : "Скопировать"}
+                {copied ? "Скопировано" : "Скопировать ссылку"}
+              </Button>
+              <Button variant="ghost" onClick={() => void copyClientMessage()}>
+                {copiedMsg
+                  ? "Сообщение скопировано"
+                  : "Скопировать сообщение для клиента"}
               </Button>
             </div>
             <p className="mt-2 text-[12px] text-mu">
               Ссылка одноразовая, 72 часа. Пароль клиент задаёт сам — мы его не
-              видим и не назначаем.
+              видим и не назначаем. Текст сообщения — в «Настройки Вайбика».
             </p>
           </div>
         ) : null}

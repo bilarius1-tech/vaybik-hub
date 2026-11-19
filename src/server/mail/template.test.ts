@@ -7,9 +7,12 @@ import {
 } from "@/server/mail/template";
 
 describe("mail templates", () => {
-  it("invite: кнопка пароля, вход и «сохраните ссылку»", () => {
+  it("invite: шаблон + кнопка пароля и вход", () => {
+    const body =
+      "Иван, добрый день! Ссылка:\nhttps://vaybik.ru/admin/invite/abc\nВход: https://vaybik.ru/admin/login";
     const m = inviteMail({
       clientName: "Тест",
+      bodyText: body,
       inviteUrl: "https://vaybik.ru/admin/invite/abc",
       loginUrl: "https://vaybik.ru/admin/login",
     });
@@ -17,8 +20,8 @@ describe("mail templates", () => {
     expect(m.html).toContain("Задать пароль");
     expect(m.html).toContain("https://vaybik.ru/admin/invite/abc");
     expect(m.html).toContain("Войти в кабинет");
-    expect(m.html).toContain("Сохраните эту ссылку для входа");
-    expect(m.text).toContain("https://vaybik.ru/admin/login");
+    expect(m.html).toContain("Иван, добрый день!");
+    expect(m.text).toContain(body);
     expect(m.text).toContain("@bilarius");
   });
 

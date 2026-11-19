@@ -1,9 +1,12 @@
 import { BrandSettingsPanel } from "@/components/settings/BrandSettingsPanel";
+import { ClientInviteMessagePanel } from "@/components/settings/ClientInviteMessagePanel";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { requireCan } from "@/server/auth/require";
 import { prisma } from "@/server/db";
 import {
+  DEFAULT_CLIENT_INVITE_MESSAGE,
   brandSchema,
+  clientInviteMessageSchema,
   contactsSchema,
   SETTINGS_KEYS,
   siteContentSchema,
@@ -25,11 +28,15 @@ export default async function SettingsPage() {
           SETTINGS_KEYS.brand,
           SETTINGS_KEYS.content,
           SETTINGS_KEYS.contacts,
+          SETTINGS_KEYS.clientInviteMessage,
         ],
       },
     },
   });
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const inviteMsg = clientInviteMessageSchema.parse(
+    map[SETTINGS_KEYS.clientInviteMessage] ?? {},
+  );
 
   return (
     <div className="space-y-6">
@@ -64,6 +71,13 @@ export default async function SettingsPage() {
         initialContacts={contactsSchema.parse(
           map[SETTINGS_KEYS.contacts] ?? {},
         )}
+      />
+
+      <ClientInviteMessagePanel
+        initialTemplate={
+          inviteMsg.template || DEFAULT_CLIENT_INVITE_MESSAGE
+        }
+        defaultTemplate={DEFAULT_CLIENT_INVITE_MESSAGE}
       />
     </div>
   );
