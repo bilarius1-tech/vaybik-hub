@@ -74,6 +74,7 @@
 - **2026-11-18** — Клиенты хаба ≠ Partner. Хаб — реестр (`Client` / `ClientService`); чат хранит рабочие данные по `hubClientId`. Контракт HMAC + SSO — в плане. Dev хаба → `chat-test.vaybik.ru`, прод → `chat.vaybik.ru`. Пауза клиента: upsert во все продукты (`archived→off`); при сбое чата — пометка «не синхронизировано», статус хаба не откатываем. Env: `CHAT_BASE_URL`, `HUB_CHAT_API_SECRET`, `HUB_CHAT_SSO_SECRET` (без запасных значений).
 - **2026-11-18** — Ф-B каркас: `SsoJti` (только jti), `POST /api/clients/[id]/impersonate` после reauth → **200 `{ redirectUrl }`** (не 302: fetch+manual = opaqueredirect); AuditLog `client.impersonate`; cookie `vaybik_session` не трогаем.
 - **2026-11-18** — Срок ClientService: `activeFrom`/`activeUntil` (дата MSK), `paymentNote`. Upsert в чат: `status ACTIVE|PAUSED|EXPIRED|OFF` + даты. Удаление клиента: бэкап хаба → `DELETE /api/hub/clients` → только потом cascade в хабе; иначе `deleteIncomplete`.
+- **2026-11-19** — Шаблон контракта подключения сервиса к клиенту хаба: `docs/services/CONTRACT.md` (референс — чат; для lead/Профи и др.). Расхождения с кодом — в §8 файла.
 
 ## 6. Договорённости
 
