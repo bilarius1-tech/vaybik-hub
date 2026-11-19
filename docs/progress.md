@@ -244,5 +244,5 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] `GET /admin/sso/chat?next=` + sanitize
 - [x] Логин/2FA/`middleware` уважают `?next=`
 - [x] «Настроить» → `/sso/chat?next=/manage/clients/…`
-- [ ] Деплой хаба — по «задеплой»
+- [x] Деплой хаба `222db91` (бэкап `20261119T163958Z`, откат `prev-b391513`)
 - [ ] Чат: редирект на `/admin/sso/chat`, `/sso` принимает `next` и пустой hubClientId
