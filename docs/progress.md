@@ -229,3 +229,11 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - Приоритет роутера admin: `TRAEFIK_ADMIN_PRIORITY=100`
 
 \* Secure cookie включается при `NODE_ENV=production`.
+
+## Справка сервиса (2026-11-19, сессия 2)
+
+- [x] CONTRACT §4a `GET /api/hub/help`
+- [x] `fetchStudioHelpFromChat` + HMAC пустое тело + кэш 5 мин + MD→HTML (`marked` + sanitize)
+- [x] `GET /admin/api/services/[id]/help` — `services.manage` (OWNER/ADMIN)
+- [x] UI: кнопка «Справка» у продукта chat + модалка (TOC / поиск / HTML)
+- [ ] Деплой хаба — по «задеплой»
