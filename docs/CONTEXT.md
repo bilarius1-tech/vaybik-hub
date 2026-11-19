@@ -75,6 +75,7 @@
 - **2026-11-18** — Ф-B каркас: `SsoJti` (только jti), `POST /api/clients/[id]/impersonate` после reauth → **200 `{ redirectUrl }`** (не 302: fetch+manual = opaqueredirect); AuditLog `client.impersonate`; cookie `vaybik_session` не трогаем.
 - **2026-11-18** — Срок ClientService: `activeFrom`/`activeUntil` (дата MSK), `paymentNote`. Upsert в чат: `status ACTIVE|PAUSED|EXPIRED|OFF` + даты. Удаление клиента: бэкап хаба → `DELETE /api/hub/clients` → только потом cascade в хабе; иначе `deleteIncomplete`.
 - **2026-11-19** — Шаблон контракта подключения сервиса к клиенту хаба: `docs/services/CONTRACT.md` (референс — чат; для lead/Профи и др.). Расхождения с кодом — в §8 файла.
+- **2026-11-19** — §8 п.1 закрыт в чате: `hubStatus` + EXPIRED→заглушка (деплой чата после «задеплой»).
 
 ## 6. Договорённости
 

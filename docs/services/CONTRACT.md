@@ -224,13 +224,12 @@ Body: { "hubClientId": "…" }
 
 Зафиксировано по репозиториям `/opt/vaybik-hub` и `/opt/vaybik-chat` — **не выдумано**. Шаблон выше = целевой контракт; ниже — факт.
 
-1. **EXPIRED → заглушка vs «молчит»**  
-   Хаб при истечении шлёт `status: EXPIRED` → чат ставит `isActive=false` → `getClientLifecycle` сразу возвращает **`PAUSED`** (проверка `!isActive` раньше дат) → config отдаёт 404 («молчит»), **заглушка не показывается**.  
-   Заглушка `EXPIRED` в виджете срабатывает только если `isActive=true` и `activeUntil` уже в прошлом (например, хаб ещё не успел синкнуть).  
-   Файлы: хаб `status-map.ts` + `hub-client.ts`; чат `lifecycle.ts`, `config/route.ts`.
+1. ~~**EXPIRED → заглушка vs «молчит»**~~ **Исправлено 2026-11-19**  
+   Чат хранит `Client.hubStatus` отдельно от `isActive`. Upsert `EXPIRED` → `hubStatus=EXPIRED`, `isActive=false` → lifecycle **`EXPIRED`** → config 200 + заглушка (лаунчер виден). `PAUSED`/`OFF` по-прежнему молчат.  
+   Файлы: чат `lifecycle.ts`, `api/hub/clients/route.ts`, `config/route.ts`.
 
 2. **Текст заглушки**  
-   Шаблон: «обратитесь к Вайбику». В коде дефолт: «…свяжитесь с Вайбик» (`WIDGET_EXPIRED_MESSAGE` / `expiredStubMessage()`).
+   Дефолт чата: «Срок работы виджета истёк, свяжитесь с Вайбик» (`WIDGET_EXPIRED_MESSAGE` / `expiredStubMessage()`). Ссылка: `WIDGET_EXPIRED_SUPPORT_URL`.
 
 3. **`NOT_YET` / `OFF`**  
    В теле upsert их нет. `NOT_YET` — только локальный lifecycle чата. `OFF` мапится в то же «молчит», что `PAUSED`.
