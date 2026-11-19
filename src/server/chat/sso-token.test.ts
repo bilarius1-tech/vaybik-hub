@@ -74,4 +74,24 @@ describe("sso token", () => {
       verifySsoToken(token, "unit-test-sso-secret-not-real", 1_700_000_061),
     ).toBeNull();
   });
+
+  it("chatNext добавляется в ssoUrl; пустой hubClientId допустим", () => {
+    const { ssoUrl, token } = issueSsoToken({
+      mode: "impersonate",
+      userId: "u1",
+      email: "a@b.c",
+      hubClientId: "",
+      impersonatedBy: "u1",
+      returnUrl: "http://127.0.0.1:3000/admin/clients",
+      chatNext: "/manage/help",
+      nowSec: 1_700_000_000,
+    });
+    expect(ssoUrl).toContain("next=%2Fmanage%2Fhelp");
+    const payload = verifySsoToken(
+      token,
+      "unit-test-sso-secret-not-real",
+      1_700_000_000,
+    );
+    expect(payload?.hubClientId).toBe("");
+  });
 });

@@ -21,9 +21,12 @@ export type IssueSsoInput = {
   mode: SsoMode;
   userId: string;
   email: string;
+  /** Пустая строка — студия без конкретного клиента (чат должен принять). */
   hubClientId: string;
   impersonatedBy: string | null;
   returnUrl: string;
+  /** Относительный путь чата → query next на /sso */
+  chatNext?: string;
   /** секунды жизни токена (по контракту 60) */
   ttlSec?: number;
   nowSec?: number;
@@ -113,7 +116,10 @@ export function issueSsoToken(input: IssueSsoInput): {
     .update(payloadRaw, "utf8")
     .digest();
   const token = `${b64url(payloadRaw)}.${b64url(sig)}`;
-  const ssoUrl = `${cfg.baseUrl}/sso?token=${encodeURIComponent(token)}`;
+  let ssoUrl = `${cfg.baseUrl}/sso?token=${encodeURIComponent(token)}`;
+  if (input.chatNext) {
+    ssoUrl += `&next=${encodeURIComponent(input.chatNext)}`;
+  }
 
   return { token, jti, exp: payload.exp, ssoUrl };
 }
