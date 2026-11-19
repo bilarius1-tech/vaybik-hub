@@ -159,15 +159,40 @@ model Client {
   /// Удаление начато, но сервис(ы) не подтвердили — клиент в хабе ещё есть
   deleteIncomplete       Boolean        @default(false)
   deleteIncompleteError  String?
+  /// Письма клиенту (приглашение / срок). Без SMTP в env — кнопки no-op.
+  emailNotifyEnabled     Boolean        @default(false)
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   services               ClientService[]
   members                ClientMember[]
   invites                ClientInvite[]
+  mailLogs               ClientMailLog[]
 
   @@index([status])
   @@index([name])
   @@index([deleteIncomplete])
+}
+
+/// Журнал писем клиенту. periodKey = activeUntil YYYY-MM-DD для идемпотентности срока.
+model ClientMailLog {
+  id              String   @id @default(cuid())
+  clientId        String
+  client          Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientServiceId String?
+  /// invite | expiry_7 | expiry_1 | expired | test
+  kind            String
+  toEmail         String
+  subject         String
+  /// YYYY-MM-DD activeUntil на момент отправки (срок); null для invite/test
+  periodKey       String?
+  inviteId        String?
+  /// sent | failed
+  status          String
+  error           String?
+  createdAt       DateTime @default(now())
+
+  @@index([clientId, createdAt])
+  @@index([kind, createdAt])
 }
 
 /// Пользователь роли CLIENT ↔ клиент хаба.

@@ -6,6 +6,7 @@ vi.mock("@/server/db", () => ({
     user: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
     clientMember: {
       findUnique: vi.fn(),
+      findMany: vi.fn(),
       create: vi.fn(),
     },
     clientInvite: {
@@ -17,6 +18,7 @@ vi.mock("@/server/db", () => ({
       findMany: vi.fn(),
       findFirst: vi.fn(),
     },
+    clientMailLog: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
     clientService: { findUnique: vi.fn() },
     ssoJti: { create: vi.fn() },
     $transaction: vi.fn(async (fn: (tx: unknown) => unknown) => {

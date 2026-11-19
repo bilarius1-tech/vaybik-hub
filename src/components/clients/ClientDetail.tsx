@@ -68,6 +68,8 @@ function csPill(s: Cs["status"]) {
 }
 
 type AccessInitial = {
+  emailNotifyEnabled: boolean;
+  mailConfigured: boolean;
   members: {
     id: string;
     userId: string;
@@ -83,6 +85,16 @@ type AccessInitial = {
     expiresAt: string;
     createdAt: string;
   } | null;
+  mailLogs: {
+    id: string;
+    kind: string;
+    toEmail: string;
+    subject: string;
+    status: string;
+    error: string | null;
+    periodKey: string | null;
+    createdAt: string;
+  }[];
 };
 
 export function ClientDetail({

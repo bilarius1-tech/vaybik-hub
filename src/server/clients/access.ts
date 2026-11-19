@@ -11,6 +11,8 @@ import {
 } from "@/server/chat/sso-token";
 import { getChatSsoConfig } from "@/server/chat/config";
 import { resolveManageUrl } from "@/server/clients/status-map";
+import { isMailConfigured } from "@/server/mail/config";
+import { listMailLogsForClient } from "@/server/mail/client-notify";
 
 function inviteBaseUrl(): string {
   return (
@@ -19,7 +21,11 @@ function inviteBaseUrl(): string {
 }
 
 export async function getClientAccess(clientId: string) {
-  const [members, invites] = await Promise.all([
+  const [client, members, invites, mailLogs] = await Promise.all([
+    prisma.client.findUnique({
+      where: { id: clientId },
+      select: { emailNotifyEnabled: true },
+    }),
     prisma.clientMember.findMany({
       where: { clientId },
       include: {
@@ -41,6 +47,7 @@ export async function getClientAccess(clientId: string) {
       orderBy: { createdAt: "desc" },
       take: 10,
     }),
+    listMailLogsForClient(clientId, 25),
   ]);
 
   const now = new Date();
@@ -49,6 +56,8 @@ export async function getClientAccess(clientId: string) {
   );
 
   return {
+    emailNotifyEnabled: client?.emailNotifyEnabled ?? false,
+    mailConfigured: isMailConfigured(),
     members: members.map((m) => ({
       id: m.id,
       userId: m.userId,
@@ -66,6 +75,16 @@ export async function getClientAccess(clientId: string) {
           createdAt: activeInvite.createdAt,
         }
       : null,
+    mailLogs: mailLogs.map((l) => ({
+      id: l.id,
+      kind: l.kind,
+      toEmail: l.toEmail,
+      subject: l.subject,
+      status: l.status,
+      error: l.error,
+      periodKey: l.periodKey,
+      createdAt: l.createdAt,
+    })),
   };
 }
 

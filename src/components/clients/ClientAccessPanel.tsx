@@ -24,9 +24,31 @@ type ActiveInvite = {
   createdAt: string;
 };
 
+type MailLog = {
+  id: string;
+  kind: string;
+  toEmail: string;
+  subject: string;
+  status: string;
+  error: string | null;
+  periodKey: string | null;
+  createdAt: string;
+};
+
 type Initial = {
+  emailNotifyEnabled: boolean;
+  mailConfigured: boolean;
   members: Member[];
   activeInvite: ActiveInvite | null;
+  mailLogs: MailLog[];
+};
+
+const KIND_LABEL: Record<string, string> = {
+  invite: "приглашение",
+  expiry_7: "срок −7 дн.",
+  expiry_1: "срок −1 дн.",
+  expired: "срок истёк",
+  test: "тест",
 };
 
 export function ClientAccessPanel({
@@ -38,9 +60,13 @@ export function ClientAccessPanel({
 }) {
   const [members, setMembers] = useState(initial.members);
   const [activeInvite, setActiveInvite] = useState(initial.activeInvite);
+  const [emailNotify, setEmailNotify] = useState(initial.emailNotifyEnabled);
+  const [mailConfigured] = useState(initial.mailConfigured);
+  const [mailLogs, setMailLogs] = useState(initial.mailLogs);
   const [email, setEmail] = useState("");
   const [acceptUrl, setAcceptUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -52,11 +78,14 @@ export function ClientAccessPanel({
     }
     setMembers(res.data.members);
     setActiveInvite(res.data.activeInvite);
+    setEmailNotify(res.data.emailNotifyEnabled);
+    setMailLogs(res.data.mailLogs);
   }
 
   async function createInvite() {
     setBusy(true);
     setError(null);
+    setMsg(null);
     setCopied(false);
     const res = await api<{
       acceptUrl: string;
@@ -80,6 +109,7 @@ export function ClientAccessPanel({
     if (!activeInvite) return;
     setBusy(true);
     setError(null);
+    setMsg(null);
     const res = await api(`/api/clients/${clientId}/access`, {
       method: "DELETE",
       body: JSON.stringify({ inviteId: activeInvite.id }),
@@ -101,6 +131,67 @@ export function ClientAccessPanel({
     } catch {
       setError("Не удалось скопировать — скопируйте вручную");
     }
+  }
+
+  async function toggleNotify(next: boolean) {
+    setBusy(true);
+    setError(null);
+    setMsg(null);
+    const res = await api(`/api/clients/${clientId}/access`, {
+      method: "PATCH",
+      body: JSON.stringify({ emailNotifyEnabled: next }),
+    });
+    setBusy(false);
+    if (res.error) {
+      setError(res.error.message);
+      return;
+    }
+    setEmailNotify(next);
+  }
+
+  async function sendInviteMail() {
+    setBusy(true);
+    setError(null);
+    setMsg(null);
+    const res = await api<{
+      sent: boolean;
+      to: string;
+      acceptUrl: string;
+    }>(`/api/clients/${clientId}/access/mail`, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "invite",
+        email: email.trim() || null,
+      }),
+    });
+    setBusy(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Не удалось отправить");
+      return;
+    }
+    setAcceptUrl(res.data.acceptUrl);
+    setMsg(`Приглашение отправлено на ${res.data.to}`);
+    await reload();
+  }
+
+  async function sendTestMail() {
+    setBusy(true);
+    setError(null);
+    setMsg(null);
+    const res = await api<{ sent: boolean; to: string }>(
+      `/api/clients/${clientId}/access/mail`,
+      {
+        method: "POST",
+        body: JSON.stringify({ action: "test" }),
+      },
+    );
+    setBusy(false);
+    if (res.error || !res.data) {
+      setError(res.error?.message || "Не удалось отправить тест");
+      return;
+    }
+    setMsg(`Тестовое письмо отправлено на ${res.data.to}`);
+    await reload();
   }
 
   return (
@@ -188,6 +279,88 @@ export function ClientAccessPanel({
           </div>
         ) : null}
 
+        <div className="rounded-[10px] border border-bd bg-bg2 px-3 py-3 space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[13px] font-semibold text-tx">Почта</span>
+            {mailConfigured ? (
+              <Pill tone="green">SMTP ок</Pill>
+            ) : (
+              <Pill tone="yellow">SMTP не настроен</Pill>
+            )}
+          </div>
+          <label className="flex items-start gap-2 text-[13px] text-tx cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5"
+              checked={emailNotify}
+              disabled={busy}
+              onChange={(e) => void toggleNotify(e.target.checked)}
+            />
+            <span>
+              Отправлять письма клиенту
+              <span className="block text-[12px] text-mu mt-0.5">
+                срок за 7 и за 1 день, истечение утром следующего дня (MSK).
+                Без галочки и без SMTP — только ручная ссылка.
+              </span>
+            </span>
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={busy || !mailConfigured}
+              onClick={() => void sendInviteMail()}
+              title={
+                mailConfigured
+                  ? undefined
+                  : "Сначала задайте SMTP_* в .env"
+              }
+            >
+              Отправить приглашение на почту
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={busy || !mailConfigured}
+              onClick={() => void sendTestMail()}
+            >
+              Тестовое письмо мне
+            </Button>
+          </div>
+          {!mailConfigured ? (
+            <p className="text-[12px] text-mu">
+              Пока SMTP нет — копируйте ссылку приглашения вручную. Секреты:
+              SMTP_HOST/USER/PASS, MAIL_FROM.
+            </p>
+          ) : null}
+
+          {mailLogs.length > 0 ? (
+            <div>
+              <p className="text-[12px] font-semibold text-mu mb-1">
+                Журнал писем
+              </p>
+              <ul className="max-h-40 overflow-auto space-y-1 text-[12px]">
+                {mailLogs.map((l) => (
+                  <li key={l.id} className="flex flex-wrap gap-x-2 text-tx">
+                    <span className="text-mu">
+                      {new Date(l.createdAt).toLocaleString("ru-RU")}
+                    </span>
+                    <span>{KIND_LABEL[l.kind] || l.kind}</span>
+                    <span className="text-mu">→ {l.toEmail}</span>
+                    {l.status === "sent" ? (
+                      <Pill tone="green">ok</Pill>
+                    ) : (
+                      <Pill tone="red">ошибка</Pill>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+        </div>
+
+        {msg ? (
+          <p className="text-[13px] font-semibold text-[color:var(--gn,#2f9e44)]">
+            {msg}
+          </p>
+        ) : null}
         {error ? (
           <p className="text-[13px] font-semibold text-rd">{error}</p>
         ) : null}

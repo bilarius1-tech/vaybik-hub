@@ -13,6 +13,7 @@ import {
 } from "@/server/services/aggregate";
 import { checkAllDueServices } from "@/server/services/check-runner";
 import { collectHostMetrics } from "@/server/services/metrics";
+import { runClientMailCron } from "@/server/mail/client-notify";
 import { notifyEvent } from "@/server/services/telegram";
 
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -37,6 +38,7 @@ async function main() {
   await boss.createQueue("maintenance");
   await boss.createQueue("admin-backup");
   await boss.createQueue("db-connection-backups");
+  await boss.createQueue("client-mail");
 
   await boss.schedule("health-checks", "*/1 * * * *", {}, { tz: "Europe/Moscow" });
   await boss.schedule("server-metrics", "*/1 * * * *", {}, { tz: "Europe/Moscow" });
@@ -49,6 +51,8 @@ async function main() {
     {},
     { tz: "Europe/Moscow" },
   );
+  // Письма о сроке: утро MSK (7 дн / 1 дн / истёк = activeUntil+1)
+  await boss.schedule("client-mail", "0 9 * * *", {}, { tz: "Europe/Moscow" });
 
   await boss.work("health-checks", async () => {
     const n = await checkAllDueServices();
@@ -124,6 +128,18 @@ async function main() {
         event: "backup.failed",
         text: `Ночной бэкап админки ОШИБКА: ${msg.slice(0, 200)}`,
       });
+      throw err;
+    }
+  });
+
+  await boss.work("client-mail", async () => {
+    try {
+      const r = await runClientMailCron();
+      console.log(
+        `[worker] client-mail checked=${r.checked} sent=${r.sent} skipped=${r.skipped}`,
+      );
+    } catch (err) {
+      console.error("[worker] client-mail failed", err);
       throw err;
     }
   });

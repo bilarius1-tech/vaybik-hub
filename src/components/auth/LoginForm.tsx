@@ -86,6 +86,34 @@ export function LoginForm() {
             {loading ? "Входим…" : "Войти"}
           </Button>
         </div>
+        <p className="mt-4 text-[12.5px] leading-relaxed text-mu">
+          Забыли пароль? Напишите Вайбику:{" "}
+          <a
+            className="text-ac underline-offset-2 hover:underline"
+            href="https://t.me/bilarius"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Telegram @bilarius
+          </a>
+          ,{" "}
+          <a
+            className="text-ac underline-offset-2 hover:underline"
+            href="mailto:bilariuss@yandex.ru"
+          >
+            bilariuss@yandex.ru
+          </a>
+          ,{" "}
+          <a
+            className="text-ac underline-offset-2 hover:underline"
+            href="https://max.ru/u/f9LHodD0cOJJqrzWNIgwcfSejU7L3YdJqC3eucYgoH12ooXijtHFm3XjPv4"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            MAX
+          </a>
+          .
+        </p>
       </form>
     </Card>
   );

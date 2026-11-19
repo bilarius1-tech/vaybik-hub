@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { z } from "zod";
 import { writeAudit } from "@/server/auth/audit";
 import { requireCan } from "@/server/auth/require";
 import { createClientInviteSchema } from "@/server/auth/schemas";
@@ -7,10 +8,15 @@ import {
   getClientAccess,
   revokeClientInvite,
 } from "@/server/clients/access";
+import { setClientEmailNotify } from "@/server/mail/client-notify";
 import { assertSameOrigin, clientIp, userAgent } from "@/server/http/request";
 import { handleRouteError, jsonError, jsonOk } from "@/server/http/response";
 
 type Ctx = { params: Promise<{ id: string }> };
+
+const patchSchema = z.object({
+  emailNotifyEnabled: z.boolean(),
+});
 
 export async function GET(_req: NextRequest, ctx: Ctx) {
   try {
@@ -18,6 +24,32 @@ export async function GET(_req: NextRequest, ctx: Ctx) {
     const { id } = await ctx.params;
     const access = await getClientAccess(id);
     return jsonOk(access);
+  } catch (err) {
+    return handleRouteError(err);
+  }
+}
+
+/** Галочка «Отправлять письма клиенту». */
+export async function PATCH(req: NextRequest, ctx: Ctx) {
+  try {
+    assertSameOrigin(req);
+    const auth = await requireCan("clients.manage");
+    const { id } = await ctx.params;
+    const body = patchSchema.parse(await req.json().catch(() => ({})));
+    const result = await setClientEmailNotify(id, body.emailNotifyEnabled);
+    if (!result.ok) {
+      return jsonError(result.code, result.message, 404);
+    }
+    await writeAudit({
+      actorId: auth.user.id,
+      action: "client.email_notify",
+      entity: "Client",
+      entityId: id,
+      diff: { emailNotifyEnabled: body.emailNotifyEnabled },
+      ip: clientIp(req),
+      userAgent: userAgent(req),
+    });
+    return jsonOk({ emailNotifyEnabled: body.emailNotifyEnabled });
   } catch (err) {
     return handleRouteError(err);
   }
