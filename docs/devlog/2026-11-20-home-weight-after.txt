@@ -1,0 +1,14 @@
+date=2026-11-20T10:12+03 (после публикации «Наши сервисы»)
+url=https://vaybik.ru/
+html_bytes=70475 (+715 к до)
+studio_stage=false
+studio_live_js_loaded=false
+studio_live_js_on_disk=55738 (файл остался, со страницы не запрашивается)
+
+typical_transfer_estimate_desktop:
+  - сняли: studio-live.js −55738
+  - добавили: 3× w960.webp ≈ 61282+56468+58452 = 176202
+  - нетто картинки+скрипт ≈ +120 KB на секцию (браузер берёт один размер из srcset)
+  - выигрыш по CPU/JS: нет canvas/изометрии
+
+notes=виджет studio в коде сохранён; блок с главной убран.

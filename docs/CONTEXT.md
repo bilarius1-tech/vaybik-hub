@@ -35,7 +35,8 @@
 ## 4. Текущее состояние (на 2026-11-19)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Хаб-образ **`9b51258`**: + **landing-clients** (`POST /admin/api/chat/landing-clients`, CONTRACT §4b). Ранее: SSO студии (`222db91`), справка, CLIENT (`e9efeb2`), почта (`edc0b17`), шаблон (`c2ea57e`).
+- Хаб-образ **`469599e`**: + блок CMS **serviceCards** («Наши сервисы» вместо `#studio` на главной). Ранее: landing-clients (`9b51258`), SSO (`222db91`), справка, CLIENT, почта, шаблон.
+- Главная: офис/studio снят с `/` (виджет `studio` в коде сохранён); три карточки сервисов + медиа. CSS leadweb `29aaee3`.
 - Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
 - **Прод env:** только `/opt/apps/vaybik-hub/.env` (compose `env_file: .env`). Dev — `/opt/vaybik-hub/.env`. Секреты SMTP не путать между ними.
