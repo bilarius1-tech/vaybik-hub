@@ -2,6 +2,7 @@ export const BLOCK_TYPES = [
   "hero",
   "answer",
   "cards",
+  "serviceCards",
   "steps",
   "faq",
   "team",
@@ -32,6 +33,10 @@ export const BLOCK_META: Record<
   cards: {
     label: "Карточки",
     description: "Сетка карточек 2–4 колонки",
+  },
+  serviceCards: {
+    label: "Сервисы (карточки)",
+    description: "Карточки продукта: картинка 4:3, текст, кнопка",
   },
   steps: {
     label: "Шаги",

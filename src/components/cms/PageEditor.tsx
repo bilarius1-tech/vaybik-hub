@@ -319,6 +319,11 @@ export function PageEditor({
       hero: { title: "Заголовок", buttons: [] },
       answer: { html: "<p>Короткий ответ</p>", facts: [] },
       cards: { header: { title: "Карточки" }, columns: 3, items: [] },
+      serviceCards: {
+        header: { title: "Наши сервисы" },
+        columns: 3,
+        items: [],
+      },
       steps: { header: { title: "Шаги" }, items: [] },
       faq: {
         header: { title: "FAQ" },

@@ -164,6 +164,33 @@ export const cardsBlockSchema = z.object({
     .nullable()
     .transform((v) => (v ? sanitizeCmsHtml(v) : v)),
 });
+
+/** Продуктовые сервисы: картинка 4:3 + заголовок + текст + кнопка */
+export const serviceCardsBlockSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  columns: z.union([z.literal(2), z.literal(3)]).default(3),
+  items: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        text: optionalString,
+        textHtml: richHtml("basic"),
+        price: optionalString,
+        image: mediaRefField,
+        button: z
+          .object({
+            label: z.string().min(1),
+            href: z.string().min(1),
+            style: z.enum(["primary", "secondary"]).default("primary"),
+          })
+          .optional()
+          .nullable(),
+      }),
+    )
+    .default([]),
+});
+
 export const stepsBlockSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
@@ -353,6 +380,7 @@ export const blockDataSchemas = {
   hero: heroBlockSchema,
   answer: answerBlockSchema,
   cards: cardsBlockSchema,
+  serviceCards: serviceCardsBlockSchema,
   steps: stepsBlockSchema,
   faq: faqBlockSchema,
   team: teamBlockSchema,

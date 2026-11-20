@@ -502,6 +502,95 @@ function renderCards(
   }
   return `${secOpen(anchor, data.background === "alt")}${secHeader(data.header as Header, opts)}${before}<div class="grid g${cols}">${cards}</div>${teaserHtml}${after}${secClose()}`;
 }
+
+function renderServiceCards(
+  data: Record<string, unknown>,
+  anchor: string | null | undefined,
+  opts: RenderOptions = {},
+): string {
+  const cols = Number(data.columns) === 2 ? 2 : 3;
+  const items = (data.items as Array<Record<string, unknown>>) || [];
+  const header = (data.header as Header) || null;
+  const titleId = "our-services-title";
+  const id = anchor || "our-services";
+  const alt = data.background === "alt";
+  const reveal = wantsReveal(opts) ? " reveal" : "";
+
+  const headParts: string[] = [`<div class="sec-h${reveal}">`];
+  if (header?.kicker) {
+    headParts.push(`<span class="kicker">${esc(header.kicker)}</span>`);
+  }
+  if (header?.title) {
+    headParts.push(
+      `<h2 id="${escAttr(titleId)}">${esc(header.title)}</h2>`,
+    );
+  }
+  if (header?.subtitle) {
+    headParts.push(`<p class="muted">${esc(header.subtitle)}</p>`);
+  }
+  headParts.push("</div>");
+
+  const cards = items
+    .map((it) => {
+      const title = String(it.title || "");
+      const altFromImage =
+        it.image &&
+        typeof it.image === "object" &&
+        typeof (it.image as { alt?: unknown }).alt === "string"
+          ? String((it.image as { alt: string }).alt).trim()
+          : "";
+      const altText = altFromImage || title;
+      let img = "";
+      if (opts.media) {
+        img = renderMediaPicture(it.image, opts.media, {
+          fallbackAlt: altText,
+          lazy: true,
+          className: "svc-card-img",
+        });
+      } else {
+        const media = resolveMediaSrc(it.image, null, altText);
+        if (media.src) {
+          img = `<img class="svc-card-img" src="${escAttr(media.src)}" alt="${escAttr(altText)}" loading="lazy">`;
+        }
+      }
+      const mediaWrap = img
+        ? `<div class="svc-card-media">${img}</div>`
+        : `<div class="svc-card-media svc-card-media--empty" aria-hidden="true"></div>`;
+      const text = cardTextHtml(it);
+      const price = it.price
+        ? `<div class="price">${PRICE_ICON}${esc(String(it.price))}</div>`
+        : "";
+      const btn =
+        it.button && typeof it.button === "object"
+          ? (it.button as {
+              label: string;
+              href: string;
+              style?: string;
+            })
+          : null;
+      let cta = "";
+      if (btn?.label && btn.href) {
+        const ext =
+          /^https?:\/\//i.test(btn.href) && !btn.href.includes("vaybik.ru")
+            ? ' target="_blank" rel="noopener"'
+            : "";
+        const primary = (btn.style || "primary") === "primary";
+        if (primary) {
+          cta = `<div class="acts"><a class="bt-btn" href="${escAttr(btn.href)}"${ext}><span class="bt-sl">${esc(btn.label)}</span></a></div>`;
+        } else {
+          cta = `<a class="more" href="${escAttr(btn.href)}"${ext}>${esc(btn.label)}${MORE_ARROW}</a>`;
+        }
+      }
+      return `<article class="card svc-card${reveal}">${mediaWrap}<h3>${esc(title)}</h3>${text}${price}${cta}</article>`;
+    })
+    .join("");
+
+  const secCls = alt
+    ? 'class="sec alt svc-services"'
+    : 'class="sec svc-services"';
+  return `<section ${secCls} id="${escAttr(id)}" aria-labelledby="${escAttr(titleId)}"><div class="w">${headParts.join("")}<div class="grid g${cols} svc-cards">${cards}</div></div></section>`;
+}
+
 function renderFaq(
   data: Record<string, unknown>,
   anchor: string | null | undefined,
@@ -898,6 +987,8 @@ export function renderBlock(
       return renderAnswer(data, block.anchor, opts);
     case "cards":
       return renderCards(data, block.anchor, opts);
+    case "serviceCards":
+      return renderServiceCards(data, block.anchor, opts);
     case "steps":
       return renderSteps(data, block.anchor, opts);
     case "faq":

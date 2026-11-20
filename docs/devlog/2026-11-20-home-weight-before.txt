@@ -1,0 +1,7 @@
+date=2026-11-20T10:00+03 (до замены студии)
+url=https://vaybik.ru/
+html_bytes=69760
+studio_live_js=/js/studio-live.js bytes=55738
+linked_assets_sum_bytes=344167 (html img/js/css sampled; studio-live включён как динамический)
+grand_html_plus_assets=413927
+notes=после публикации serviceCards сравнить те же метрики; studio-live не должен грузиться

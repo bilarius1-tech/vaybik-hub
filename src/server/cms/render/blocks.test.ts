@@ -172,6 +172,50 @@ describe("renderBlock", () => {
     expect(html).toContain('aria-label="Подробнее: Landing Page"');
   });
 
+  it("serviceCards: H2/H3, picture lazy, кнопка", () => {
+    const html = renderBlock({
+      type: "serviceCards",
+      anchor: "our-services",
+      data: {
+        header: { title: "Наши сервисы" },
+        columns: 3,
+        items: [
+          {
+            title: "Консультант на сайт",
+            textHtml: "<p>ИИ отвечает 24/7</p>",
+            price: "От 1 700 ₽/мес.",
+            image: { src: "/img/service-consultant.jpg", alt: null },
+            button: {
+              label: "Попробовать",
+              href: "https://chat.vaybik.ru",
+              style: "primary",
+            },
+          },
+          {
+            title: "Лидогенерация",
+            text: "Заявки с бирж",
+            button: {
+              label: "Подробнее",
+              href: "#contact",
+              style: "secondary",
+            },
+          },
+        ],
+      },
+    });
+    expect(html).toContain('id="our-services"');
+    expect(html).toContain('id="our-services-title"');
+    expect(html).toContain("<h2 id=\"our-services-title\">Наши сервисы</h2>");
+    expect(html).toContain("<h3>Консультант на сайт</h3>");
+    expect(html).toContain('class="grid g3 svc-cards"');
+    expect(html).toContain('loading="lazy"');
+    expect(html).toContain('alt="Консультант на сайт"');
+    expect(html).toContain('href="https://chat.vaybik.ru"');
+    expect(html).toContain("Попробовать");
+    expect(html).toContain('class="more"');
+    expect(html).toContain("Подробнее");
+  });
+
   it("keysy rawHtml: фильтры + кнопки диалога после sanitize", () => {
     const html = renderBlock({
       type: "rawHtml",

@@ -10,6 +10,7 @@ import { HeroForm } from "./HeroForm";
 import { IconListForm } from "./IconListForm";
 import { OfferForm } from "./OfferForm";
 import { RawHtmlForm } from "./RawHtmlForm";
+import { ServiceCardsForm } from "./ServiceCardsForm";
 import { StepsForm } from "./StepsForm";
 import { TeamForm } from "./TeamForm";
 import { TextForm } from "./TextForm";
@@ -40,6 +41,8 @@ export function BlockForm({
       return <AnswerForm data={data} onChange={set} />;
     case "cards":
       return <CardsForm data={data} onChange={set} />;
+    case "serviceCards":
+      return <ServiceCardsForm data={data} onChange={set} />;
     case "steps":
       return <StepsForm data={data} onChange={set} />;
     case "faq":

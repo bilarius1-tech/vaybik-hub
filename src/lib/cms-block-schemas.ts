@@ -115,6 +115,32 @@ export const cardsClientSchema = z.object({
     )
     .default([]),
 });
+
+export const serviceCardsClientSchema = z.object({
+  header: headerSchema,
+  background: backgroundSchema,
+  columns: z.union([z.literal(2), z.literal(3)]).default(3),
+  items: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        text: optionalString,
+        textHtml: optionalString,
+        price: optionalString,
+        image: mediaRefSchema.optional(),
+        button: z
+          .object({
+            label: z.string().min(1),
+            href: z.string().min(1),
+            style: z.enum(["primary", "secondary"]).default("primary"),
+          })
+          .optional()
+          .nullable(),
+      }),
+    )
+    .default([]),
+});
+
 export const stepsClientSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
@@ -275,6 +301,7 @@ export const CLIENT_BLOCK_SCHEMAS = {
   hero: heroClientSchema,
   answer: answerClientSchema,
   cards: cardsClientSchema,
+  serviceCards: serviceCardsClientSchema,
   steps: stepsClientSchema,
   faq: faqClientSchema,
   team: teamClientSchema,
