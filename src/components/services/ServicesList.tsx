@@ -1,6 +1,6 @@
 "use client";
 
-import { ServiceHelpModal } from "@/components/services/ServiceHelpModal";
+import { ServiceStudioLinks } from "@/components/services/ServiceStudioLinks";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { DataTable } from "@/components/ui/DataTable";
@@ -9,6 +9,10 @@ import { Pill } from "@/components/ui/Pill";
 import { Segmented } from "@/components/ui/Segmented";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { StatusDot } from "@/components/ui/StatusDot";
+import {
+  studioLinksForService,
+  type StudioServiceLink,
+} from "@/lib/studio-service-links";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
@@ -35,16 +39,8 @@ function tone(s: string): "up" | "down" | "degraded" | "unknown" {
   return "unknown";
 }
 
-/** Пока справка только у продукта «Чат» (контракт GET /api/hub/help). */
-function hasStudioHelp(r: Row): boolean {
-  return r.isProduct && r.slug === "chat";
-}
-
 export function ServicesList({ initial }: { initial: Row[] }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const [helpFor, setHelpFor] = useState<{ id: string; name: string } | null>(
-    null,
-  );
   const rows = useMemo(() => {
     if (filter === "products") return initial.filter((r) => r.isProduct);
     if (filter === "infra") return initial.filter((r) => !r.isProduct);
@@ -92,15 +88,23 @@ export function ServicesList({ initial }: { initial: Row[] }) {
               {
                 key: "name",
                 header: "Название",
-                render: (r) => (
-                  <Link
-                    href={`/services/${r.slug}`}
-                    className="inline-flex items-center gap-2 font-semibold hover:text-ac"
-                  >
-                    <StatusDot status={tone(r.status)} />
-                    {r.name}
-                  </Link>
-                ),
+                render: (r) => {
+                  const links: StudioServiceLink[] = studioLinksForService(
+                    r.slug,
+                  );
+                  return (
+                    <div className="min-w-[220px] py-1">
+                      <Link
+                        href={`/services/${r.slug}`}
+                        className="inline-flex items-center gap-2 font-semibold hover:text-ac"
+                      >
+                        <StatusDot status={tone(r.status)} />
+                        {r.name}
+                      </Link>
+                      <ServiceStudioLinks links={links} />
+                    </div>
+                  );
+                },
               },
               { key: "url", header: "URL", render: (r) => r.url },
               {
@@ -133,33 +137,10 @@ export function ServicesList({ initial }: { initial: Row[] }) {
                 header: "спарклайн",
                 render: (r) => <Sparkline values={r.spark} />,
               },
-              {
-                key: "help",
-                header: "",
-                render: (r) =>
-                  hasStudioHelp(r) ? (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setHelpFor({ id: r.id, name: r.name })}
-                    >
-                      Справка
-                    </Button>
-                  ) : null,
-              },
             ]}
           />
         )}
       </Card>
-
-      {helpFor ? (
-        <ServiceHelpModal
-          open
-          serviceId={helpFor.id}
-          serviceName={helpFor.name}
-          onClose={() => setHelpFor(null)}
-        />
-      ) : null}
     </div>
   );
 }

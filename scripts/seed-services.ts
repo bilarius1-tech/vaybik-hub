@@ -45,7 +45,7 @@ const DEMO = [
   },
   {
     slug: "chat",
-    name: "Чат",
+    name: "Вайбик Чат",
     url: "https://chat.vaybik.ru",
     healthUrl: null,
     description: "ИИ-чат для клиентов студии",
@@ -58,6 +58,19 @@ const DEMO = [
     tags: ["chat", "product"],
   },
   {
+    slug: "design-atlas",
+    name: "Дизайн Атлас",
+    url: "https://design.vaybik.ru",
+    healthUrl: "https://design.vaybik.ru",
+    description: "Дизайн-система и примеры сайтов для клиентов",
+    type: "EXTERNAL" as const,
+    isPublic: true,
+    isDeployed: true,
+    isProduct: true,
+    sortOrder: 4,
+    tags: ["design", "product", "atlas"],
+  },
+  {
     slug: "lead",
     name: "Lead",
     url: "https://lead.vaybik.ru",
@@ -66,7 +79,7 @@ const DEMO = [
     type: "DOCKER" as const,
     isPublic: true,
     isDeployed: false,
-    sortOrder: 4,
+    sortOrder: 5,
     tags: ["lead", "undeployed"],
   },
 ];

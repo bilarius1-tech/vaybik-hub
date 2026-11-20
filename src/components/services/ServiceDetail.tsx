@@ -2,6 +2,7 @@
 
 import { DockerPanel } from "@/components/services/DockerPanel";
 import { ServiceForm } from "@/components/services/ServiceForm";
+import { ServiceStudioLinks } from "@/components/services/ServiceStudioLinks";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
 import { Chart } from "@/components/ui/Chart";
@@ -11,6 +12,7 @@ import { Pill } from "@/components/ui/Pill";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { api } from "@/lib/api-client";
 import { formatDateTime } from "@/lib/format";
+import { studioLinksForService } from "@/lib/studio-service-links";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -140,6 +142,10 @@ export function ServiceDetail({
               </Pill>
             )}
           </div>
+          <ServiceStudioLinks
+            links={studioLinksForService(service.slug)}
+            className="mt-3 flex flex-wrap items-center gap-2"
+          />
         </div>
         <Button onClick={() => void runCheck()} disabled={busy || !service.healthUrl}>
           {busy ? "Проверяем…" : "Проверить сейчас"}

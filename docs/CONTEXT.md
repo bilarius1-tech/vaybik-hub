@@ -28,6 +28,7 @@
 | https://region.vaybik.ru      | «Регион» (Битрикс, отдельная разработка)              | `/opt/apps/region`      | работает; **не трогать** |
 | http://199.189.250.208/whoami | тест Traefik / Docker-панели (`vaybik.managed=true`)  | `/opt/apps/whoami`      | работает           |
 | https://chat.vaybik.ru        | ИИ-ассистент (виджет на vaybik.ru + сервис чата) | репо [vaybik-chat](https://github.com/bilarius1-tech/vaybik-chat); виджет с хаба (`site.chatWidget`) | прод виджета на главной vaybik.ru |
+| https://design.vaybik.ru      | Дизайн Атлас (сайт + /primer)                    | внешний; в реестре хаба `design-atlas` | сайт 200; DNS/Traefik не трогаем из хаба |
 | lead.vaybik.ru                | сбор заявок (лиды → `/admin/api/ingest/lead`, фаза 4) | —                       | план, не развёрнут |
 
 Не относится к Вайбику, не трогать отсюда: сайт стоматологии цауне-дентал.рф (хостинг HandyHost).
@@ -87,6 +88,7 @@
 - **2026-11-20** — Лендинг DEMO→ACTIVE: хаб `POST /admin/api/chat/landing-clients` (CONTRACT §4b); чат вызывает через `hubAdminBaseUrl()` (не сырой `HUB_BASE_URL`). Секрет тот же `HUB_CHAT_API_SECRET`.
 - **2026-11-20** — В чат-репо (`/opt/vaybik-chat`) с агента хаба **не писать даже на диск** — только текст промпта для агента чата.
 - **2026-11-20** — Главная: `#studio` убран; блок `serviceCards` «Наши сервисы»; виджет studio в коде сохранён. Прод хаб `469599e`, CSS leadweb `29aaee3`.
+- **2026-11-21** — `/admin/services`: у чата кнопки через SSO (`/sso/chat?next=`); у «Дизайн Атлас» внешние ссылки; slug `design-atlas`; CLIENT страницу не видит (`services.manage`).
 
 ## 6. Договорённости
 

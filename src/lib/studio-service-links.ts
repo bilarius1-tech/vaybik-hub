@@ -1,0 +1,51 @@
+export type StudioServiceLink = {
+  label: string;
+  /** Путь хаба (с basePath) или абсолютный URL */
+  href: string;
+  /** Открывать во внешней вкладке (сайт Атласа и т.п.) */
+  external?: boolean;
+};
+
+/** Клиент чата «наш виджет / база знаний» студии (не клиента хаба). */
+export const CHAT_STUDIO_WIDGET_CLIENT_ID = "cmwl06pki0001qm5kuqwp8uss";
+
+/** Как chatStudioSsoHref — без импорта studio-sso (Prisma), чтобы можно было в client. */
+function chatSsoHref(chatNextPath: string): string {
+  return `/sso/chat?next=${encodeURIComponent(chatNextPath)}`;
+}
+
+const CHAT_STUDIO_LINKS: StudioServiceLink[] = [
+  { label: "Клиенты чата", href: chatSsoHref("/manage") },
+  {
+    label: "Наш виджет (база знаний)",
+    href: chatSsoHref(`/manage/clients/${CHAT_STUDIO_WIDGET_CLIENT_ID}`),
+  },
+  { label: "Справка чата", href: chatSsoHref("/manage/help") },
+  {
+    label: "Лендинг чата (SEO)",
+    href: chatSsoHref("/manage/landing"),
+  },
+];
+
+const DESIGN_ATLAS_LINKS: StudioServiceLink[] = [
+  {
+    label: "Открыть сайт",
+    href: "https://design.vaybik.ru",
+    external: true,
+  },
+  {
+    label: "Пример сайта для клиента",
+    href: "https://design.vaybik.ru/primer",
+    external: true,
+  },
+];
+
+/**
+ * Быстрые ссылки студии на карточке сервиса.
+ * Только для OWNER/ADMIN UI (`services.manage`); CLIENT сюда не попадает.
+ */
+export function studioLinksForService(slug: string): StudioServiceLink[] {
+  if (slug === "chat") return CHAT_STUDIO_LINKS;
+  if (slug === "design-atlas") return DESIGN_ATLAS_LINKS;
+  return [];
+}
