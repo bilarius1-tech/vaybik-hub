@@ -36,7 +36,7 @@
 ## 4. Текущее состояние (на 2026-11-20)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Хаб-образ **`469599e`**: + блок CMS **serviceCards** («Наши сервисы» вместо `#studio` на главной). Ранее: landing-clients (`9b51258`), SSO (`222db91`), справка, CLIENT, почта, шаблон.
+- Хаб-образ **`33a5061`**: SSO-кнопки чата + «Дизайн Атлас» на `/admin/services`. Ранее: serviceCards (`469599e`), landing-clients (`9b51258`), SSO (`222db91`).
 - Главная: офис/studio снят с `/` (виджет `studio` в коде сохранён); три карточки сервисов + медиа. CSS leadweb `29aaee3`.
 - Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
@@ -44,7 +44,7 @@
 - **Источник правды — админка.** Промпт 8 (PARTNER) отложен; Client ≠ Partner. Кабинет-аналитика — позже.
 - Деплой/cutover: всегда unset `POSTGRES_*` и `SITE_PROD_PRIORITY`/`SITE_PUBLIC_ORIGIN` из shell.
 - Владелец: `bilariuss@yandex.ru` (пароль у Алексея в хранилище, в документах не хранить).
-- Прод-реестр: **Whoami**, **Вайбик (главная)**, CMS site. **Region** не трогаем без согласия.
+- Прод-реестр: **Whoami**, **Вайбик (главная)**, CMS site, **Вайбик Чат**, **Дизайн Атлас**. **Region** не трогаем без согласия.
 - Бэкапы: `/var/backups/vaybik` (uid 1001). Яндекс.Метрика — отложена.
 
 ## 5. Решения (кратко, новые — снизу)

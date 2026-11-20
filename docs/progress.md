@@ -270,4 +270,4 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Чат: SSO-кнопки Клиенты / Наш виджет / Справка / Лендинг (`studio-service-links`)
 - [x] Дизайн Атлас: реестр + «Открыть сайт» / «Пример сайта для клиента»
 - [x] Только `services.manage` (CLIENT не видит страницу)
-- [ ] Деплой + `npm run seed:design-atlas` на проде — после «задеплой»
+- [x] Деплой хаба `33a5061` + `seed:design-atlas` на проде (бэкап `20261120T234904Z`, откат `prev-469599e`)
