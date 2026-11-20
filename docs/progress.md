@@ -255,3 +255,12 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Тесты: create / повтор / 401 / пустой siteHost
 - [ ] Чат: `register-landing-client` → `hubAdminBaseUrl()` — промпт агенту чата (в чат-репо с хаба не писать)
 - [x] Деплой хаба `9b51258` (бэкап `20261120T055434Z`, откат `prev-222db91`)
+
+## Главная «Наши сервисы» (2026-11-20)
+
+- [x] Тип блока `serviceCards` + рендер/форма/тесты
+- [x] CSS `.svc-cards` (leadweb `29aaee3`)
+- [x] Медиа service-consultant / design-system / leadgen
+- [x] Убрать `#studio` с `/`, вставить блок, опубликовать
+- [x] Деплой хаба `469599e` (бэкап `20261120T070817Z`, откат `prev-9b51258`)
+- [x] Вес до/после в diglog

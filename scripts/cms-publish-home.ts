@@ -12,13 +12,20 @@ async function main() {
     where: { role: "OWNER" },
     select: { id: true },
   });
-  const result = await publishPage(
+  const { page: published, revision } = await publishPage(
     page.id,
     owner?.id ?? null,
     "Наши сервисы вместо офиса",
   );
   await bumpSiteVersion(prisma, "cms.home.services");
-  console.log("published", page.id, "status", result.status);
+  console.log(
+    "published",
+    published.id,
+    "status",
+    published.status,
+    "rev",
+    revision.id,
+  );
 }
 
 main()
