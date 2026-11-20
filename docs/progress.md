@@ -253,6 +253,5 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Сервис find/create по externalId|siteHost; ACTIVE + даты; идемпотентность
 - [x] Middleware public + HMAC `HUB_CHAT_API_SECRET`
 - [x] Тесты: create / повтор / 401 / пустой siteHost
-- [x] Чат: `register-landing-client` → `hubAdminBaseUrl()` (без коммита хаба по запросу)
-- [ ] Деплой хаба (+ бэкап) — после «задеплой»
-- [ ] Деплой чата с `hubAdminBaseUrl` — агент/репо чата
+- [ ] Чат: `register-landing-client` → `hubAdminBaseUrl()` — промпт агенту чата (в чат-репо с хаба не писать)
+- [x] Деплой хаба `9b51258` (бэкап `20261120T055434Z`, откат `prev-222db91`)

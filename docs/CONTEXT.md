@@ -35,8 +35,8 @@
 ## 4. Текущее состояние (на 2026-11-19)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Хаб-образ **`222db91`**: + **SSO студии** (`/admin/sso/chat`) + справка сервиса (модалка на `/admin/services` из `GET /api/hub/help`). Ранее: CLIENT (`e9efeb2`), почта (`edc0b17`), шаблон приглашения (`c2ea57e`). Чат прод ~`c97717f` (help API).
-- Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`. Виджет — `site.chatWidget` (весь сайт).
+- Хаб-образ **`9b51258`**: + **landing-clients** (`POST /admin/api/chat/landing-clients`, CONTRACT §4b). Ранее: SSO студии (`222db91`), справка, CLIENT (`e9efeb2`), почта (`edc0b17`), шаблон (`c2ea57e`).
+- Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
 - **Прод env:** только `/opt/apps/vaybik-hub/.env` (compose `env_file: .env`). Dev — `/opt/vaybik-hub/.env`. Секреты SMTP не путать между ними.
 - **Источник правды — админка.** Промпт 8 (PARTNER) отложен; Client ≠ Partner. Кабинет-аналитика — позже.
@@ -111,8 +111,8 @@
 ## 8. Следующие шаги
 
 1. ~~Чат: редирект на `/admin/sso/chat?next=`~~ — на проде чата (`8ddb2b0`).
-2. Деплой хаба: `POST /admin/api/chat/landing-clients` (CONTRACT §4b) + чат `hubAdminBaseUrl()` в `register-landing-client` — после «задеплой», с бэкапом.
-3. Этап 2+ аналитика кабинета (позже). CLIENT / почта / шаблон / справка / SSO студии — на проде 19.11.
+2. Чат: `hubAdminBaseUrl()` в `register-landing-client` (промпт агенту; хаб `9b51258` уже на проде).
+3. Этап 2+ аналитика кабинета (позже). CLIENT / почта / шаблон / справка / SSO / landing-clients — на проде.
 4. Промпт 8 — партнёры и лиды (фаза 4) — **отложена**.
 5. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
 6. Яндекс.Метрика на дашборд (отложено).
