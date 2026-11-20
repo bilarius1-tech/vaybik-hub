@@ -13,6 +13,8 @@ const PUBLIC_PREFIXES = [
   "/api/client-invites/preview",
   "/api/health",
   "/api/public",
+  /** Chat → Hub, HMAC (CONTRACT §4b) */
+  "/api/chat/landing-clients",
 ];
 
 function isPublic(pathname: string): boolean {

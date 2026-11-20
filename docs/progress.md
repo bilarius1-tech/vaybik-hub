@@ -245,4 +245,14 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Логин/2FA/`middleware` уважают `?next=`
 - [x] «Настроить» → `/sso/chat?next=/manage/clients/…`
 - [x] Деплой хаба `222db91` (бэкап `20261119T163958Z`, откат `prev-b391513`)
-- [ ] Чат: редирект на `/admin/sso/chat`, `/sso` принимает `next` и пустой hubClientId
+- [x] Чат: редирект на `/admin/sso/chat` — на проде чата `8ddb2b0`
+
+## Лендинг DEMO→ACTIVE → хаб (2026-11-20)
+
+- [x] CONTRACT §4b `POST /api/chat/landing-clients`
+- [x] Сервис find/create по externalId|siteHost; ACTIVE + даты; идемпотентность
+- [x] Middleware public + HMAC `HUB_CHAT_API_SECRET`
+- [x] Тесты: create / повтор / 401 / пустой siteHost
+- [x] Чат: `register-landing-client` → `hubAdminBaseUrl()` (без коммита хаба по запросу)
+- [ ] Деплой хаба (+ бэкап) — после «задеплой»
+- [ ] Деплой чата с `hubAdminBaseUrl` — агент/репо чата

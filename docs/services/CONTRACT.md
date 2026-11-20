@@ -21,6 +21,7 @@
 - `hubClientId` = `Client.id` в хабе.
 - `ClientService.externalId` = id клиента **в сервисе** (для чата — `Client.id` чата).
 - Сервис **не** меняет срок и статус «от себя» назад в хаб; только исполняет upsert/delete.
+  Исключение: лендинг-активация DEMO→ACTIVE (§4b).
 
 ---
 
@@ -176,6 +177,72 @@ X-Hub-Signature: t=<unix>,v1=<hex>
 
 ---
 
+## 4b. Лендинг: активация DEMO→ACTIVE (chat → hub)
+
+Исключение из правила «сервис не пишет срок/статус в хаб» (§1): при активации демо-клиента с лендинга чат **best-effort** пушит в хаб.
+
+```
+POST {HUB_ADMIN_BASE}/api/chat/landing-clients
+Content-Type: application/json
+X-Hub-Signature: t=<unix>,v1=<hex>
+```
+
+- **`HUB_ADMIN_BASE`** = база админки хаба с `/admin`  
+  (прод: `https://vaybik.ru/admin`).  
+  Чат обязан брать `hubAdminBaseUrl()`, **не** сырой `HUB_BASE_URL`  
+  (`HUB_BASE_URL=https://vaybik.ru` → иначе URL без `/admin` и запрос не попадёт в хаб).
+- Подпись — как у §2, секрет `HUB_CHAT_API_SECRET`. Без сессии браузера.
+- Без секрета в env хаба → **503** `HUB_NOT_CONFIGURED`.
+
+### Тело
+
+```json
+{
+  "externalId": "<chat Client.id>",
+  "name": "<название>",
+  "siteHost": "example.ru",
+  "contactNote": "<строка>|null",
+  "status": "ACTIVE",
+  "activeFrom": "YYYY-MM-DD",
+  "activeUntil": "YYYY-MM-DD"
+}
+```
+
+- `externalId`, `name`, `status=ACTIVE`, `activeFrom`, `activeUntil` — обязательны.
+- `siteHost` — обязателен (нормализованный домен). Пустой / `null` / невалидный → **400** `SITE_HOST_REQUIRED`.
+- Даты — календарные **MSK** (`YYYY-MM-DD`), как в §3.
+
+### Поведение хаба
+
+1. Найти `ClientService` продукта `chat` с `externalId`.
+2. Иначе найти `Client` по нормализованному хосту в `siteUrl`.
+3. Иначе создать `Client` (`siteUrl=https://{host}`, `status=active`).
+4. Upsert `ClientService` chat: `status=active`, `externalId`, `activeFrom`/`activeUntil`.
+5. Обратный upsert в чат **не** делать (чат уже ACTIVE).
+6. AuditLog: `clients.landing_create` / `clients.landing_activate` (без секретов).
+
+### Идемпотентность
+
+Повтор с тем же `externalId` (или тем же доменом) → тот же `hubClientId`, без дублей клиентов.
+
+### Ответы
+
+| HTTP | Когда | Тело |
+| --- | --- | --- |
+| **200** | ok | `{ "hubClientId": "<Client.id хаба>" }` |
+| **400** | валидация / нет домена | `{ "error": { "code", "message" } }` |
+| **401** | подпись / skew | `UNAUTHORIZED` |
+| **503** | секрет не задан / нет продукта chat | `HUB_NOT_CONFIGURED` / `CHAT_PRODUCT_MISSING` |
+
+Чат также принимает обёртку `{ "data": { "hubClientId" } }` — хаб шлёт плоский объект.
+
+Референс:
+
+- хаб: `src/app/api/chat/landing-clients/route.ts`, `src/server/chat/landing-clients.ts`
+- чат: `src/server/hub/register-landing-client.ts` (вызов), `src/server/landing/activate-demo.ts`
+
+---
+
 ## 5. Поведение сервиса по статусам / сроку
 
 Шаблон ожидаемого UX (исполняет сервис):
@@ -237,6 +304,7 @@ X-Hub-Signature: t=<unix>,v1=<hex>
    - `POST /api/hub/clients` — upsert (§2)  
    - `DELETE /api/hub/clients` — удаление (§4)  
    - `GET /api/hub/help` — справка студии (§4a), опционально  
+   - (чат) при лендинге: вызов хаба `POST /api/chat/landing-clients` (§4b) через `hubAdminBaseUrl()`  
    - `GET /sso?token=…` — вход под клиентом (§ ниже)
 
 5. **Подпись** — та же схема `X-Hub-Signature` (§2); общий секрет; unit-тесты зеркала.
@@ -315,6 +383,7 @@ X-Hub-Signature: t=<unix>,v1=<hex>
 | Тема | Путь |
 | --- | --- |
 | HTTP upsert/delete + подпись | `src/server/chat/hub-client.ts`, `signature.ts`, `config.ts` |
+| Лендинг DEMO→ACTIVE (inbound) | `src/app/api/chat/landing-clients/route.ts`, `src/server/chat/landing-clients.ts` |
 | Статус EXPIRED/MSK | `src/server/clients/status-map.ts` |
 | Payload sync | `src/server/clients/sync-payload.ts` |
 | Connect / sync / delete | `src/server/clients/service.ts` |
@@ -328,6 +397,7 @@ X-Hub-Signature: t=<unix>,v1=<hex>
 | Тема | Путь |
 | --- | --- |
 | API | `src/app/api/hub/clients/route.ts` |
+| Лендинг → хаб | `src/server/hub/register-landing-client.ts` (`hubAdminBaseUrl`) |
 | Справка GET `/api/hub/help` | `src/app/api/hub/help/route.ts`, `docs/admin-help/*.md` |
 | Подпись | `src/server/hub/signature.ts` |
 | Lifecycle / EXPIRED / reminders due | `src/server/client/lifecycle.ts` |

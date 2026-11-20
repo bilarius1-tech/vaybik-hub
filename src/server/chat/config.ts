@@ -17,10 +17,16 @@ function trimOrEmpty(v: string | undefined): string {
   return (v ?? "").trim();
 }
 
+/** Секрет server-to-server хаб↔чат (inbound и outbound). Без запасных значений. */
+export function getHubChatApiSecret(): string | null {
+  const apiSecret = trimOrEmpty(process.env.HUB_CHAT_API_SECRET);
+  return apiSecret || null;
+}
+
 /** Готовность API upsert клиентов (Подключить / синхронизация статуса). */
 export function getChatApiConfig(): ChatApiConfig | null {
   const baseUrl = trimOrEmpty(process.env.CHAT_BASE_URL).replace(/\/$/, "");
-  const apiSecret = trimOrEmpty(process.env.HUB_CHAT_API_SECRET);
+  const apiSecret = getHubChatApiSecret();
   if (!baseUrl || !apiSecret) return null;
   return { baseUrl, apiSecret };
 }
