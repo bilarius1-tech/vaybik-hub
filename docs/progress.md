@@ -292,4 +292,4 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] UI: секции Сервер / Чат / Лиды / Кабинеты; Chart line+bar+doughnut; контейнеры только статус
 - [x] Сайдбар группа «Кабинеты»; region только статус
 - [x] Unit: metrics net, downsample, hub-stats, cabinets
-- [ ] Деплой — после «задеплой» (+ ключ `HUB_LEADS_API_SECRET` на проде)
+- [x] Деплой `1b1ae61` (бэкап-тег `prev-f4ba7e2`); миграция net OK; worker mounts disk/proc; health 200

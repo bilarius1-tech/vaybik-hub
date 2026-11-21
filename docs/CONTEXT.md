@@ -36,8 +36,7 @@
 ## 4. Текущее состояние (на 2026-11-21)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Хаб-образ **`f4ba7e2`**: SSO «Лиды Профи/YouDo» (`/admin/sso/leads`, aud `leads`). Ранее: SSO-кнопки чата + Атлас (`33a5061`), serviceCards (`469599e`).
-- **Dev (ещё не на проде):** дашборд-пульт — сеть в `ServerMetric`, диск через `/var→/host/disk:ro` (не весь `/`), прореживание графиков, блоки чат/лиды из `GET /api/hub/stats`, кабинеты в сайдбаре. Env: `HUB_LEADS_API_SECRET`.
+- Хаб-образ **`1b1ae61`**: дашборд-пульт (сеть/диск/stats чат+лиды/кабинеты) + ранее SSO лидов (`f4ba7e2`), SSO чата/Атлас (`33a5061`). Миграция `server_metric_net` применена. Worker: `/proc→/host/proc:ro`, `/var→/host/disk:ro`.
 - Главная: офис/studio снят с `/` (виджет `studio` в коде сохранён); три карточки сервисов + медиа. CSS leadweb `29aaee3`.
 - Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
@@ -118,9 +117,8 @@
 
 ## 8. Следующие шаги
 
-1. Алексей: одна строка `HUB_LEADS_API_SECRET=` в `/opt/apps/vaybik-hub/.env` и тот же ключ в `.env` лидов (когда будет `/api/hub/stats`).
-2. После «задеплой» хаба — пульт на проде; имеет смысл, когда stats уже есть у чата и лидов.
-3. Smoke SSO: OWNER → «Кабинет лидов» → lead.vaybik.ru/manage.
-4. Чат: промпт агенту — `hubAdminBaseUrl()` в `register-landing-client`.
-5. Этап 2+ аналитика кабинета / PARTNER / CMS-2b / Метрика — позже.
-6. По желанию: Telegram-бот; 2FA; noreply@.
+1. Открыть https://vaybik.ru/admin — проверить пульт (чат/лиды: цифры или «недоступен», если ещё нет `/api/hub/stats`).
+2. Smoke SSO: OWNER → «Кабинет лидов» → lead.vaybik.ru/manage.
+3. Чат: промпт агенту — `hubAdminBaseUrl()` в `register-landing-client`.
+4. Этап 2+ аналитика / PARTNER / CMS-2b / Метрика — позже.
+5. По желанию: Telegram-бот; 2FA; noreply@.
