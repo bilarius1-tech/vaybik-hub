@@ -4,6 +4,14 @@ export type StudioServiceLink = {
   href: string;
   /** Открывать во внешней вкладке (сайт Атласа и т.п.) */
   external?: boolean;
+  /** Серый пункт без перехода (SSO не настроено) */
+  disabled?: boolean;
+  /** Подсказка при disabled */
+  title?: string;
+};
+
+export type StudioCabinetLink = StudioServiceLink & {
+  id: "chat" | "leads" | "atlas";
 };
 
 /** Клиент чата «наш виджет / база знаний» студии (не клиента хаба). */
@@ -58,4 +66,40 @@ export function studioLinksForService(slug: string): StudioServiceLink[] {
   if (slug === "design-atlas") return DESIGN_ATLAS_LINKS;
   if (slug === "lead") return LEAD_STUDIO_LINKS;
   return [];
+}
+
+/**
+ * Блок «Кабинеты» на дашборде и в сайдбаре.
+ * chatSsoReady / leadsSsoReady — с сервера (есть env).
+ */
+export function studioCabinetLinks(opts: {
+  chatSsoReady: boolean;
+  leadsSsoReady: boolean;
+}): StudioCabinetLink[] {
+  return [
+    {
+      id: "chat",
+      label: "Кабинет чата",
+      href: chatSsoHref("/manage"),
+      disabled: !opts.chatSsoReady,
+      title: opts.chatSsoReady
+        ? undefined
+        : "SSO не настроено: CHAT_BASE_URL / HUB_CHAT_SSO_SECRET",
+    },
+    {
+      id: "leads",
+      label: "Кабинет лидов",
+      href: leadsSsoHref("/manage"),
+      disabled: !opts.leadsSsoReady,
+      title: opts.leadsSsoReady
+        ? undefined
+        : "SSO не настроено: LEADS_BASE_URL / HUB_LEADS_SSO_SECRET",
+    },
+    {
+      id: "atlas",
+      label: "Дизайн Атлас",
+      href: "https://design.vaybik.ru",
+      external: true,
+    },
+  ];
 }

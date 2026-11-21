@@ -3,6 +3,7 @@
 import { NAV_ITEMS, SIDEFOOT_ROWS } from "@/lib/nav";
 import { cn } from "@/lib/cn";
 import { api } from "@/lib/api-client";
+import type { StudioCabinetLink } from "@/lib/studio-service-links";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -12,6 +13,7 @@ type Props = {
   userEmail?: string;
   userRole?: string;
   sidefoot?: ReadonlyArray<{ label: string; value: string }>;
+  cabinets?: StudioCabinetLink[];
 };
 
 function isActive(pathname: string, href: string): boolean {
@@ -25,10 +27,13 @@ export function Sidebar({
   userEmail,
   userRole,
   sidefoot,
+  cabinets,
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
   const foot = sidefoot?.length ? sidefoot : SIDEFOOT_ROWS;
+  const showCabinets =
+    userRole !== "CLIENT" && userRole !== "PARTNER" && (cabinets?.length ?? 0) > 0;
 
   const items =
     userRole === "CLIENT"
@@ -107,6 +112,64 @@ export function Sidebar({
           <span className="inline-flex w-[18px] justify-center">◉</span>
           Профиль
         </Link>
+
+        {showCabinets ? (
+          <div className="mt-3 border-t border-bd pt-3">
+            <div className="mb-1 px-3 text-[11px] font-bold uppercase tracking-wide text-mu">
+              Кабинеты
+            </div>
+            {cabinets!.map((c) => {
+              const className = cn(
+                "flex items-center gap-2.5 rounded-md px-3 py-[9px] text-[13.5px] font-semibold transition-colors duration-150",
+                c.disabled
+                  ? "cursor-not-allowed text-mu/50"
+                  : "text-mu hover:bg-card hover:text-tx",
+              );
+              if (c.disabled) {
+                return (
+                  <span key={c.id} className={className} title={c.title}>
+                    <span className="inline-flex w-[18px] justify-center" aria-hidden>
+                      ↗
+                    </span>
+                    {c.label}
+                  </span>
+                );
+              }
+              if (c.external) {
+                return (
+                  <a
+                    key={c.id}
+                    href={c.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onNavigate}
+                    className={className}
+                    title={c.title}
+                  >
+                    <span className="inline-flex w-[18px] justify-center" aria-hidden>
+                      ↗
+                    </span>
+                    {c.label}
+                  </a>
+                );
+              }
+              return (
+                <Link
+                  key={c.id}
+                  href={c.href}
+                  onClick={onNavigate}
+                  className={className}
+                  title={c.title}
+                >
+                  <span className="inline-flex w-[18px] justify-center" aria-hidden>
+                    ↗
+                  </span>
+                  {c.label}
+                </Link>
+              );
+            })}
+          </div>
+        ) : null}
       </nav>
 
       <div className="space-y-2">

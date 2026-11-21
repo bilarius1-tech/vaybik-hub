@@ -2,6 +2,7 @@
 
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Topbar, type Period } from "@/components/shell/Topbar";
+import type { StudioCabinetLink } from "@/lib/studio-service-links";
 import { useState, type ReactNode } from "react";
 
 type SidefootRow = { label: string; value: string };
@@ -12,6 +13,7 @@ type Props = {
   userEmail?: string;
   userRole?: string;
   sidefoot?: SidefootRow[];
+  cabinets?: StudioCabinetLink[];
 };
 
 export function AppShell({
@@ -20,6 +22,7 @@ export function AppShell({
   userEmail,
   userRole,
   sidefoot,
+  cabinets,
 }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [period, setPeriod] = useState<Period>("week");
@@ -40,6 +43,7 @@ export function AppShell({
         userEmail={userEmail}
         userRole={userRole}
         sidefoot={sidefoot}
+        cabinets={cabinets}
       />
       <main className="min-w-0 flex-1 px-[26px] pb-5 max-[950px]:px-4">
         <Topbar

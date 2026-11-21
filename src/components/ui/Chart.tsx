@@ -6,13 +6,16 @@ import {
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Tooltip,
   Legend,
   Filler,
   type ChartData,
   type ChartOptions,
+  type ChartType,
 } from "chart.js";
-import { Line } from "react-chartjs-2";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { cn } from "@/lib/cn";
 
 ChartJS.register(
@@ -20,20 +23,23 @@ ChartJS.register(
   LinearScale,
   PointElement,
   LineElement,
+  BarElement,
+  ArcElement,
   Tooltip,
   Legend,
   Filler,
 );
 
-type Props = {
-  data: ChartData<"line">;
-  options?: ChartOptions<"line">;
+type Props<T extends ChartType = "line"> = {
+  type?: T;
+  data: ChartData<T>;
+  options?: ChartOptions<T>;
   className?: string;
   height?: number;
 };
 
-export function Chart({ data, options, className, height = 220 }: Props) {
-  const defaults: ChartOptions<"line"> = {
+function baseOptions(): ChartOptions {
+  return {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
@@ -59,10 +65,35 @@ export function Chart({ data, options, className, height = 220 }: Props) {
       },
     },
   };
+}
+
+export function Chart<T extends ChartType = "line">({
+  type = "line" as T,
+  data,
+  options,
+  className,
+  height = 220,
+}: Props<T>) {
+  const defaults = baseOptions();
+  const merged = { ...defaults, ...options } as ChartOptions<T>;
 
   return (
     <div className={cn("relative w-full", className)} style={{ height }}>
-      <Line data={data} options={{ ...defaults, ...options }} />
+      {type === "bar" ? (
+        <Bar data={data as ChartData<"bar">} options={merged as ChartOptions<"bar">} />
+      ) : type === "doughnut" ? (
+        <Doughnut
+          data={data as ChartData<"doughnut">}
+          options={
+            {
+              ...merged,
+              scales: undefined,
+            } as ChartOptions<"doughnut">
+          }
+        />
+      ) : (
+        <Line data={data as ChartData<"line">} options={merged as ChartOptions<"line">} />
+      )}
     </div>
   );
 }

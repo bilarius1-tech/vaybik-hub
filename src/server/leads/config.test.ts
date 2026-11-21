@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { getLeadsSsoConfig, leadsSsoMissingKeys } from "./config";
+import {
+  getLeadsApiConfig,
+  getLeadsSsoConfig,
+  leadsApiMissingKeys,
+  leadsSsoMissingKeys,
+} from "./config";
 
 describe("leads config", () => {
   const prev = { ...process.env };
@@ -7,6 +12,7 @@ describe("leads config", () => {
   beforeEach(() => {
     delete process.env.LEADS_BASE_URL;
     delete process.env.HUB_LEADS_SSO_SECRET;
+    delete process.env.HUB_LEADS_API_SECRET;
   });
 
   afterEach(() => {
@@ -19,6 +25,11 @@ describe("leads config", () => {
       "LEADS_BASE_URL",
       "HUB_LEADS_SSO_SECRET",
     ]);
+    expect(getLeadsApiConfig()).toBeNull();
+    expect(leadsApiMissingKeys()).toEqual([
+      "LEADS_BASE_URL",
+      "HUB_LEADS_API_SECRET",
+    ]);
   });
 
   it("оба ключа — config готов", () => {
@@ -29,5 +40,15 @@ describe("leads config", () => {
       ssoSecret: "secret-not-real",
     });
     expect(leadsSsoMissingKeys()).toEqual([]);
+  });
+
+  it("API stats — LEADS_BASE_URL + HUB_LEADS_API_SECRET", () => {
+    process.env.LEADS_BASE_URL = "https://lead.vaybik.ru/";
+    process.env.HUB_LEADS_API_SECRET = "api-secret-not-real";
+    expect(getLeadsApiConfig()).toEqual({
+      baseUrl: "https://lead.vaybik.ru",
+      apiSecret: "api-secret-not-real",
+    });
+    expect(leadsApiMissingKeys()).toEqual([]);
   });
 });

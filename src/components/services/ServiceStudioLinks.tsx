@@ -34,6 +34,20 @@ export function ServiceStudioLinks({
       {links.map((l, i) => {
         const variant =
           emphasizeFirst && i === 0 ? "primary" : "ghost";
+        if (l.disabled) {
+          return (
+            <Button
+              key={l.href}
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled
+              title={l.title}
+            >
+              {l.label}
+            </Button>
+          );
+        }
         const btn = (
           <Button type="button" variant={variant} size="sm">
             {l.label}
@@ -46,13 +60,14 @@ export function ServiceStudioLinks({
               href={l.href}
               target="_blank"
               rel="noopener noreferrer"
+              title={l.title}
             >
               {btn}
             </a>
           );
         }
         return (
-          <Link key={l.href} href={l.href}>
+          <Link key={l.href} href={l.href} title={l.title}>
             {btn}
           </Link>
         );

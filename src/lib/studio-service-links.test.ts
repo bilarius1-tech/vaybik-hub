@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CHAT_STUDIO_WIDGET_CLIENT_ID,
+  studioCabinetLinks,
   studioLinksForService,
 } from "./studio-service-links";
 
@@ -53,5 +54,29 @@ describe("studioLinksForService", () => {
 
   it("прочие slug — пусто", () => {
     expect(studioLinksForService("vaybik-main")).toEqual([]);
+  });
+});
+
+describe("studioCabinetLinks", () => {
+  it("без SSO — чат и лиды disabled, Атлас внешний", () => {
+    const links = studioCabinetLinks({
+      chatSsoReady: false,
+      leadsSsoReady: false,
+    });
+    expect(links).toHaveLength(3);
+    expect(links[0]?.disabled).toBe(true);
+    expect(links[1]?.disabled).toBe(true);
+    expect(links[2]?.external).toBe(true);
+    expect(links[2]?.disabled).toBeFalsy();
+  });
+
+  it("с SSO — все активны", () => {
+    const links = studioCabinetLinks({
+      chatSsoReady: true,
+      leadsSsoReady: true,
+    });
+    expect(links.every((l) => !l.disabled)).toBe(true);
+    expect(links[0]?.href).toBe("/sso/chat?next=%2Fmanage");
+    expect(links[1]?.href).toBe("/sso/leads?next=%2Fmanage");
   });
 });
