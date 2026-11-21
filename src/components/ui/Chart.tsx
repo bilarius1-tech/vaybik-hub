@@ -81,7 +81,7 @@ export function Chart<T extends ChartType = "line">({
             font: { family: "Manrope", size: 11 },
             maxRotation: 0,
           },
-          grid: { color: palette.grid, drawBorder: false },
+          grid: { color: palette.grid },
           border: { display: false },
         },
         y: {
@@ -90,7 +90,7 @@ export function Chart<T extends ChartType = "line">({
             font: { family: "Manrope", size: 11 },
             padding: 6,
           },
-          grid: { color: palette.grid, drawBorder: false },
+          grid: { color: palette.grid },
           border: { display: false },
         },
       },
