@@ -372,7 +372,7 @@ X-Hub-Signature: t=<unix>,v1=<hex>
     Реализованы только в чате; хаб сроков клиенту в Telegram не шлёт.
 
 11. **Аудитория SSO**  
-    Зашито `aud: "chat"`. Новому сервису нужен свой `aud` и зеркальная проверка — общего параметра в хабе пока нет.
+    ~~Зашито `aud: "chat"`~~ **Исправлено 2026-11-21:** `issueSsoToken` принимает `aud` (`"chat"` | `"leads"`) + `product` (baseUrl/secret). Чат по умолчанию `"chat"`; внутренний сервис лидов — `GET /admin/sso/leads`, `aud: "leads"`, env `LEADS_BASE_URL` / `HUB_LEADS_SSO_SECRET` (не продукт для CLIENT, без upsert клиентов).
 
 ---
 

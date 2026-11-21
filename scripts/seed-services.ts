@@ -72,15 +72,17 @@ const DEMO = [
   },
   {
     slug: "lead",
-    name: "Lead",
+    name: "Лиды Профи/YouDo",
     url: "https://lead.vaybik.ru",
     healthUrl: null,
-    description: "Лиды / CRM — ещё не развёрнут",
+    description:
+      "Внутренний сбор заявок с Profi.ru и YouDo в Telegram",
     type: "DOCKER" as const,
-    isPublic: true,
+    isPublic: false,
     isDeployed: false,
+    isProduct: false,
     sortOrder: 5,
-    tags: ["lead", "undeployed"],
+    tags: ["lead", "studio", "internal"],
   },
 ];
 

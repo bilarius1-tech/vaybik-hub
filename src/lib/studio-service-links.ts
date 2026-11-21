@@ -40,6 +40,15 @@ const DESIGN_ATLAS_LINKS: StudioServiceLink[] = [
   },
 ];
 
+function leadsSsoHref(leadsNextPath: string): string {
+  return `/sso/leads?next=${encodeURIComponent(leadsNextPath)}`;
+}
+
+/** Внутренний кабинет лидов (не продукт для CLIENT). */
+const LEAD_STUDIO_LINKS: StudioServiceLink[] = [
+  { label: "Кабинет лидов", href: leadsSsoHref("/manage") },
+];
+
 /**
  * Быстрые ссылки студии на карточке сервиса.
  * Только для OWNER/ADMIN UI (`services.manage`); CLIENT сюда не попадает.
@@ -47,5 +56,6 @@ const DESIGN_ATLAS_LINKS: StudioServiceLink[] = [
 export function studioLinksForService(slug: string): StudioServiceLink[] {
   if (slug === "chat") return CHAT_STUDIO_LINKS;
   if (slug === "design-atlas") return DESIGN_ATLAS_LINKS;
+  if (slug === "lead") return LEAD_STUDIO_LINKS;
   return [];
 }

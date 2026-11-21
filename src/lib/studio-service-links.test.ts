@@ -44,8 +44,14 @@ describe("studioLinksForService", () => {
     ]);
   });
 
+  it("lead — SSO в кабинет лидов", () => {
+    const links = studioLinksForService("lead");
+    expect(links).toEqual([
+      { label: "Кабинет лидов", href: "/sso/leads?next=%2Fmanage" },
+    ]);
+  });
+
   it("прочие slug — пусто", () => {
     expect(studioLinksForService("vaybik-main")).toEqual([]);
-    expect(studioLinksForService("lead")).toEqual([]);
   });
 });

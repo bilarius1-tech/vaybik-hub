@@ -271,3 +271,14 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Дизайн Атлас: реестр + «Открыть сайт» / «Пример сайта для клиента»
 - [x] Только `services.manage` (CLIENT не видит страницу)
 - [x] Деплой хаба `33a5061` + `seed:design-atlas` на проде (бэкап `20261120T234904Z`, откат `prev-469599e`)
+
+## Лиды Профи/YouDo — SSO студии (2026-11-21)
+
+- [x] `issueSsoToken` с `aud` (`chat`|`leads`) + `product` (baseUrl/secret)
+- [x] `GET /admin/sso/leads?next=/manage…` (OWNER/ADMIN, без reauth; CLIENT 403)
+- [x] Env: `LEADS_BASE_URL`, `HUB_LEADS_SSO_SECRET` (`.env.example`, без запасных)
+- [x] Карточка `slug=lead` в сиде: «Лиды Профи/YouDo», не isProduct, кнопка «Кабинет лидов»
+- [x] Unit: aud leads, sanitize paths, config missing
+- [ ] Env на dev/проде — Алексей (`LEADS_BASE_URL`, `HUB_LEADS_SSO_SECRET`)
+- [ ] Деплой хаба — после «задеплой» и когда lead `/sso` уже отвечает
+- [ ] Не делать: upsert/delete клиентов хаба для lead (не продукт)

@@ -93,5 +93,38 @@ describe("sso token", () => {
       1_700_000_000,
     );
     expect(payload?.hubClientId).toBe("");
+    expect(payload?.aud).toBe("chat");
+  });
+
+  it("aud leads: свой product + verify с expectedAud", () => {
+    const { token, ssoUrl, jti } = issueSsoToken({
+      mode: "impersonate",
+      userId: "u1",
+      email: "a@b.c",
+      hubClientId: "",
+      impersonatedBy: "u1",
+      returnUrl: "http://127.0.0.1:3000/admin/services",
+      aud: "leads",
+      product: {
+        baseUrl: "https://lead.vaybik.ru",
+        ssoSecret: "unit-test-leads-sso-secret",
+      },
+      serviceNext: "/manage",
+      nowSec: 1_700_000_000,
+    });
+    expect(ssoUrl.startsWith("https://lead.vaybik.ru/sso?token=")).toBe(true);
+    expect(ssoUrl).toContain("next=%2Fmanage");
+    expect(
+      verifySsoToken(token, "unit-test-leads-sso-secret", 1_700_000_000, "chat"),
+    ).toBeNull();
+    const payload = verifySsoToken(
+      token,
+      "unit-test-leads-sso-secret",
+      1_700_000_000,
+      "leads",
+    );
+    expect(payload?.aud).toBe("leads");
+    expect(payload?.jti).toBe(jti);
+    expect(payload?.hubClientId).toBe("");
   });
 });

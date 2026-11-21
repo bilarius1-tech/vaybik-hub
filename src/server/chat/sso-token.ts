@@ -3,9 +3,12 @@ import { getChatSsoConfig } from "./config";
 
 export type SsoMode = "impersonate" | "client";
 
+/** Аудитория SSO: у каждого сервиса свой aud (чат / лиды / …). */
+export type SsoAudience = "chat" | "leads";
+
 export type SsoPayload = {
   iss: "vaybik-hub";
-  aud: "chat";
+  aud: SsoAudience;
   jti: string;
   iat: number;
   exp: number;
@@ -17,16 +20,29 @@ export type SsoPayload = {
   returnUrl: string;
 };
 
+export type SsoProductConfig = {
+  baseUrl: string;
+  ssoSecret: string;
+  /** Код ошибки 503, если не задан product и нет chat-config */
+  notConfiguredCode?: string;
+  notConfiguredMessage?: string;
+};
+
 export type IssueSsoInput = {
   mode: SsoMode;
   userId: string;
   email: string;
-  /** Пустая строка — студия без конкретного клиента (чат должен принять). */
+  /** Пустая строка — студия без конкретного клиента (сервис должен принять). */
   hubClientId: string;
   impersonatedBy: string | null;
   returnUrl: string;
-  /** Относительный путь чата → query next на /sso */
+  /** По умолчанию "chat" — поведение impersonate/client для чата без изменений. */
+  aud?: SsoAudience;
+  /** baseUrl + secret; если нет — берём CHAT_BASE_URL / HUB_CHAT_SSO_SECRET. */
+  product?: SsoProductConfig;
+  /** Относительный путь сервиса → query next на /sso */
   chatNext?: string;
+  serviceNext?: string;
   /** секунды жизни токена (по контракту 60) */
   ttlSec?: number;
   nowSec?: number;
@@ -64,6 +80,21 @@ export function assertReturnUrlAllowed(returnUrl: string): boolean {
   }
 }
 
+function resolveProduct(
+  input: IssueSsoInput,
+): SsoProductConfig | null {
+  if (input.product) return input.product;
+  const chat = getChatSsoConfig();
+  if (!chat) return null;
+  return {
+    baseUrl: chat.baseUrl,
+    ssoSecret: chat.ssoSecret,
+    notConfiguredCode: "CHAT_SSO_NOT_CONFIGURED",
+    notConfiguredMessage:
+      "SSO не настроен: задайте CHAT_BASE_URL и HUB_CHAT_SSO_SECRET",
+  };
+}
+
 /**
  * Выпуск SSO-токена. Полный токен наружу только для Location redirect —
  * не логировать и не класть в БД (только jti).
@@ -74,13 +105,15 @@ export function issueSsoToken(input: IssueSsoInput): {
   exp: number;
   ssoUrl: string;
 } {
-  const cfg = getChatSsoConfig();
+  const cfg = resolveProduct(input);
   if (!cfg) {
     const err = new Error(
-      "SSO не настроен: задайте CHAT_BASE_URL и HUB_CHAT_SSO_SECRET",
+      input.product?.notConfiguredMessage ||
+        "SSO не настроен: задайте CHAT_BASE_URL и HUB_CHAT_SSO_SECRET",
     ) as Error & { status: number; code: string };
     err.status = 503;
-    err.code = "CHAT_SSO_NOT_CONFIGURED";
+    err.code =
+      input.product?.notConfiguredCode || "CHAT_SSO_NOT_CONFIGURED";
     throw err;
   }
 
@@ -94,12 +127,13 @@ export function issueSsoToken(input: IssueSsoInput): {
     throw err;
   }
 
+  const aud: SsoAudience = input.aud ?? "chat";
   const iat = input.nowSec ?? Math.floor(Date.now() / 1000);
   const ttl = input.ttlSec ?? 60;
   const jti = randomBytes(16).toString("hex");
   const payload: SsoPayload = {
     iss: "vaybik-hub",
-    aud: "chat",
+    aud,
     jti,
     iat,
     exp: iat + ttl,
@@ -117,18 +151,20 @@ export function issueSsoToken(input: IssueSsoInput): {
     .digest();
   const token = `${b64url(payloadRaw)}.${b64url(sig)}`;
   let ssoUrl = `${cfg.baseUrl}/sso?token=${encodeURIComponent(token)}`;
-  if (input.chatNext) {
-    ssoUrl += `&next=${encodeURIComponent(input.chatNext)}`;
+  const nextPath = input.serviceNext ?? input.chatNext;
+  if (nextPath) {
+    ssoUrl += `&next=${encodeURIComponent(nextPath)}`;
   }
 
   return { token, jti, exp: payload.exp, ssoUrl };
 }
 
-/** Для unit-тестов: проверить подпись (зеркало логики чата). */
+/** Для unit-тестов: проверить подпись (зеркало логики сервиса). */
 export function verifySsoToken(
   token: string,
   secret: string,
   nowSec = Math.floor(Date.now() / 1000),
+  expectedAud: SsoAudience = "chat",
 ): SsoPayload | null {
   const parts = token.split(".");
   if (parts.length !== 2) return null;
@@ -156,7 +192,7 @@ export function verifySsoToken(
   } catch {
     return null;
   }
-  if (payload.iss !== "vaybik-hub" || payload.aud !== "chat") return null;
+  if (payload.iss !== "vaybik-hub" || payload.aud !== expectedAud) return null;
   if (typeof payload.exp !== "number" || payload.exp < nowSec) return null;
   return payload;
 }

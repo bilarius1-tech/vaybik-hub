@@ -29,7 +29,7 @@
 | http://199.189.250.208/whoami | тест Traefik / Docker-панели (`vaybik.managed=true`)  | `/opt/apps/whoami`      | работает           |
 | https://chat.vaybik.ru        | ИИ-ассистент (виджет на vaybik.ru + сервис чата) | репо [vaybik-chat](https://github.com/bilarius1-tech/vaybik-chat); виджет с хаба (`site.chatWidget`) | прод виджета на главной vaybik.ru |
 | https://design.vaybik.ru      | Дизайн Атлас (сайт + /primer)                    | внешний; в реестре хаба `design-atlas` | сайт 200; DNS/Traefik не трогаем из хаба |
-| lead.vaybik.ru                | сбор заявок (лиды → `/admin/api/ingest/lead`, фаза 4) | —                       | план, не развёрнут |
+| https://lead.vaybik.ru        | «Лиды Профи/YouDo» — внутренний кабинет студии       | репо [vaybik-leads](https://github.com/bilarius1-tech/vaybik-leads); в хабе slug `lead` | SSO хаба готово; сервис собирает другой агент |
 
 Не относится к Вайбику, не трогать отсюда: сайт стоматологии цауне-дентал.рф (хостинг HandyHost).
 
@@ -89,6 +89,7 @@
 - **2026-11-20** — В чат-репо (`/opt/vaybik-chat`) с агента хаба **не писать даже на диск** — только текст промпта для агента чата.
 - **2026-11-20** — Главная: `#studio` убран; блок `serviceCards` «Наши сервисы»; виджет studio в коде сохранён. Прод хаб `469599e`, CSS leadweb `29aaee3`.
 - **2026-11-21** — `/admin/services`: у чата кнопки через SSO (`/sso/chat?next=`); у «Дизайн Атлас» внешние ссылки; slug `design-atlas`; CLIENT страницу не видит (`services.manage`).
+- **2026-11-21** — Внутренний сервис «Лиды Профи/YouDo» (`slug=lead`): SSO студии `GET /admin/sso/leads?next=/manage…`, `aud: "leads"`, env `LEADS_BASE_URL` + `HUB_LEADS_SSO_SECRET` (без запасных значений). Не `isProduct`, без upsert клиентов хаба. CLIENT не видит (нет `services.manage`). Деплой SSO — после «задеплой» и когда на lead есть `/sso`.
 
 ## 6. Договорённости
 
@@ -115,9 +116,10 @@
 
 ## 8. Следующие шаги
 
-1. Чат: задеплоить `hubAdminBaseUrl()` в `register-landing-client` (с хаба в чат-репо не писать — только промпт).
-2. Этап 2+ аналитика кабинета (позже).
-3. Промпт 8 — партнёры и лиды (фаза 4) — **отложена**.
-4. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
-5. Яндекс.Метрика на дашборд (отложено).
-6. По желанию: Telegram-бот; 2FA владельцу; noreply@ / SPF-DKIM позже (сейчас личный Яндекс).
+1. Лиды: дописать в env хаба `LEADS_BASE_URL` и `HUB_LEADS_SSO_SECRET`; деплой SSO хаба — после «задеплой», когда `lead.vaybik.ru/sso` уже отвечает.
+2. Чат: задеплоить `hubAdminBaseUrl()` в `register-landing-client` (с хаба в чат-репо не писать — только промпт).
+3. Этап 2+ аналитика кабинета (позже).
+4. Промпт 8 — партнёры (фаза 4) — **отложена** (лиды как продукт для CLIENT ≠ этот внутренний сервис).
+5. CMS-2b (позже): + между блоками, библиотека секций, drag-and-drop.
+6. Яндекс.Метрика на дашборд (отложено).
+7. По желанию: Telegram-бот; 2FA владельцу; noreply@ / SPF-DKIM позже (сейчас личный Яндекс).
