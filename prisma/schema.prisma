@@ -286,14 +286,17 @@ model HealthCheck {
 }
 
 model ServerMetric {
-  id        BigInt   @id @default(autoincrement())
-  cpu       Float
-  memUsed   BigInt
-  memTotal  BigInt
-  diskUsed  BigInt
-  diskTotal BigInt
-  load1     Float
-  takenAt   DateTime @default(now())
+  id         BigInt   @id @default(autoincrement())
+  cpu        Float
+  memUsed    BigInt
+  memTotal   BigInt
+  diskUsed   BigInt
+  diskTotal  BigInt
+  load1      Float
+  /** Накопительные байты с NIC (0 у старых строк). */
+  netRxBytes BigInt   @default(0)
+  netTxBytes BigInt   @default(0)
+  takenAt    DateTime @default(now())
 
   @@index([takenAt])
 }

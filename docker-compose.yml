@@ -78,7 +78,9 @@ services:
     volumes:
       - uploads:/app/uploads
       - ${BACKUPS_HOST_DIR:-/var/backups/vaybik}:/app/backups
+      # Метрики хоста: /proc (CPU/RAM/сеть), /var → /host/disk для df (не весь /)
       - /proc:/host/proc:ro
+      - /var:/host/disk:ro
     networks: [hub]
 
   postgres:

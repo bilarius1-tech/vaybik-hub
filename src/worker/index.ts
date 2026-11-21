@@ -70,10 +70,12 @@ async function main() {
           diskUsed: m.diskUsed,
           diskTotal: m.diskTotal,
           load1: m.load1,
+          netRxBytes: m.netRxBytes,
+          netTxBytes: m.netTxBytes,
         },
       });
       console.log(
-        `[worker] metrics cpu=${m.cpu}% load=${m.load1} mem=${m.memUsed}/${m.memTotal}`,
+        `[worker] metrics cpu=${m.cpu}% load=${m.load1} mem=${m.memUsed}/${m.memTotal} netRx=${m.netRxBytes}`,
       );
     } catch (err) {
       console.warn("[worker] metrics failed", err);

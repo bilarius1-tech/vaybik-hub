@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "ServerMetric" ADD COLUMN     "netRxBytes" BIGINT NOT NULL DEFAULT 0,
+ADD COLUMN     "netTxBytes" BIGINT NOT NULL DEFAULT 0;
