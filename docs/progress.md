@@ -293,3 +293,4 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Сайдбар группа «Кабинеты»; region только статус
 - [x] Unit: metrics net, downsample, hub-stats, cabinets
 - [x] Деплой `1b1ae61` (бэкап-тег `prev-f4ba7e2`); миграция net OK; worker mounts disk/proc; health 200
+- [x] Fix Chart.js цвета (`getComputedStyle`, светлая сетка, defaults.color) — прод **`a17519f`**
