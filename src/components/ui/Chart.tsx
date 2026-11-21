@@ -32,6 +32,11 @@ ChartJS.register(
   Filler,
 );
 
+/** Глобально: Chart.js по умолчанию рисует #666 — на тёмной теме это почти чёрное. */
+ChartJS.defaults.color = "#9aa5c3";
+ChartJS.defaults.borderColor = "rgba(232, 236, 248, 0.14)";
+ChartJS.defaults.font.family = "Manrope";
+
 type Props<T extends ChartType = "line"> = {
   type?: T;
   data: ChartData<T>;
