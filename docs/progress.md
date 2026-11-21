@@ -279,6 +279,6 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Env: `LEADS_BASE_URL`, `HUB_LEADS_SSO_SECRET` (`.env.example`, без запасных)
 - [x] Карточка `slug=lead` в сиде: «Лиды Профи/YouDo», не isProduct, кнопка «Кабинет лидов»
 - [x] Unit: aud leads, sanitize paths, config missing
-- [ ] Env на dev/проде — Алексей (`LEADS_BASE_URL`, `HUB_LEADS_SSO_SECRET`)
-- [ ] Деплой хаба — после «задеплой» и когда lead `/sso` уже отвечает
+- [x] Env на проде — `LEADS_BASE_URL`, `HUB_LEADS_SSO_SECRET` (заданы)
+- [x] Деплой хаба `f4ba7e2` + seed lead (бэкап-тег `prev-33a5061`)
 - [ ] Не делать: upsert/delete клиентов хаба для lead (не продукт)

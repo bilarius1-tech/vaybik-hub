@@ -36,7 +36,7 @@
 ## 4. Текущее состояние (на 2026-11-21)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Хаб-образ **`33a5061`**: SSO-кнопки чата + «Дизайн Атлас» на `/admin/services`. Ранее: serviceCards (`469599e`), landing-clients (`9b51258`), SSO (`222db91`).
+- Хаб-образ **`f4ba7e2`**: SSO «Лиды Профи/YouDo» (`/admin/sso/leads`, aud `leads`). Ранее: SSO-кнопки чата + Атлас (`33a5061`), serviceCards (`469599e`).
 - Главная: офис/studio снят с `/` (виджет `studio` в коде сохранён); три карточки сервисов + медиа. CSS leadweb `29aaee3`.
 - Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
@@ -116,7 +116,7 @@
 
 ## 8. Следующие шаги
 
-1. Лиды: дописать в env хаба `LEADS_BASE_URL` и `HUB_LEADS_SSO_SECRET`; деплой SSO хаба — после «задеплой», когда `lead.vaybik.ru/sso` уже отвечает.
+1. Smoke SSO: OWNER → `/admin/services` → «Кабинет лидов» → кабинет на lead.vaybik.ru.
 2. Чат: задеплоить `hubAdminBaseUrl()` в `register-landing-client` (с хаба в чат-репо не писать — только промпт).
 3. Этап 2+ аналитика кабинета (позже).
 4. Промпт 8 — партнёры (фаза 4) — **отложена** (лиды как продукт для CLIENT ≠ этот внутренний сервис).
