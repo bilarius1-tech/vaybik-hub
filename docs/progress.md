@@ -282,3 +282,14 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Env на проде — `LEADS_BASE_URL`, `HUB_LEADS_SSO_SECRET` (заданы)
 - [x] Деплой хаба `f4ba7e2` + seed lead (бэкап-тег `prev-33a5061`)
 - [ ] Не делать: upsert/delete клиентов хаба для lead (не продукт)
+
+## Дашборд-пульт (2026-11-21, сессия 3)
+
+- [x] `ServerMetric.netRxBytes/netTxBytes` + миграция; сбор из `/host/proc/net/dev`
+- [x] Диск: `/var:/host/disk:ro` у worker (не `/:/host/root`); `/proc` уже был
+- [x] Прореживание графиков (день 5м / неделя 1ч / месяц 6ч) вместо `take:500`
+- [x] `GET /api/hub/stats` клиенты чат+лиды (HMAC, таймаут 5с, кэш ~45с); `HUB_LEADS_API_SECRET` в `.env.example`
+- [x] UI: секции Сервер / Чат / Лиды / Кабинеты; Chart line+bar+doughnut; контейнеры только статус
+- [x] Сайдбар группа «Кабинеты»; region только статус
+- [x] Unit: metrics net, downsample, hub-stats, cabinets
+- [ ] Деплой — после «задеплой» (+ ключ `HUB_LEADS_API_SECRET` на проде)

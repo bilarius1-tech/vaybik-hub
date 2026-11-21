@@ -163,6 +163,8 @@ scripts/deploy-prod.sh             # выкатка + health + команда о
 На VPS канонический каталог хоста: **`/var/backups/vaybik`** (`chmod 700`, владелец uid **1001** / пользователь `nextjs` в образе).  
 В compose app и worker монтируют его как bind-mount → `/app/backups` (переменная `BACKUPS_HOST_DIR`, по умолчанию `/var/backups/vaybik`). Named volume `backups` больше не используется.
 
+Метрики хоста (только **worker**, read-only): `/proc` → `/host/proc`, `/var` → `/host/disk` (точка для `df`, не весь корень `/`). В **app** эти тома не монтируются.
+
 Каталог создаётся автоматически скриптом `scripts/deploy-prod.sh` при «задеплой» (`mkdir` + `chown 1001:1001` + `chmod 700`). Не кладите бэкапы в git и не в `/opt/apps`.
 
 Структура файлов:
