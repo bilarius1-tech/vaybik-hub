@@ -12,6 +12,7 @@ import { Segmented } from "@/components/ui/Segmented";
 import { Sparkline } from "@/components/ui/Sparkline";
 import { StatusDot } from "@/components/ui/StatusDot";
 import { api } from "@/lib/api-client";
+import { lineDatasetStyle, useChartPalette } from "@/lib/chart-theme";
 import { formatDateTime } from "@/lib/format";
 import type { StudioCabinetLink } from "@/lib/studio-service-links";
 import Link from "next/link";
@@ -118,6 +119,7 @@ export function DashboardView({ initial }: { initial: Summary }) {
   const [summary, setSummary] = useState(initial);
   const [period, setPeriod] = useState<Period>("week");
   const [loading, setLoading] = useState(false);
+  const palette = useChartPalette();
 
   async function changePeriod(p: Period) {
     setPeriod(p);
@@ -137,27 +139,21 @@ export function DashboardView({ initial }: { initial: Summary }) {
         {
           label: "CPU %",
           data: summary.charts.server.map((p) => p.cpu),
-          borderColor: "var(--ac)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.ac),
         },
         {
           label: "RAM %",
           data: summary.charts.server.map((p) => p.mem),
-          borderColor: "var(--cy)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.cy),
         },
         {
           label: "Диск %",
           data: summary.charts.server.map((p) => p.disk),
-          borderColor: "var(--yl)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.yl, { fillAlpha: 0.1 }),
         },
       ],
     }),
-    [summary.charts.server, period],
+    [summary.charts.server, period, palette],
   );
 
   const networkChart = useMemo(
@@ -170,30 +166,19 @@ export function DashboardView({ initial }: { initial: Summary }) {
         {
           label: "↓ Мбит/с",
           data: summary.charts.network.map((p) => p.rxMbps),
-          borderColor: "var(--gr)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.gr),
         },
         {
           label: "↑ Мбит/с",
           data: summary.charts.network.map((p) => p.txMbps),
-          borderColor: "var(--vi)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.vi),
         },
       ],
     }),
-    [summary.charts.network, period],
+    [summary.charts.network, period, palette],
   );
 
   const responseChart = useMemo(() => {
-    const palette = [
-      "var(--ac)",
-      "var(--cy)",
-      "var(--gr)",
-      "var(--vi)",
-      "var(--pk)",
-    ];
     return {
       labels: chartLabels(
         summary.charts.response[0]?.data.map((p) => p.t) || [],
@@ -202,12 +187,12 @@ export function DashboardView({ initial }: { initial: Summary }) {
       datasets: summary.charts.response.map((series, i) => ({
         label: series.label,
         data: series.data.map((p) => p.ms),
-        borderColor: palette[i % palette.length],
-        backgroundColor: "transparent",
-        tension: 0.3,
+        ...lineDatasetStyle(palette.series[i % palette.series.length]!, {
+          fillAlpha: 0.08,
+        }),
       })),
     };
-  }, [summary.charts.response, period]);
+  }, [summary.charts.response, period, palette]);
 
   const chatClients = summary.chat.kpi?.clients as
     | Record<string, number>
@@ -222,18 +207,14 @@ export function DashboardView({ initial }: { initial: Summary }) {
       datasets: [
         {
           data,
-          backgroundColor: [
-            "var(--cy)",
-            "var(--gr)",
-            "var(--yl)",
-            "var(--rd)",
-            "var(--mu)",
-          ],
-          borderWidth: 0,
+          backgroundColor: keys.map((k) => palette.clients[k]),
+          borderColor: palette.card,
+          borderWidth: 2,
+          hoverOffset: 4,
         },
       ],
     };
-  }, [chatClients]);
+  }, [chatClients, palette]);
 
   const chatSeriesChart = useMemo(() => {
     const series = summary.chat.series;
@@ -248,27 +229,21 @@ export function DashboardView({ initial }: { initial: Summary }) {
         {
           label: "Диалоги",
           data: series.map((p) => asNum(p.dialogs) ?? 0),
-          borderColor: "var(--ac)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.ac),
         },
         {
           label: "Сообщения",
           data: series.map((p) => asNum(p.messages) ?? 0),
-          borderColor: "var(--cy)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.cy),
         },
         {
           label: "Заявки",
           data: series.map((p) => asNum(p.leads) ?? 0),
-          borderColor: "var(--gr)",
-          backgroundColor: "transparent",
-          tension: 0.3,
+          ...lineDatasetStyle(palette.gr),
         },
       ],
     };
-  }, [summary.chat.series, period]);
+  }, [summary.chat.series, period, palette]);
 
   const leadsSeriesChart = useMemo(() => {
     const series = summary.leads.series;
@@ -283,26 +258,30 @@ export function DashboardView({ initial }: { initial: Summary }) {
         {
           label: "Profi",
           data: series.map((p) => asNum(p.profi) ?? 0),
-          backgroundColor: "var(--ac)",
+          backgroundColor: palette.ac,
+          borderRadius: 4,
         },
         {
           label: "YouDo",
           data: series.map((p) => asNum(p.youdo) ?? 0),
-          backgroundColor: "var(--cy)",
+          backgroundColor: palette.cy,
+          borderRadius: 4,
         },
         {
           label: "Доставлено",
           data: series.map((p) => asNum(p.delivered) ?? 0),
-          backgroundColor: "var(--gr)",
+          backgroundColor: palette.gr,
+          borderRadius: 4,
         },
         {
           label: "Отсеяно",
           data: series.map((p) => asNum(p.filtered) ?? 0),
-          backgroundColor: "var(--yl)",
+          backgroundColor: palette.yl,
+          borderRadius: 4,
         },
       ],
     };
-  }, [summary.leads.series, period]);
+  }, [summary.leads.series, period, palette]);
 
   const tg = summary.chat.kpi?.deliveries as
     | { telegram?: { sent?: number; failed?: number; pending?: number }; max?: { sent?: number; failed?: number; pending?: number } }

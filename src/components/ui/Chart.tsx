@@ -17,6 +17,8 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { cn } from "@/lib/cn";
+import { useChartPalette } from "@/lib/chart-theme";
+import { useMemo } from "react";
 
 ChartJS.register(
   CategoryScale,
@@ -38,35 +40,6 @@ type Props<T extends ChartType = "line"> = {
   height?: number;
 };
 
-function baseOptions(): ChartOptions {
-  return {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: {
-        labels: {
-          color: "var(--mu)",
-          font: { family: "Manrope", size: 12 },
-        },
-      },
-      tooltip: {
-        titleFont: { family: "Manrope" },
-        bodyFont: { family: "Manrope" },
-      },
-    },
-    scales: {
-      x: {
-        ticks: { color: "var(--mu)", font: { family: "Manrope", size: 11 } },
-        grid: { color: "color-mix(in srgb, var(--bd) 50%, transparent)" },
-      },
-      y: {
-        ticks: { color: "var(--mu)", font: { family: "Manrope", size: 11 } },
-        grid: { color: "color-mix(in srgb, var(--bd) 50%, transparent)" },
-      },
-    },
-  };
-}
-
 export function Chart<T extends ChartType = "line">({
   type = "line" as T,
   data,
@@ -74,13 +47,64 @@ export function Chart<T extends ChartType = "line">({
   className,
   height = 220,
 }: Props<T>) {
-  const defaults = baseOptions();
+  const palette = useChartPalette();
+
+  const defaults = useMemo((): ChartOptions => {
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: {
+          labels: {
+            color: palette.muted,
+            font: { family: "Manrope", size: 12 },
+            usePointStyle: true,
+            pointStyle: "circle",
+            padding: 14,
+          },
+        },
+        tooltip: {
+          titleFont: { family: "Manrope" },
+          bodyFont: { family: "Manrope" },
+          backgroundColor: palette.card,
+          titleColor: palette.tx,
+          bodyColor: palette.muted,
+          borderColor: palette.bd,
+          borderWidth: 1,
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: palette.muted,
+            font: { family: "Manrope", size: 11 },
+            maxRotation: 0,
+          },
+          grid: { color: palette.grid },
+          border: { color: palette.grid },
+        },
+        y: {
+          ticks: {
+            color: palette.muted,
+            font: { family: "Manrope", size: 11 },
+          },
+          grid: { color: palette.grid },
+          border: { color: palette.grid },
+        },
+      },
+    };
+  }, [palette]);
+
   const merged = { ...defaults, ...options } as ChartOptions<T>;
 
   return (
     <div className={cn("relative w-full", className)} style={{ height }}>
       {type === "bar" ? (
-        <Bar data={data as ChartData<"bar">} options={merged as ChartOptions<"bar">} />
+        <Bar
+          data={data as ChartData<"bar">}
+          options={merged as ChartOptions<"bar">}
+        />
       ) : type === "doughnut" ? (
         <Doughnut
           data={data as ChartData<"doughnut">}
@@ -88,11 +112,15 @@ export function Chart<T extends ChartType = "line">({
             {
               ...merged,
               scales: undefined,
+              cutout: "62%",
             } as ChartOptions<"doughnut">
           }
         />
       ) : (
-        <Line data={data as ChartData<"line">} options={merged as ChartOptions<"line">} />
+        <Line
+          data={data as ChartData<"line">}
+          options={merged as ChartOptions<"line">}
+        />
       )}
     </div>
   );
