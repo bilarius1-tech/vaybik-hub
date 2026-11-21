@@ -122,8 +122,10 @@ export function getChartPalette(): ChartPalette {
     card,
     demo,
     off,
-    muted: withAlpha(mu, 0.92),
-    grid: withAlpha(bd, 0.55),
+    // Подписи — светлый muted (не --bd: он тёмный и «чернеет» на фоне)
+    muted: mu || CHART_FALLBACK.mu,
+    // Сетка — полупрозрачный текст, не цвет рамки карточки
+    grid: withAlpha(tx || CHART_FALLBACK.tx, 0.14),
     series: [ac, cy, gr, vi, pk, yl],
     clients: {
       DEMO: demo,

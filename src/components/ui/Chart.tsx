@@ -81,16 +81,17 @@ export function Chart<T extends ChartType = "line">({
             font: { family: "Manrope", size: 11 },
             maxRotation: 0,
           },
-          grid: { color: palette.grid },
-          border: { color: palette.grid },
+          grid: { color: palette.grid, drawBorder: false },
+          border: { display: false },
         },
         y: {
           ticks: {
             color: palette.muted,
             font: { family: "Manrope", size: 11 },
+            padding: 6,
           },
-          grid: { color: palette.grid },
-          border: { color: palette.grid },
+          grid: { color: palette.grid, drawBorder: false },
+          border: { display: false },
         },
       },
     };
