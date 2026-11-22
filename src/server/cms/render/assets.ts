@@ -61,7 +61,7 @@ export function assetsForTemplate(
     js.push(`/js/magic-rings.js?v=${versions.magicRingsJs}`);
     js.push(`/js/gradient-blinds.js?v=${versions.gradientBlindsJs}`);
     js.push(`/js/keysy-ii.js?v=${versions.keysyJs}`);
-    js.push(`/js/metrika.js`);
+    // Метрика — только после согласия (см. renderConsentAndAnalytics)
     return { bodyClass: "svc", bodyAttrs: "", css, js };
   }
 
@@ -69,7 +69,6 @@ export function assetsForTemplate(
     css.push(`/css/service-pages.css?v=${versions.serviceCss}`);
     js.push(`/js/magic-rings.js?v=${versions.magicRingsJs}`);
     js.push(`/js/gradient-blinds.js?v=${versions.gradientBlindsJs}`);
-    js.push(`/js/metrika.js`);
     return { bodyClass: "svc", bodyAttrs: "", css, js };
   }
 
@@ -79,7 +78,6 @@ export function assetsForTemplate(
     js.push(`/kalkulyator/content.js?v=${versions.calcContentJs}`);
     js.push(`/kalkulyator/calc.js?v=${versions.calcJs}`);
     js.push(`/kalkulyator/client.js?v=${versions.calcClientJs}`);
-    js.push(`/js/metrika.js`);
     return {
       bodyClass: "lc-page",
       bodyAttrs: ' data-mode="client"',
@@ -92,6 +90,5 @@ export function assetsForTemplate(
   // home | default
   js.push(`/js/magic-rings.js?v=${versions.magicRingsJs}`);
   js.push(`/js/gradient-blinds.js?v=${versions.gradientBlindsJs}`);
-  js.push(`/js/metrika.js`);
   return { bodyClass: "", bodyAttrs: "", css, js };
 }

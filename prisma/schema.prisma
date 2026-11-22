@@ -145,8 +145,38 @@ model Service {
   ownerPartnerId String?
   checks         HealthCheck[]
   clientServices ClientService[]
+  seo            ServiceSeo?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
+}
+
+/// Доменное SEO и аналитика сервиса (источник правды для поддоменов).
+model ServiceSeo {
+  id                   String    @id @default(cuid())
+  serviceId            String    @unique
+  service              Service   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  title                String?
+  description          String?
+  canonical            String?
+  robots               String    @default("index,follow")
+  ogTitle              String?
+  ogDescription        String?
+  ogImage              String?
+  twitterCard          String?   @default("summary_large_image")
+  jsonLd               Json?
+  yandexMetrika        String?
+  yandexWebmaster      String?
+  googleSearchConsole  String?
+  googleAnalytics      String?
+  robotsTxt            String?   @db.Text
+  llmsTxt              String?   @db.Text
+  sitemapUrl           String?
+  /// Исходник favicon в uploads/service-seo/<serviceId>/
+  faviconSourceFile    String?
+  faviconSourceMime    String?
+  faviconGeneratedAt   DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 }
 
 /// Клиент студии (не Partner). Источник правды — хаб.

@@ -2,6 +2,7 @@
 
 import { DockerPanel } from "@/components/services/DockerPanel";
 import { ServiceForm } from "@/components/services/ServiceForm";
+import { ServiceSeoPanel } from "@/components/services/ServiceSeoPanel";
 import { ServiceStudioLinks } from "@/components/services/ServiceStudioLinks";
 import { Button } from "@/components/ui/Button";
 import { Card, CardHeader } from "@/components/ui/Card";
@@ -294,6 +295,8 @@ export function ServiceDetail({
           tags: service.tags,
         }}
       />
+
+      <ServiceSeoPanel serviceId={service.id} />
     </div>
   );
 }

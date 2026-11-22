@@ -8,6 +8,13 @@ import {
   mergeAssetVersions,
   type SiteAssetVersions,
 } from "./assets";
+import {
+  renderConsentAndAnalytics,
+  renderFaviconLinks,
+  renderVerificationMeta,
+  type SiteAnalyticsRender,
+  type SiteFaviconRender,
+} from "./consent";
 import { esc, escAttr } from "./escape";
 import {
   renderBlocks,
@@ -38,6 +45,14 @@ export type SeoRenderData = {
   ogImage?: string | null;
   twitterCard?: string | null;
   jsonLd?: unknown;
+};
+
+export type SiteDomainExtras = {
+  analytics?: SiteAnalyticsRender | null;
+  favicon?: SiteFaviconRender | null;
+  privacyUrl?: string | null;
+  /** JSON-LD домена (ServiceSeo), дополняет page-level */
+  domainJsonLd?: unknown;
 };
 
 export type ContactsRender = {
@@ -326,6 +341,12 @@ function renderFooter(
   return `<footer class="ftr"><div class="w"><div class="grid"><div><a class="logo" href="/">vaybik<b>.</b>ru</a><p>Команда из двух разработчиков — Алексея и Игоря. Делаем сайты, презентации и калькуляторы, которые приводят заявки: дизайн, разработка, SEO и реклама в одних руках.</p></div>${cols}</div><p style="margin-top:32px">© ${year} vaybik.ru. Сайты, которые приводят заявки. <a class="ftr-team" href="/kp/" rel="nofollow" style="opacity:.55;margin-left:12px">Калькулятор для команды</a></p></div></footer>`;
 }
 
+function jsonLdScript(data: unknown): string {
+  if (data == null) return "";
+  const raw = typeof data === "string" ? data : JSON.stringify(data);
+  return `<script type="application/ld+json">${raw.replace(/</g, "\\u003c")}</script>`;
+}
+
 function renderHead(opts: {
   mode: RenderMode;
   title: string;
@@ -336,6 +357,7 @@ function renderHead(opts: {
   cssHrefs: string[];
   noindexHost?: boolean;
   skipCanonical?: boolean;
+  domain?: SiteDomainExtras | null;
 }): string {
   const seo = opts.seo || {};
   const title = seo.title || opts.title;
@@ -356,12 +378,13 @@ function renderHead(opts: {
   const twitterCard = seo.twitterCard || "summary_large_image";
 
   let jsonLd = "";
-  if (opts.mode === "public" && seo.jsonLd) {
-    const raw =
-      typeof seo.jsonLd === "string"
-        ? seo.jsonLd
-        : JSON.stringify(seo.jsonLd);
-    jsonLd = `<script type="application/ld+json">${raw.replace(/</g, "\\u003c")}</script>`;
+  if (opts.mode === "public") {
+    jsonLd = [
+      jsonLdScript(seo.jsonLd),
+      jsonLdScript(opts.domain?.domainJsonLd),
+    ]
+      .filter(Boolean)
+      .join("\n");
   }
 
   const origin = opts.assetsOrigin.replace(/\/$/, "");
@@ -378,6 +401,15 @@ function renderHead(opts: {
   const showCanonical =
     opts.mode === "public" && !opts.noindexHost && !opts.skipCanonical;
 
+  const verification =
+    opts.mode === "public"
+      ? renderVerificationMeta(opts.domain?.analytics)
+      : "";
+  const favicons = renderFaviconLinks(
+    opts.mode === "public" ? opts.domain?.favicon : null,
+    abs("/img/favicon.svg"),
+  );
+
   return `<meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>${previewTitle}</title>
@@ -385,11 +417,12 @@ ${desc ? `<meta name="description" content="${escAttr(desc)}">` : ""}
 ${showCanonical ? `<link rel="canonical" href="${escAttr(canonical)}">` : ""}
 <meta name="robots" content="${escAttr(robots)}">
 <meta name="theme-color" content="#07051a">
+${verification}
 <meta property="og:type" content="website"><meta property="og:locale" content="ru_RU"><meta property="og:site_name" content="vaybik.ru">
 <meta property="og:title" content="${escAttr(ogTitle)}"><meta property="og:description" content="${escAttr(ogDesc)}">
 <meta property="og:url" content="${escAttr(canonical)}"><meta property="og:image" content="${escAttr(ogImage)}"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630"><meta property="og:image:alt" content="${escAttr(ogTitle)}">
 <meta name="twitter:card" content="${escAttr(twitterCard)}"><meta name="twitter:title" content="${escAttr(ogTitle)}"><meta name="twitter:description" content="${escAttr(ogDesc)}"><meta name="twitter:image" content="${escAttr(ogImage)}">
-<link rel="icon" href="${escAttr(abs("/img/favicon.svg"))}" type="image/svg+xml">
+${favicons}
 <link rel="preload" href="${escAttr(abs("/fonts/manrope-cyrillic-400-normal.woff2"))}" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="${escAttr(abs("/fonts/unbounded-cyrillic-500-normal.woff2"))}" as="font" type="font/woff2" crossorigin>
 ${css}
@@ -416,6 +449,8 @@ export type SiteDocumentOpts = {
   year?: number;
   /** ИИ-консультант; только mode=public */
   chatWidget?: ChatWidgetConfig | null;
+  /** Доменные SEO/аналитика (ServiceSeo vaybik-site-cms) */
+  domain?: SiteDomainExtras | null;
 };
 
 export function renderSiteDocument(opts: SiteDocumentOpts): string {
@@ -457,6 +492,7 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
     siteOrigin: opts.siteOrigin,
     cssHrefs: assets.css,
     noindexHost: opts.noindexHost,
+    domain: opts.domain || null,
   });
 
   const origin = opts.assetsOrigin.replace(/\/$/, "");
@@ -474,6 +510,14 @@ export function renderSiteDocument(opts: SiteDocumentOpts): string {
     opts.chatWidget &&
     chatWidgetApplies(opts.chatWidget, opts.path)
       ? renderChatWidgetScript(opts.chatWidget)
+      : "";
+  const consentHtml =
+    opts.mode === "public"
+      ? renderConsentAndAnalytics({
+          analytics: opts.domain?.analytics,
+          privacyUrl:
+            opts.domain?.privacyUrl || "https://chat.vaybik.ru/privacy",
+        })
       : "";
   const scripts = [siteScripts, chatScript].filter(Boolean).join("\n");
 
@@ -515,6 +559,7 @@ ${mobile}
 <main id="main">${body}</main>
 ${assets.afterMain || ""}
 ${footer}
+${consentHtml}
 ${scripts}
 </body>
 </html>`;

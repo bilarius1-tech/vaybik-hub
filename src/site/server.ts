@@ -19,8 +19,14 @@ import {
   type ChatWidgetConfig,
 } from "@/server/cms/chat-widget";
 import { getSiteContentVersion } from "@/server/cms/site-version";
+import type { SiteDomainExtras } from "@/server/cms/render/document";
 import { ensureAdminDisallow } from "@/server/seo/robots-normalize";
 import { buildPublicCmsSitemapXml } from "@/server/seo/sitemap";
+import {
+  buildPublicServiceSeo,
+  loadSiteCmsSeo,
+} from "@/server/services/seo";
+import { SEO_PUBLIC_DENY_SLUGS } from "@/server/services/seo-defaults";
 import {
   clearAllCache,
   getAnyCached,
@@ -66,6 +72,7 @@ let redirects: RedirectRule[] = [];
 let robotsText = "";
 let llmsText = "";
 let chatWidget: ChatWidgetConfig = parseChatWidget({});
+let siteDomain: SiteDomainExtras | null = null;
 
 const SECURITY_HEADERS: Record<string, string> = {
   "X-Content-Type-Options": "nosniff",
@@ -125,12 +132,13 @@ function sendCached(
 
 async function refreshMeta(): Promise<void> {
   try {
-    const [ver, rules, robotsRow, llmsRow, chatRow] = await Promise.all([
+    const [ver, rules, robotsRow, llmsRow, chatRow, cmsSeo] = await Promise.all([
       getSiteContentVersion(sitePrisma),
       loadRedirects(sitePrisma),
       sitePrisma.setting.findUnique({ where: { key: "site.robots" } }),
       sitePrisma.setting.findUnique({ where: { key: "site.llms" } }),
       sitePrisma.setting.findUnique({ where: { key: CHAT_WIDGET_SETTING_KEY } }),
+      loadSiteCmsSeo(sitePrisma).catch(() => null),
     ]);
     if (ver !== contentVersion) {
       contentVersion = ver;
@@ -138,9 +146,19 @@ async function refreshMeta(): Promise<void> {
       console.info("[site] content version →", ver, "cache cleared");
     }
     redirects = rules;
-    robotsText = ensureAdminDisallow(settingText(robotsRow?.value));
-    llmsText = settingText(llmsRow?.value);
+    const fromService = cmsSeo?.robotsTxt?.trim() || "";
+    const fromSetting = settingText(robotsRow?.value);
+    robotsText = ensureAdminDisallow(fromService || fromSetting);
+    llmsText = cmsSeo?.llmsTxt?.trim() || settingText(llmsRow?.value);
     chatWidget = parseChatWidget(chatRow?.value);
+    siteDomain = cmsSeo
+      ? {
+          analytics: cmsSeo.analytics,
+          favicon: cmsSeo.favicon || undefined,
+          privacyUrl: cmsSeo.privacyUrl,
+          domainJsonLd: cmsSeo.domainSeo?.jsonLd ?? null,
+        }
+      : null;
     dbOk = true;
   } catch (err) {
     dbOk = false;
@@ -322,6 +340,21 @@ async function servePage(
     if (loaded.source !== "revision") {
       throw new Error("public page must come from revision");
     }
+    // Page SeoPage перекрывает доменные title/desc; доменный jsonLd — отдельно
+    let seo = loaded.seo;
+    if (!seo && siteDomain) {
+      seo = {
+        title: null,
+        description: null,
+        robots: null,
+        canonical: null,
+        ogTitle: null,
+        ogDescription: null,
+        ogImage: null,
+        twitterCard: null,
+        jsonLd: null,
+      };
+    }
     const html = renderSiteDocument({
       mode: "public",
       title: loaded.page.title,
@@ -329,7 +362,7 @@ async function servePage(
       template: loaded.page.template,
       blocks: loaded.blocks,
       nav: loaded.nav,
-      seo: loaded.seo,
+      seo,
       contacts: loaded.contacts,
       assetsOrigin: ASSETS_ORIGIN,
       siteOrigin: SITE_ORIGIN,
@@ -337,6 +370,7 @@ async function servePage(
       media: loaded.media,
       noindexHost: test,
       chatWidget,
+      domain: siteDomain,
     });
     const entry = putCached(pathname, contentVersion, html, 200);
     sendCached(req, res, entry, extra);
@@ -381,6 +415,38 @@ async function handle(
   const mediaMatch = pathname.match(/^\/media\/([^/]+)\/(v\d+)\/([^/]+)$/);
   if (mediaMatch) {
     await serveMedia(res, mediaMatch[1], mediaMatch[2], mediaMatch[3]);
+    return;
+  }
+
+  // 2b. зеркало публичного SEO JSON (без /admin)
+  const seoJsonMatch = pathname.match(
+    /^\/seo\/services\/([^/]+)\.json$/,
+  );
+  if (seoJsonMatch) {
+    const slug = decodeURIComponent(seoJsonMatch[1] || "");
+    if (SEO_PUBLIC_DENY_SLUGS.has(slug)) {
+      send(res, 404, JSON.stringify({ error: "not_found" }), {
+        "Content-Type": "application/json",
+      });
+      return;
+    }
+    try {
+      const payload = await buildPublicServiceSeo(sitePrisma, slug);
+      if (!payload) {
+        send(res, 404, JSON.stringify({ error: "not_found" }), {
+          "Content-Type": "application/json",
+        });
+        return;
+      }
+      send(res, 200, JSON.stringify(payload), {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "public, s-maxage=300, stale-while-revalidate=60",
+      });
+    } catch {
+      send(res, 503, JSON.stringify({ error: "unavailable" }), {
+        "Content-Type": "application/json",
+      });
+    }
     return;
   }
 

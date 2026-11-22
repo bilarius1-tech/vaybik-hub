@@ -16,7 +16,6 @@ describe("assetsForTemplate calculator", () => {
       "/kalkulyator/content.js?v=2",
       "/kalkulyator/calc.js?v=2",
       "/kalkulyator/client.js?v=2",
-      "/js/metrika.js",
     ]);
     expect(a.afterMain).toBe(LC_BAR_HTML);
     expect(a.bodyClass).toBe("lc-page");

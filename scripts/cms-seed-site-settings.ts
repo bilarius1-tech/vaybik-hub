@@ -62,6 +62,10 @@ User-agent: YandexAdditional
 Allow: /
 Disallow: /admin/
 
+User-agent: YandexGPT
+Allow: /
+Disallow: /admin/
+
 User-agent: Applebot-Extended
 Allow: /
 Disallow: /admin/
