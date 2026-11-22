@@ -152,7 +152,8 @@ async function main() {
   const data = parseBlockData("serviceCards", {
     header: prev.header || { title: "Наши сервисы", kicker: null, subtitle: null },
     background: prev.background || "default",
-    columns: 4,
+    // 3 в ряд; 4-я карточка — на второй строке (g3), не g4
+    columns: 3,
     items,
   }) as Prisma.InputJsonValue;
 
