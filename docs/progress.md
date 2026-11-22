@@ -305,6 +305,6 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] robots/llms из ServiceSeo `vaybik-site-cms` (+ YandexGPT в шаблоне); sync со старыми Setting
 - [x] Сид `mockup`; скрипт 4-й карточки + publish (`cms-home-add-mockup-card.ts`)
 - [x] Unit: defaults/favicon/consent/public SEO/g4
-- [ ] Деплой — только после «задеплой»: бэкап БД → migrate → seed:mockup → cms-home-add-mockup-card на прод
+- [x] Деплой: бэкап `20261122T114344Z` → `8b56e97` (+ migrate `service_seo`) → seed:mockup → 4-я карточка; GRANT `vaybik_site` (`715d433`)
 - [ ] Алексей: ID Метрики / Вебмастер / GSC в формах сервисов
 - [ ] Агенты chat/mockup: промпты в `/home/deploy/staging/t45-hub-seo/`

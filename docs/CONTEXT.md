@@ -36,8 +36,8 @@
 ## 4. Текущее состояние (на 2026-11-22)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Прод хаб пока **`a17519f`**. В dig: SEO сервисов (`ServiceSeo`), публичный `/admin/api/public/services/<slug>/seo`, согласие+Метрика, сид `mockup`, на dig-главной 4 карточки (мокап). Деплой — по «задеплой» + бэкап БД перед migrate.
-- Главная (прод): три карточки сервисов; после деплоя+скрипта — четвёртая «Генератор мокапов». CSS leadweb `29aaee3` (есть `.g4`).
+- Прод хаб **`8b56e97`** (+ migrate grants `715d433`): SEO сервисов, публичный `/admin/api/public/services/<slug>/seo`, зеркало `/seo/services/<slug>.json`, mockup в реестре, на главной 4 карточки. Роль `vaybik_site` — SELECT на `Service`/`ServiceSeo`.
+- Главная: блок «Наши сервисы» — 4 карточки (`g4`), 4-я → https://mockup.vaybik.ru. CSS leadweb `29aaee3`.
 - Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
 - **Прод env:** только `/opt/apps/vaybik-hub/.env` (compose `env_file: .env`). Dev — `/opt/vaybik-hub/.env`. Секреты SMTP не путать между ними.
@@ -118,7 +118,6 @@
 
 ## 8. Следующие шаги
 
-1. «задеплой» SEO: бэкап прод-БД → migrate `service_seo` → `seed:mockup` → `cms-home-add-mockup-card` на прод → проверка публичного SEO.
-2. Алексей: ID Метрики / Вебмастер / GSC в формах сервисов (`vaybik-site-cms`, chat, design-atlas, mockup).
-3. Промпты агентам chat/mockup: `/home/deploy/staging/t45-hub-seo/PROMPT_CHAT_SEO.md`, `PROMPT_MOCKUP_SEO.md`.
-4. Smoke SSO лидов; чат `hubAdminBaseUrl()` — позже. PARTNER / CMS-2b — позже.
+1. Алексей: ID Метрики / Вебмастер / GSC в формах сервисов (`vaybik-site-cms`, chat, design-atlas, mockup).
+2. Промпты агентам chat/mockup: `/home/deploy/staging/t45-hub-seo/PROMPT_CHAT_SEO.md`, `PROMPT_MOCKUP_SEO.md`.
+3. Smoke SSO лидов; чат `hubAdminBaseUrl()` — позже. PARTNER / CMS-2b — позже.
