@@ -294,3 +294,17 @@ npx lighthouse http://127.0.0.1:3000/admin --preset=desktop --only-categories=pe
 - [x] Unit: metrics net, downsample, hub-stats, cabinets
 - [x] Деплой `1b1ae61` (бэкап-тег `prev-f4ba7e2`); миграция net OK; worker mounts disk/proc; health 200
 - [x] Fix Chart.js цвета (`getComputedStyle`, светлая сетка, defaults.color) — прод **`a17519f`**
+
+## SEO сервисов + 4-я карточка (2026-11-22)
+
+- [x] Модель `ServiceSeo` + аддитивная миграция `service_seo`
+- [x] Админка: секция «SEO и аналитика» в карточке сервиса; favicon → ico/32/180/192/512 + manifest
+- [x] `GET /admin/api/public/services/<slug>/seo` (+ `/icons/…`); region/unknown → 404; кэш s-maxage=300
+- [x] Зеркало site: `/seo/services/<slug>.json`
+- [x] Главная: verification meta, favicon links, Метрика только после согласия (cookie); privacy → chat.vaybik.ru/privacy
+- [x] robots/llms из ServiceSeo `vaybik-site-cms` (+ YandexGPT в шаблоне); sync со старыми Setting
+- [x] Сид `mockup`; скрипт 4-й карточки + publish (`cms-home-add-mockup-card.ts`)
+- [x] Unit: defaults/favicon/consent/public SEO/g4
+- [ ] Деплой — только после «задеплой»: бэкап БД → migrate → seed:mockup → cms-home-add-mockup-card на прод
+- [ ] Алексей: ID Метрики / Вебмастер / GSC в формах сервисов
+- [ ] Агенты chat/mockup: промпты в `/home/deploy/staging/t45-hub-seo/`

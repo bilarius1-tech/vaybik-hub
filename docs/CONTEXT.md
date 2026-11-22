@@ -1,7 +1,7 @@
 # CONTEXT — память проекта Вайбик
 
 > Читать в начале **каждого** чата и при «открой день». Обновлять при «закрой день» и сразу после любого важного решения.
-> Здесь только факты и решения, без секретов. Последнее обновление: 2026-11-21 (закрытие дня: пульт + fix Chart.js на `a17519f`).
+> Здесь только факты и решения, без секретов. Последнее обновление: 2026-11-22 (SEO сервисов + 4-я карточка мокапа; деплой ещё нет).
 
 ## 1. Что такое Вайбик
 
@@ -33,11 +33,11 @@
 
 Не относится к Вайбику, не трогать отсюда: сайт стоматологии цауне-дентал.рф (хостинг HandyHost).
 
-## 4. Текущее состояние (на 2026-11-21)
+## 4. Текущее состояние (на 2026-11-22)
 
 - Фазы 0–3 + CMS-3a на проде. Публичный **vaybik.ru = CMS** (`SITE_PROD_PRIORITY=50`). `REQUIRE_2FA=false`, `SESSION_REMEMBER_DAYS=30`.
-- Хаб-образ **`a17519f`**: дашборд-пульт (сеть/диск/stats чат+лиды/кабинеты) + fix цветов Chart.js (`getComputedStyle`). Ранее SSO лидов (`f4ba7e2`), SSO чата/Атлас (`33a5061`). Миграция `server_metric_net` применена. Worker: `/proc→/host/proc:ro`, `/var→/host/disk:ro`.
-- Главная: офис/studio снят с `/` (виджет `studio` в коде сохранён); три карточки сервисов + медиа. CSS leadweb `29aaee3`.
+- Прод хаб пока **`a17519f`**. В dig: SEO сервисов (`ServiceSeo`), публичный `/admin/api/public/services/<slug>/seo`, согласие+Метрика, сид `mockup`, на dig-главной 4 карточки (мокап). Деплой — по «задеплой» + бэкап БД перед migrate.
+- Главная (прод): три карточки сервисов; после деплоя+скрипта — четвёртая «Генератор мокапов». CSS leadweb `29aaee3` (есть `.g4`).
 - Клиенты↔Чат: connect/sync, срок, удаление, статус autosave; impersonate → 200 `{redirectUrl}`; SSO `mode=client`; лендинг DEMO→ACTIVE → хаб. Виджет — `site.chatWidget` (весь сайт).
 - Доступ клиента: Invite 72 ч, `/my-services`, «Скопировать сообщение», письмо-приглашение; галочка «Отправлять письма»; cron срока 09:00 MSK.
 - **Прод env:** только `/opt/apps/vaybik-hub/.env` (compose `env_file: .env`). Dev — `/opt/vaybik-hub/.env`. Секреты SMTP не путать между ними.
@@ -91,6 +91,7 @@
 - **2026-11-21** — `/admin/services`: у чата кнопки через SSO (`/sso/chat?next=`); у «Дизайн Атлас» внешние ссылки; slug `design-atlas`; CLIENT страницу не видит (`services.manage`).
 - **2026-11-21** — Внутренний сервис «Лиды Профи/YouDo» (`slug=lead`): SSO студии `GET /admin/sso/leads?next=/manage…`, `aud: "leads"`, env `LEADS_BASE_URL` + `HUB_LEADS_SSO_SECRET` (без запасных значений). Не `isProduct`, без upsert клиентов хаба. CLIENT не видит (нет `services.manage`). Деплой SSO — после «задеплой» и когда на lead есть `/sso`.
 - **2026-11-21** — Дашборд-пульт: воркер монтирует `/proc→/host/proc:ro` и `/var→/host/disk:ro` (не весь корень хоста). Сеть из `/proc/net/dev` (+ default route). Stats: `HUB_CHAT_API_SECRET` / новый `HUB_LEADS_API_SECRET`. Region на дашборде — только статус контейнера. Деплой — после «задеплой».
+- **2026-11-22** — Доменное SEO/аналитика — модель `ServiceSeo` (1:1 с Service). Публичный JSON: `/admin/api/public/services/<slug>/seo` (+ зеркало `/seo/services/<slug>.json`). `region` → 404. Счётчики/robots/llms главной — у `vaybik-site-cms`; `SeoPage` остаётся постраничным оверрайдом. Метрика на сайте только после cookie-согласия; политика → `https://chat.vaybik.ru/privacy` (на vaybik.ru своей нет). Отдельный счётчик на сервис, не общий на все поддомены.
 
 ## 6. Договорённости
 
@@ -117,7 +118,7 @@
 
 ## 8. Следующие шаги
 
-1. Smoke SSO: OWNER → «Кабинет лидов» → lead.vaybik.ru/manage.
-2. Чат: промпт агенту — `hubAdminBaseUrl()` в `register-landing-client` (с хаба не писать).
-3. Этап 2+ аналитика / PARTNER / CMS-2b / Метрика — позже.
-4. По желанию: Telegram-бот; 2FA; noreply@; место на диске (~89%).
+1. «задеплой» SEO: бэкап прод-БД → migrate `service_seo` → `seed:mockup` → `cms-home-add-mockup-card` на прод → проверка публичного SEO.
+2. Алексей: ID Метрики / Вебмастер / GSC в формах сервисов (`vaybik-site-cms`, chat, design-atlas, mockup).
+3. Промпты агентам chat/mockup: `/home/deploy/staging/t45-hub-seo/PROMPT_CHAT_SEO.md`, `PROMPT_MOCKUP_SEO.md`.
+4. Smoke SSO лидов; чат `hubAdminBaseUrl()` — позже. PARTNER / CMS-2b — позже.
