@@ -119,7 +119,7 @@ export const cardsClientSchema = z.object({
 export const serviceCardsClientSchema = z.object({
   header: headerSchema,
   background: backgroundSchema,
-  columns: z.union([z.literal(2), z.literal(3)]).default(3),
+  columns: z.union([z.literal(2), z.literal(3), z.literal(4)]).default(3),
   items: z
     .array(
       z.object({

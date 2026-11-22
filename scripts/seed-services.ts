@@ -84,6 +84,21 @@ const DEMO = [
     sortOrder: 5,
     tags: ["lead", "studio", "internal"],
   },
+  {
+    slug: "mockup",
+    name: "Генератор мокапов",
+    url: "https://mockup.vaybik.ru",
+    healthUrl: "https://mockup.vaybik.ru",
+    description:
+      "Бесплатный генератор мокапов: баннер, визитка, телефон — без регистрации",
+    type: "EXTERNAL" as const,
+    repoUrl: "https://github.com/bilarius1-tech/vaybik-mockup",
+    isPublic: true,
+    isDeployed: true,
+    isProduct: true,
+    sortOrder: 6,
+    tags: ["mockup", "product"],
+  },
 ];
 
 async function main() {

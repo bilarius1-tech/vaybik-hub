@@ -508,7 +508,8 @@ function renderServiceCards(
   anchor: string | null | undefined,
   opts: RenderOptions = {},
 ): string {
-  const cols = Number(data.columns) === 2 ? 2 : 3;
+  const rawCols = Number(data.columns);
+  const cols = rawCols === 2 || rawCols === 4 ? rawCols : 3;
   const items = (data.items as Array<Record<string, unknown>>) || [];
   const header = (data.header as Header) || null;
   const titleId = "our-services-title";

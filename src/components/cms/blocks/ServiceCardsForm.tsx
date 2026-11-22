@@ -28,7 +28,7 @@ type ServiceCardsData = {
     subtitle?: string | null;
   } | null;
   background?: "default" | "alt";
-  columns?: 2 | 3;
+  columns?: 2 | 3 | 4;
   items?: ServiceCardItem[];
 };
 
@@ -55,12 +55,13 @@ export function ServiceCardsForm({
           onChange={(e) =>
             onChange({
               ...data,
-              columns: Number(e.target.value) as 2 | 3,
+              columns: Number(e.target.value) as 2 | 3 | 4,
             })
           }
         >
           <option value="2">2</option>
           <option value="3">3</option>
+          <option value="4">4</option>
         </Select>
       </Field>
       <Repeater

@@ -23,6 +23,7 @@
     "seed:services": "tsx scripts/seed-services.ts",
     "seed:chat-product": "tsx scripts/seed-chat-product.ts",
     "seed:design-atlas": "tsx scripts/seed-design-atlas.ts",
+    "seed:mockup": "tsx scripts/seed-mockup.ts",
     "vault:rotate": "tsx scripts/vault-rotate.ts",
     "backup:now": "tsx scripts/backup-now.ts",
     "backup:restore": "tsx scripts/restore-backup.ts",

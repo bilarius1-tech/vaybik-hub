@@ -172,6 +172,24 @@ describe("renderBlock", () => {
     expect(html).toContain('aria-label="Подробнее: Landing Page"');
   });
 
+  it("serviceCards: columns=4 → grid g4", () => {
+    const html = renderBlock({
+      type: "serviceCards",
+      anchor: "our-services",
+      data: {
+        header: { title: "Наши сервисы" },
+        columns: 4,
+        items: [
+          { title: "A", textHtml: "<p>a</p>" },
+          { title: "B", textHtml: "<p>b</p>" },
+          { title: "C", textHtml: "<p>c</p>" },
+          { title: "D", textHtml: "<p>d</p>" },
+        ],
+      },
+    });
+    expect(html).toContain('class="grid g4 svc-cards"');
+  });
+
   it("serviceCards: H2/H3, picture lazy, кнопка", () => {
     const html = renderBlock({
       type: "serviceCards",
